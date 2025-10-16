@@ -174,8 +174,20 @@ export default function SeasonTable({ seasonData, year }) {
               const pfpg = totalGames ? (row.pf / totalGames).toFixed(1) : "-";
               const papg = totalGames ? (row.pa / totalGames).toFixed(1) : "-";
 
+              // find top3 by winPct dynamically
+              const top3 = [...sortedData]
+                .sort((a, b) => (b.winPct || 0) - (a.winPct || 0))
+                .slice(0,3)
+                .map((t) => t._idx);
+
+              let rowClass = "";
+              if (top3[0] === row._idx) rowClass = styles.goldRow
+              else if (top3[1] === row._idx) rowClass = styles.silverRow
+              else if (top3[2] === row._idx) rowClass = styles.bronzeRow
+
+
               return (
-                <tr key={idx}>
+                <tr key={idx} className={rowClass}>
                   <td className="placementEmoji">{row.place || ""}</td>
                   <td>{row.team}</td>
                   <td>{winPctDisplay}</td>

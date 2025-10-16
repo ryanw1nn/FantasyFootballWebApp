@@ -65,3 +65,15 @@
     min-width: 600px; /* table width adjusted for smaller screens */
   }
 }
+
+.goldRow {
+  background-color: #fff4b2;
+}
+
+.silverRow {
+  background-color: #d1d1d1;
+}
+
+.bronzeRow {
+  background-color: #f4d7b2;
+}
