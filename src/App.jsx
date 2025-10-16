@@ -12,7 +12,7 @@ function App() {
   const [filters, setFilters] = useState({
     active: true,
     inactive: false,
-    jake2020: false,
+    jake2020: true,
     botted: false,
   });
 

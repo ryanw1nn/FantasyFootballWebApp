@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import styles from "./Table.module.css";
 
 export default function SeasonTable({ seasonData, year }) {
@@ -6,34 +6,126 @@ export default function SeasonTable({ seasonData, year }) {
 
   if (!seasonData) return null;
 
-  // prepare data with computed fields
-  const preparedData = seasonData.map((row) => {
-    const totalGames = row.wins + row.losses + (row.ties || 0);
-    const winPct = totalGames ? (row.wins + 0.5 * (row.ties || 0)) / totalGames : 0;
-    const PFPG = totalGames ? row.pf / totalGames : 0;
-    const PAPG = totalGames ? row.pa / totalGames : 0;
-    return { ...row, totalGames, winPct, PFPG, PAPG };
-  });
+  // emoji mapping (used when "place" is an emoji)
+  const emojiRank = {
+    "🥇": 1,
+    "🥈": 2,
+    "🥉": 3,
+    "✨": 4,
+    "💩": 5,
+  };
 
-  // sorting data
-  const sortedData = [...preparedData].sort((a, b) => {
-    if (!sortConfig.key) return 0;
-    let aValue = a[sortConfig.key];
-    let bValue = b[sortConfig.key];
+  // Prepare data once (coerce numeric fields to numbers and add original index for stable sort)
+  const preparedData = useMemo(
+    () =>
+      seasonData.map((row, i) => {
+        const wins = Number(row.wins) || 0;
+        const losses = Number(row.losses) || 0;
+        const ties = Number(row.ties) || 0;
+        const pf = Number(row.pf) || 0;
+        const pa = Number(row.pa) || 0;
+        const totalGames = wins + losses + ties;
+        const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
+        const PFPG = totalGames ? pf / totalGames : 0;
+        const PAPG = totalGames ? pa / totalGames : 0;
 
-    if (typeof aValue === "string") aValue = aValue.toLowerCase();
-    if (typeof bValue === "string") bValue = bValue.toLowerCase();
+        return {
+          ...row,
+          wins,
+          losses,
+          ties,
+          pf,
+          pa,
+          totalGames,
+          winPct,
+          PFPG,
+          PAPG,
+          _idx: i, // preserve original index for stable sorting
+        };
+      }),
+    [seasonData]
+  );
 
-    if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-    if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+  // Robust comparator + tie-breakers
+  const sortedData = useMemo(() => {
+    const EPSILON = 1e-6;
+    const numericLikeRegex = /^[+-]?\d[\d,]*\.?\d*%?$/;
 
-    let aPF = a.PF ?? 0;
-    let bPF = b.PF ?? 0;
-    if (aPF < bPF) return 1;
-    if (aPF > bPF) return -1;
+    const normalize = (obj, key) => {
+      // guard
+      if (obj == null) return null;
+      const raw = obj[key];
 
-    return 0;
-  });
+      if (raw == null) return null;
+
+      // special case: place emojis
+      if (key === "place") {
+        if (typeof raw === "string" && emojiRank[raw]) return emojiRank[raw];
+        // if it's a number-like string or number, fall through to numeric handling
+      }
+
+      // if it's already a number, return it
+      if (typeof raw === "number") return raw;
+
+      // if it's a string that looks numeric (e.g. "10", "66.7%", "1,234"), parse it
+      if (typeof raw === "string") {
+        const s = raw.trim();
+        if (numericLikeRegex.test(s)) {
+          // remove commas and optional percent sign, then parse
+          const num = Number(s.replace(/,/g, "").replace("%", ""));
+          if (!isNaN(num)) return num;
+        }
+        // fallback: case-insensitive string for comparisons
+        return s.toLowerCase();
+      }
+
+      // fallback: return as-is
+      return raw;
+    };
+
+    const dir = sortConfig.direction === "asc" ? 1 : -1;
+
+    return [...preparedData].sort((a, b) => {
+      const key = sortConfig.key;
+      if (!key) return 0;
+
+      const aVal = normalize(a, key);
+      const bVal = normalize(b, key);
+
+      // both null/undefined -> continue to tie breakers
+      if (aVal == null && bVal == null) {
+        /* fall through */
+      } else if (typeof aVal === "number" && typeof bVal === "number") {
+        // numeric comparison with small tolerance for floats
+        if (Math.abs(aVal - bVal) > EPSILON) {
+          return (aVal < bVal ? -1 : 1) * dir;
+        }
+      } else {
+        // string comparison (localeCompare with numeric option)
+        const sa = String(aVal ?? "");
+        const sb = String(bVal ?? "");
+        const cmp = sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
+        if (cmp !== 0) return cmp * dir;
+      }
+
+      // === tie-breakers (apply when primary key considered equal) ===
+      // 1) PF (points for) -- always descending (more PF ranks higher)
+      if ((a.pf || 0) !== (b.pf || 0)) return a.pf > b.pf ? -1 : 1;
+
+      // 2) PA (points against) -- ascending (lower PA better)
+      if ((a.pa || 0) !== (b.pa || 0)) return (a.pa || 0) < (b.pa || 0) ? -1 : 1;
+
+      // 3) team name (alphabetical)
+      const teamCmp = String(a.team ?? "").localeCompare(String(b.team ?? ""), undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+      if (teamCmp !== 0) return teamCmp;
+
+      // 4) stable fallback by original index
+      return (a._idx || 0) - (b._idx || 0);
+    });
+  }, [preparedData, sortConfig]);
 
   // handle header click
   const requestSort = (key) => {
@@ -49,14 +141,6 @@ export default function SeasonTable({ seasonData, year }) {
     if (sortConfig.key !== key) return null;
     return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
-
-  const emojiRank = {
-    "🥇": 1, // gold
-    "🥈": 2, // silver
-    "🥉": 3, // bronze
-    "✨": 4, // playoff
-    "💩": 5, // poop
-  }
 
   return (
     <div>
@@ -83,8 +167,8 @@ export default function SeasonTable({ seasonData, year }) {
           </thead>
           <tbody>
             {sortedData.map((row, idx) => {
-              const totalGames = row.wins + row.losses + (row.ties || 0);
-              const winPct = totalGames
+              const totalGames = row.totalGames;
+              const winPctDisplay = totalGames
                 ? (((row.wins + 0.5 * (row.ties || 0)) / totalGames) * 100).toFixed(1) + "%"
                 : "-";
               const pfpg = totalGames ? (row.pf / totalGames).toFixed(1) : "-";
@@ -94,7 +178,7 @@ export default function SeasonTable({ seasonData, year }) {
                 <tr key={idx}>
                   <td className="placementEmoji">{row.place || ""}</td>
                   <td>{row.team}</td>
-                  <td>{winPct}</td>
+                  <td>{winPctDisplay}</td>
                   <td>{row.wins}</td>
                   <td>{row.losses}</td>
                   {year === "2024" && <td>{row.ties}</td>}

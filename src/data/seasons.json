@@ -8,7 +8,7 @@
         { "team": "Team John", "name": "Keith John", "wins": 7, "losses": 5, "pf": 1635.32, "pa": 1516.72, "state": "jake2020", "playoff": {"made": true, "rounds": 1, "pChampion": false}, "rChampion": false, "place": "✨" },
         { "team": "Cali DankVapes", "name": "Ben Jordan", "wins": 6, "losses": 6, "pf": 1498.34, "pa": 1418.64, "state": "inactive", "playoff": {"made": true, "rounds": 1, "pChampion": false}, "rChampion": false, "place": "✨" },
         { "team": "Craven Moore", "name": "Garret Vivian", "wins": 6, "losses": 6, "pf": 1498.34, "pa": 1441.54, "state": "jake2020", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "" },
-        { "team": "Mike Hawk", "name": "Michael Cassidy", "wins": 4, "losses": 8, "pf": 1349.7, "pa": 1483.12, "state": "jake2020", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "" },
+        { "team": "Mike Hawk", "name": "Michael Cassidy", "wins": 4, "losses": 8, "pf": 1349.7, "pa": 1483.12, "state": "inactive", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "" },
         { "team": "Commissioner Gordon", "name": "Ryan Winn", "wins": 5, "losses": 7, "pf": 1514.34, "pa": 1527.36, "state": "jake2020", "playoff": {"made": true, "rounds": 1, "pChampion": false}, "rChampion": false, "place": "✨" },
         { "team": "Gabe uhtsecs Moo", "name": "Max Strater", "wins": 6, "losses": 6, "pf": 1384.02, "pa": 1401.4, "state": "jake2020", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "" },
         { "team": "Dixon Cider", "name": "Jake Strater", "wins": 2, "losses": 10, "pf": 1363.38, "pa": 1680.32, "state": "jake2020", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "💩" }
@@ -75,17 +75,17 @@
     ],
 
     "2025": [
-        { "team": "Woody \"skid\" Marks and Co.", "name": "Will Friedenberger", "wins": 1, "losses": 4, "ties": 0, "pf": 522.88, "pa": 620.48, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "12" },
-        { "team": "Lil Tom", "name": "TJ Cairney", "wins": 5, "losses": 0, "ties": 0, "pf": 630.26, "pa": 543.8, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "1" },
-        { "team": "Welsh Wales", "name": "Brett Lewis", "wins": 3, "losses": 2, "ties": 0, "pf": 631.98, "pa": 561.3, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "4" },
-        { "team": "Bistro Beverages", "name": "Jimmy Beer", "wins": 1, "losses": 4, "ties": 0, "pf": 578.4, "pa": 627.26, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "10" },
-        { "team": "Dr. Fish", "name": "Noah Roberts", "wins": 2, "losses": 3, "ties": 0, "pf": 599.98, "pa": 588.68, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "7" },
-        { "team": "EPATHI", "name": "Keith John", "wins": 2, "losses": 3, "ties": 0, "pf": 537.32, "pa": 571.9, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "8" },
-        { "team": "Cali Awhitty", "name": "Austin Whittaker", "wins": 4, "losses": 1, "ties": 0, "pf": 630.26, "pa": 579.5, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "2" },
-        { "team": "Craven Moore", "name": "Garret Vivian", "wins": 2, "losses": 3, "ties": 0, "pf": 529.84, "pa": 606.54, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "9" },
-        { "team": "Jay Cutler's Mistress", "name": "Jake Strater", "wins": 1, "losses": 4, "ties": 0, "pf": 535.18, "pa": 558.0, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "11" },
-        { "team": "Ginja Ninjas", "name": "Ryan Winn", "wins": 2, "losses": 3, "ties": 0, "pf": 612.02, "pa": 580.74, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "6" },
-        { "team": "gabe uhtsecs", "name": "Max Strater", "wins": 4, "losses": 1, "ties": 0, "pf": 575.76, "pa": 547.38, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "3" },
-        { "team": "Boner Garage", "name": "Josh Whelan", "wins": 3, "losses": 2, "ties": 0, "pf": 607.22, "pa": 577.74, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "5" }
+        { "team": "Woody \"skid\" Marks and Co.", "name": "Will Friedenberger", "wins": 1, "losses": 5, "ties": 0, "pf": 610.06, "pa": 725.9, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "12" },
+        { "team": "Lil Tom", "name": "TJ Cairney", "wins": 6, "losses": 0, "ties": 0, "pf": 726.22, "pa": 624.84, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "1" },
+        { "team": "Welsh Wales", "name": "Brett Lewis", "wins": 4, "losses": 2, "ties": 0, "pf": 769.78, "pa": 671.76, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "4" },
+        { "team": "Bistro Beverages", "name": "Jimmy Beer", "wins": 2, "losses": 4, "ties": 0, "pf": 686.04, "pa": 728.22, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "8" },
+        { "team": "Dr. Fish", "name": "Noah Roberts", "wins": 2, "losses": 4, "ties": 0, "pf": 704.66, "pa": 727.98, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "7" },
+        { "team": "EPATHI", "name": "Keith John", "wins": 2, "losses": 4, "ties": 0, "pf": 631.46, "pa": 666.36, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "9" },
+        { "team": "Cali Awhitty", "name": "Austin Whittaker", "wins": 5, "losses": 1, "ties": 0, "pf": 724.72, "pa": 673.64, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "2" },
+        { "team": "Craven Moore", "name": "Garret Vivian", "wins": 2, "losses": 4, "ties": 0, "pf": 630.8, "pa": 714.18, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "10" },
+        { "team": "Jay Cutler's Mistress", "name": "Jake Strater", "wins": 1, "losses": 5, "ties": 0, "pf": 616.22, "pa": 681.74, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "11" },
+        { "team": "Ginja Ninjas", "name": "Ryan Winn", "wins": 3, "losses": 3, "ties": 0, "pf": 751.32, "pa": 685.42, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "5" },
+        { "team": "gabe uhtsecs", "name": "Max Strater", "wins": 5, "losses": 1, "ties": 0, "pf": 681.18, "pa": 634.56, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "3" },
+        { "team": "Boner Garage", "name": "Josh Whelan", "wins": 3, "losses": 3, "ties": 0, "pf": 717.58, "pa": 715.54, "state": "active", "playoff": {"made": false, "rounds": 0, "pChampion": false}, "rChampion": false, "place": "6" }
     ]
 }
