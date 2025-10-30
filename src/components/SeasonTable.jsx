@@ -28,6 +28,11 @@ export default function SeasonTable({ seasonData, year }) {
         const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
         const PFPG = totalGames ? pf / totalGames : 0;
         const PAPG = totalGames ? pa / totalGames : 0;
+        
+        const change = 
+          row.prevPlace != null && row.place != null
+            ? row.prevPlace - row.place
+            : 0;
 
         return {
           ...row,
@@ -40,6 +45,7 @@ export default function SeasonTable({ seasonData, year }) {
           winPct,
           PFPG,
           PAPG,
+          change,
           _idx: i, // preserve original index for stable sorting
         };
       }),
@@ -142,15 +148,16 @@ export default function SeasonTable({ seasonData, year }) {
     return sortConfig.direction === "asc" ? " ▲" : " ▼";
   };
 
+
   return (
     <div>
       <h2>Season {year}</h2>
-
       <div className={styles.tableContainer}>
         <table className={styles.table}>
           <thead>
             <tr>
               <th onClick={() => requestSort("place")}>Place{getSortIndicator("place")}</th>
+              <th>Change</th>
               <th onClick={() => requestSort("team")}>Team{getSortIndicator("team")}</th>
               <th onClick={() => requestSort("winPct")}>WIN%{getSortIndicator("winPct")}</th>
               <th onClick={() => requestSort("wins")}>Wins{getSortIndicator("wins")}</th>
@@ -174,21 +181,28 @@ export default function SeasonTable({ seasonData, year }) {
               const pfpg = totalGames ? (row.pf / totalGames).toFixed(1) : "-";
               const papg = totalGames ? (row.pa / totalGames).toFixed(1) : "-";
 
-              // find top3 by winPct dynamically
-              const top3 = [...sortedData]
-                .sort((a, b) => (b.winPct || 0) - (a.winPct || 0))
-                .slice(0,3)
-                .map((t) => t._idx);
-
+              // highlight rows based on place number
               let rowClass = "";
-              if (top3[0] === row._idx) rowClass = styles.goldRow
-              else if (top3[1] === row._idx) rowClass = styles.silverRow
-              else if (top3[2] === row._idx) rowClass = styles.bronzeRow
+              if (row.place === 1) rowClass = styles.goldRow;
+              else if (row.place === 2) rowClass = styles.silverRow;
+              else if (row.place === 3) rowClass = styles.bronzeRow;
 
+              // change
+              let changeDisplay = "-";
+              let changeStyle = {};
+
+              if (row.change > 0) {
+                changeDisplay = `▲ ${row.change}`;
+                changeStyle = { color: "green", fontWeight: "bold" };
+              } else if (row.change < 0) {
+                changeDisplay = `▼ ${Math.abs(row.change)}`;
+                changeStyle = { color: "red", fontWeight: "bold" };
+              }
 
               return (
                 <tr key={idx} className={rowClass}>
                   <td className="placementEmoji">{row.place || ""}</td>
+                  <td style={changeStyle}>{changeDisplay}</td>
                   <td>{row.team}</td>
                   <td>{winPctDisplay}</td>
                   <td>{row.wins}</td>

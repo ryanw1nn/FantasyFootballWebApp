@@ -110,9 +110,9 @@ export default function AllTimeTable({ allData }) {
                         <th onClick={() => requestSort("PA")}>PA{getSortIndicator("PA")}</th>
                         <th onClick={() => requestSort("PFPG")}>PFPG{getSortIndicator("PFPG")}</th>
                         <th onClick={() => requestSort("PAPG")}>PAPG{getSortIndicator("PAPG")}</th>
-                        <th onClick={() => requestSort("regSeasonChamps")}>Reg-Champs{getSortIndicator("regSeasonChamps")}</th>
-                        <th onClick={() => requestSort("playoffRounds")}>Playoff Rounds{getSortIndicator("playoffRounds")}</th>
-                        <th onClick={() => requestSort("postSeasonChamps")}>Post-Champs{getSortIndicator("postSeasonChamps")}</th>
+                        <th onClick={() => requestSort("regSeasonChamps")}>R-Champs{getSortIndicator("regSeasonChamps")}</th>
+                        <th onClick={() => requestSort("playoffRounds")}>P-Rounds{getSortIndicator("playoffRounds")}</th>
+                        <th onClick={() => requestSort("postSeasonChamps")}>P-Champs{getSortIndicator("postSeasonChamps")}</th>
 
                     </tr>
                 </thead>

@@ -23,6 +23,7 @@ let seasonsData = {};
 try {
   const raw = fs.readFileSync(dataFile, "utf-8");
   console.log("Raw file content length:", raw.length); 
+  console.log(raw.slice(0, 500));
   seasonsData = JSON.parse(raw);
   console.log("Seasons data loaded. Keys:", Object.keys(seasonsData));
 } catch (err) {
