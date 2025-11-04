@@ -1,224 +1,377 @@
-import React, { useState, useMemo } from "react";
-import styles from "./Table.module.css";
+// ==================================
+// AllTimeTable.jsx
+// ==================================
 
-export default function SeasonTable({ seasonData, year }) {
-  const [sortConfig, setSortConfig] = useState({ key: "winPct", direction: "desc" });
+import React, { useState, useMemo } from 'react';
 
-  if (!seasonData) return null;
+/**
+ * SeasonTable Component
+ * 
+ * Displays rankings and statistics for a single season.
+ * Features:
+ *  - Season standings with place indicators
+ *  - Rank change tracking (up/down from previous week)
+ *  - Full Statistics (W-L, PF, PA, PFPG, PAPG)
+ *  - Championship and playoff indicators
+ *  - Sortable columns
+ *  - Search filtering by player name or team name
+ * 
+ * @param {Object} props - Component props
+ * @param {Array} props.seasonData - Array of team objects for the season
+ * @param {string|number} props.year - The year of the season being displayed
+ * @param {string} props.searchQuery - Search query to filter teams/players
+ */
+export default function SeasonTable({ seasonData, year, searchQuery }) {
+  // ==================================
+  // STATE MANAGEMENT
+  // ==================================
 
-  // emoji mapping (used when "place" is an emoji)
-  const emojiRank = {
-    "🥇": 1,
-    "🥈": 2,
-    "🥉": 3,
-    "✨": 4,
-    "💩": 5,
-  };
+  /**
+   * Sorting configuration
+   * Defaults to sorting by place (ascending - 1st place at top)
+   */
+  const [sortConfig, setSortConfig] = useState({
+    key: "place",
+    direction: "asc"
+  });
 
-  // Prepare data once (coerce numeric fields to numbers and add original index for stable sort)
-  const preparedData = useMemo(
-    () =>
-      seasonData.map((row, i) => {
-        const wins = Number(row.wins) || 0;
-        const losses = Number(row.losses) || 0;
-        const ties = Number(row.ties) || 0;
-        const pf = Number(row.pf) || 0;
-        const pa = Number(row.pa) || 0;
-        const totalGames = wins + losses + ties;
-        const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
-        const PFPG = totalGames ? pf / totalGames : 0;
-        const PAPG = totalGames ? pa / totalGames : 0;
-        
-        const change = 
-          row.prevPlace != null && row.place != null
-            ? row.prevPlace - row.place
-            : 0;
+  // ==================================
+  // DATA PREPARATION & FILTERING
+  // ==================================
 
-        return {
-          ...row,
-          wins,
-          losses,
-          ties,
-          pf,
-          pa,
-          totalGames,
-          winPct,
-          PFPG,
-          PAPG,
-          change,
-          _idx: i, // preserve original index for stable sorting
-        };
-      }),
-    [seasonData]
-  );
+  /**
+   * Prepares and enriches season data with calculated fields
+   * Memoized to prevent recalculation on every render
+   */
+  const preparedData = useMemo(() => {
+    let data = seasonData.map((row, i) => {
+      // ensure numeric values
+      const wins = Number(row.wins) || 0;
+      const losses = Number(row.losses) || 0;
+      const ties = Number (row.ties) || 0;
+      const totalGames = wins + losses + ties;
 
-  // Robust comparator + tie-breakers
+      // Calculates win percentage (ties = 0.5 wins)
+      const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
+
+      // Calculate rank change from previous standings
+      // Positive = moved up, Negative = moved down, 0 = no change
+      const change = row.prevPlace != null && row.place != null
+        ? row.prevPlace - row.place
+        : 0;
+
+      // Normalize place to number (handle emoji and string values)
+      let placeValue = row.place;
+
+      // Handle emoji placings from older data
+      const emojiMap = {
+        "🥇": 1,
+        "🥈": 2, 
+        "🥉": 3,
+        "✨": 4,
+        "💩": 5
+      };
+
+      if (typeof placeValue === 'string' && emojiMap[placeValue]) {
+        placeValue = emojiMap[placeValue];
+      } else if (typeof placeValue === 'string') {
+        // Try to parse as number
+        const parsed = parseInt(placeValue);
+        if (!isNaN(parsed)) {
+          placeValue = parsed;
+        }
+      }
+
+      return {
+        ...row,
+        wins,
+        losses,
+        ties,
+        totalGames,
+        winPct,
+        change,
+        placeValue,
+        _idx: i, // preserve original index for stable sorting
+      };
+    });
+
+    // Apply search filter if query exists
+    if (searchQuery) {
+        data = data.filter(d =>
+          d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          d.team.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }
+
+    return data;
+  }, [seasonData, searchQuery]);
+
+  // ==================================
+  // SORTING
+  // ==================================
+
+  /**
+   * Sorts teams based on current sort configuration
+   * Includes tie-breakers: PF (descending) as primary tie-breaker
+   * Memoized to prevent re-sorting on every render
+   */
   const sortedData = useMemo(() => {
-    const EPSILON = 1e-6;
-    const numericLikeRegex = /^[+-]?\d[\d,]*\.?\d*%?$/;
-
-    const normalize = (obj, key) => {
-      // guard
-      if (obj == null) return null;
-      const raw = obj[key];
-
-      if (raw == null) return null;
-
-      // special case: place emojis
-      if (key === "place") {
-        if (typeof raw === "string" && emojiRank[raw]) return emojiRank[raw];
-        // if it's a number-like string or number, fall through to numeric handling
-      }
-
-      // if it's already a number, return it
-      if (typeof raw === "number") return raw;
-
-      // if it's a string that looks numeric (e.g. "10", "66.7%", "1,234"), parse it
-      if (typeof raw === "string") {
-        const s = raw.trim();
-        if (numericLikeRegex.test(s)) {
-          // remove commas and optional percent sign, then parse
-          const num = Number(s.replace(/,/g, "").replace("%", ""));
-          if (!isNaN(num)) return num;
-        }
-        // fallback: case-insensitive string for comparisons
-        return s.toLowerCase();
-      }
-
-      // fallback: return as-is
-      return raw;
-    };
-
-    const dir = sortConfig.direction === "asc" ? 1 : -1;
-
     return [...preparedData].sort((a, b) => {
-      const key = sortConfig.key;
-      if (!key) return 0;
+      let key = sortConfig.key;
+      const dir = sortConfig.direction === "asc" ? 1 : -1;
 
-      const aVal = normalize(a, key);
-      const bVal = normalize(b, key);
-
-      // both null/undefined -> continue to tie breakers
-      if (aVal == null && bVal == null) {
-        /* fall through */
-      } else if (typeof aVal === "number" && typeof bVal === "number") {
-        // numeric comparison with small tolerance for floats
-        if (Math.abs(aVal - bVal) > EPSILON) {
-          return (aVal < bVal ? -1 : 1) * dir;
-        }
-      } else {
-        // string comparison (localeCompare with numeric option)
-        const sa = String(aVal ?? "");
-        const sb = String(bVal ?? "");
-        const cmp = sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" });
-        if (cmp !== 0) return cmp * dir;
+      // Use placevalue for sorting when sorting by place
+      if (key === "place") {
+        key = "placeValue";
       }
 
-      // === tie-breakers (apply when primary key considered equal) ===
-      // 1) PF (points for) -- always descending (more PF ranks higher)
-      if ((a.pf || 0) !== (b.pf || 0)) return a.pf > b.pf ? -1 : 1;
+      let aVal = a[key];
+      let bVal = b[key];
 
-      // 2) PA (points against) -- ascending (lower PA better)
-      if ((a.pa || 0) !== (b.pa || 0)) return (a.pa || 0) < (b.pa || 0) ? -1 : 1;
+      // Handle null/undefined values
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
 
-      // 3) team name (alphabetical)
-      const teamCmp = String(a.team ?? "").localeCompare(String(b.team ?? ""), undefined, {
-        sensitivity: "base",
-        numeric: true,
-      });
-      if (teamCmp !== 0) return teamCmp;
+      // Primary sort by selected column
+      if (aVal < bVal) return -1 * dir;
+      if (aVal > bVal) return 1 * dir;
 
-      // 4) stable fallback by original index
-      return (a._idx || 0) - (b._idx || 0);
+      // Tie-breaker; sort by PF (desc)
+      return (b.pf || 0) - (a.pf || 0);
     });
   }, [preparedData, sortConfig]);
 
-  // handle header click
+  /**
+   * Handles column header clicks to change sorting
+   * Toggles between ascending and descending on repeated clicks
+   * 
+   * @param {string} key - The column key to sort by
+   */
   const requestSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") {
-      direction = "desc";
-    }
-    setSortConfig({ key, direction });
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc"
+    }));
   };
 
-  // arrow indicator
-  const getSortIndicator = (key) => {
-    if (sortConfig.key !== key) return null;
-    return sortConfig.direction === "asc" ? " ▲" : " ▼";
+  /**
+   * Returns the appropiate sort indicator for a column
+   * 
+   * @param {string} key - The column key
+   * @returns {string} Unicode arrow character or empty string
+   */
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return "↕";
+    return sortConfig.direction === "asc" ? "↑" : "↓";
   };
 
+  // ==================================
+  // RENDER
+  // ==================================
 
   return (
-    <div>
-      <h2>Season {year}</h2>
-      <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th onClick={() => requestSort("place")}>Place{getSortIndicator("place")}</th>
-              <th>Change</th>
-              <th onClick={() => requestSort("team")}>Team{getSortIndicator("team")}</th>
-              <th onClick={() => requestSort("winPct")}>WIN%{getSortIndicator("winPct")}</th>
-              <th onClick={() => requestSort("wins")}>Wins{getSortIndicator("wins")}</th>
-              <th onClick={() => requestSort("losses")}>Losses{getSortIndicator("losses")}</th>
-              {year === "2024" && (
-                <th onClick={() => requestSort("ties")}>Ties{getSortIndicator("ties")}</th>
-              )}
-              <th onClick={() => requestSort("pf")}>PF{getSortIndicator("pf")}</th>
-              <th onClick={() => requestSort("pa")}>PA{getSortIndicator("pa")}</th>
-              <th onClick={() => requestSort("PFPG")}>PFPG{getSortIndicator("PFPG")}</th>
-              <th onClick={() => requestSort("PAPG")}>PAPG{getSortIndicator("PAPG")}</th>
-              <th>Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedData.map((row, idx) => {
-              const totalGames = row.totalGames;
-              const winPctDisplay = totalGames
-                ? (((row.wins + 0.5 * (row.ties || 0)) / totalGames) * 100).toFixed(1) + "%"
-                : "-";
-              const pfpg = totalGames ? (row.pf / totalGames).toFixed(1) : "-";
-              const papg = totalGames ? (row.pa / totalGames).toFixed(1) : "-";
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse">
+        
+        {/* Table Header - Sticky on scroll */}
+        <thead className="sticky top-0 bg-gradient-to-r from-purple-600 to-purple-700 text-white z-10">
+          <tr>
+            {/* Place/Rank Column */}
+            <th 
+              className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("place")}
+            >
+              # {getSortIcon("place")}
+            </th>
+            
+            {/* Change (Delta) Column - Not sortable */}
+            <th className="px-4 py-3 text-center font-semibold">
+              Δ
+            </th>
+            
+            {/* Team Name Column */}
+            <th 
+              className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("team")}
+            >
+              Team {getSortIcon("team")}
+            </th>
+            
+            {/* Owner Name Column */}
+            <th 
+              className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("name")}
+            >
+              Owner {getSortIcon("name")}
+            </th>
+            
+            {/* Win Percentage Column */}
+            <th 
+              className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("winPct")}
+            >
+              WIN% {getSortIcon("winPct")}
+            </th>
+            
+            {/* Win-Loss Record Column */}
+            <th 
+              className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("wins")}
+            >
+              W-L {getSortIcon("wins")}
+            </th>
+            
+            {/* Points For Column */}
+            <th 
+              className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("pf")}
+            >
+              PF {getSortIcon("pf")}
+            </th>
+            
+            {/* Points Against Column */}
+            <th 
+              className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
+              onClick={() => requestSort("pa")}
+            >
+              PA {getSortIcon("pa")}
+            </th>
+            
+            {/* Points For Per Game - Not sortable (calculated field) */}
+            <th className="px-4 py-3 text-center font-semibold">
+              PFPG
+            </th>
+            
+            {/* Points Against Per Game - Not sortable (calculated field) */}
+            <th className="px-4 py-3 text-center font-semibold">
+              PAPG
+            </th>
+          
+          </tr>
+        </thead>
+        
+        {/* Table Body */}
+        <tbody>
+          {sortedData.map((row, idx) => {
+            // Calculate display values
+            const winPctDisplay = row.totalGames 
+              ? (row.winPct * 100).toFixed(1) + "%" 
+              : "-";
+            const pfpg = row.totalGames 
+              ? (row.pf / row.totalGames).toFixed(1) 
+              : "-";
+            const papg = row.totalGames 
+              ? (row.pa / row.totalGames).toFixed(1) 
+              : "-";
+            
+            // Build row classes for styling
+            let rowClass = "border-b border-gray-200 hover:bg-purple-50 transition-colors";
+            
+            // Add zebra striping
+            if (idx % 2 === 0) rowClass += " bg-white";
+            else rowClass += " bg-gray-50";
 
-              // highlight rows based on place number
-              let rowClass = "";
-              if (row.place === 1) rowClass = styles.goldRow;
-              else if (row.place === 2) rowClass = styles.silverRow;
-              else if (row.place === 3) rowClass = styles.bronzeRow;
+            // Add colored left border for top 3 finishers
+            if (row.place === 1) rowClass += " border-l-4 border-l-yellow-400";
+            else if (row.place === 2) rowClass += " border-l-4 border-l-gray-400";
+            else if (row.place === 3) rowClass += " border-l-4 border-l-amber-700";
 
-              // change
-              let changeDisplay = "-";
-              let changeStyle = {};
+            return (
+              <tr key={idx} className={rowClass}>
+                
+                {/* Place/Rank - Show medal emojis for top 3 */}
+                <td className="px-4 py-3 text-center font-bold text-gray-900">
+                  {row.place === 1 && "🥇"}
+                  {row.place === 2 && "🥈"}
+                  {row.place === 3 && "🥉"}
+                  {row.place > 3 && row.place}
+                </td>
+                
+                {/* Place/Rank - Show medal emojis for top 3 or championship indicators */}
+                <td className="px-4 py-3 text-center font-bold text-gray-900">
+                  <div className="flex items-center justify-center gap-1">
+                    {row.placeValue === 1 && "🥇"}
+                    {row.placeValue === 2 && "🥈"}
+                    {row.placeValue === 3 && "🥉"}
+                    {row.placeValue > 3 && row.placeValue}
+                    {/* Show championship indicators next to place */}
+                    {row.rChampion && (
+                      <span className="text-lg ml-1" title="Regular Season Champion">👑</span>
+                    )}
+                    {row.playoff?.pChampion && (
+                      <span className="text-lg ml-1" title="Playoff Champion">🏆</span>
+                    )}
+                  </div>
+                </td>
 
-              if (row.change > 0) {
-                changeDisplay = `▲ ${row.change}`;
-                changeStyle = { color: "green", fontWeight: "bold" };
-              } else if (row.change < 0) {
-                changeDisplay = `▼ ${Math.abs(row.change)}`;
-                changeStyle = { color: "red", fontWeight: "bold" };
-              }
+                {/* Change Indicator - Green for up, Red for down */}
+                <td className="px-4 py-3 text-center">
+                  {row.change > 0 && (
+                    <span className="text-green-600 font-bold">+{row.change}</span>
+                  )}
+                  {row.change < 0 && (
+                    <span className="text-red-600 font-bold">{row.change}</span>
+                  )}
+                  {row.change === 0 && (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
 
-              return (
-                <tr key={idx} className={rowClass}>
-                  <td className="placementEmoji">{row.place || ""}</td>
-                  <td style={changeStyle}>{changeDisplay}</td>
-                  <td>{row.team}</td>
-                  <td>{winPctDisplay}</td>
-                  <td>{row.wins}</td>
-                  <td>{row.losses}</td>
-                  {year === "2024" && <td>{row.ties}</td>}
-                  <td>{row.pf}</td>
-                  <td>{row.pa}</td>
-                  <td>{pfpg}</td>
-                  <td>{papg}</td>
-                  <td>{row.name}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                {/* Team Name */}
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {row.team}
+                </td>
+                
+                {/* Owner Name */}
+                <td className="px-4 py-3 text-gray-700">
+                  {row.name}
+                </td>
+                
+                {/* Win Percentage - Color coded by performance */}
+                <td className="px-4 py-3 text-center">
+                  <span className={`font-semibold ${
+                    row.winPct >= 0.6 ? 'text-green-600' :   // Great record
+                    row.winPct >= 0.5 ? 'text-blue-600' :    // Above .500
+                    'text-gray-600'                          // Below .500
+                  }`}>
+                    {winPctDisplay}
+                  </span>
+                </td>
+                
+                {/* Win-Loss Record - Color coded */}
+                <td className="px-4 py-3 text-center text-gray-700">
+                  <span className="text-green-600 font-medium">{row.wins}</span>-
+                  <span className="text-red-600 font-medium">{row.losses}</span>
+                  {row.ties > 0 && (
+                    <span className="text-gray-500">-{row.ties}</span>
+                  )}
+                </td>
+                
+                {/* Points For */}
+                <td className="px-4 py-3 text-center text-gray-700 font-medium">
+                  {row.pf?.toFixed(1)}
+                </td>
+                
+                {/* Points Against */}
+                <td className="px-4 py-3 text-center text-gray-700 font-medium">
+                  {row.pa?.toFixed(1)}
+                </td>
+                
+                {/* Points For Per Game */}
+                <td className="px-4 py-3 text-center text-gray-700">
+                  {pfpg}
+                </td>
+                
+                {/* Points Against Per Game */}
+                <td className="px-4 py-3 text-center text-gray-700">
+                  {papg}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
