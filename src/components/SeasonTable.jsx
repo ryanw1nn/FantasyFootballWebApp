@@ -1,5 +1,5 @@
 // ==================================
-// AllTimeTable.jsx
+// SeasonTable.jsx
 // ==================================
 
 import React, { useState, useMemo } from 'react';
@@ -63,21 +63,9 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
       // Normalize place to number (handle emoji and string values)
       let placeValue = row.place;
 
-      // Handle emoji placings from older data
-      const emojiMap = {
-        "🥇": 1,
-        "🥈": 2, 
-        "🥉": 3,
-        "✨": 4,
-        "💩": 5
-      };
-
-      if (typeof placeValue === 'string' && emojiMap[placeValue]) {
-        placeValue = emojiMap[placeValue];
-      } else if (typeof placeValue === 'string') {
-        // Try to parse as number
+      if (typeof placeValue === 'string') {
         const parsed = parseInt(placeValue);
-        if (!isNaN(parsed)) {
+        if(!isNaN(parsed)) {
           placeValue = parsed;
         }
       }
@@ -182,7 +170,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
               className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
               onClick={() => requestSort("place")}
             >
-              # {getSortIcon("place")}
+              Rank {getSortIcon("place")}
             </th>
             
             {/* Change (Delta) Column - Not sortable */}
@@ -219,7 +207,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
               className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-purple-500 transition-colors" 
               onClick={() => requestSort("wins")}
             >
-              W-L {getSortIcon("wins")}
+              Record {getSortIcon("wins")}
             </th>
             
             {/* Points For Column */}
@@ -280,27 +268,16 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
             return (
               <tr key={idx} className={rowClass}>
                 
-                {/* Place/Rank - Show medal emojis for top 3 */}
-                <td className="px-4 py-3 text-center font-bold text-gray-900">
-                  {row.place === 1 && "🥇"}
-                  {row.place === 2 && "🥈"}
-                  {row.place === 3 && "🥉"}
-                  {row.place > 3 && row.place}
-                </td>
-                
                 {/* Place/Rank - Show medal emojis for top 3 or championship indicators */}
                 <td className="px-4 py-3 text-center font-bold text-gray-900">
                   <div className="flex items-center justify-center gap-1">
-                    {row.placeValue === 1 && "🥇"}
-                    {row.placeValue === 2 && "🥈"}
-                    {row.placeValue === 3 && "🥉"}
-                    {row.placeValue > 3 && row.placeValue}
+                    {row.placeValue}
                     {/* Show championship indicators next to place */}
                     {row.rChampion && (
-                      <span className="text-lg ml-1" title="Regular Season Champion">👑</span>
+                      <span className="text-lg ml-1" title="Regular Season Champion">RS</span>
                     )}
                     {row.playoff?.pChampion && (
-                      <span className="text-lg ml-1" title="Playoff Champion">🏆</span>
+                      <span className="text-lg ml-1" title="Playoff Champion">PO</span>
                     )}
                   </div>
                 </td>
@@ -344,7 +321,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
                   <span className="text-green-600 font-medium">{row.wins}</span>-
                   <span className="text-red-600 font-medium">{row.losses}</span>
                   {row.ties > 0 && (
-                    <span className="text-gray-500">-{row.ties}</span>
+                    <span>-<span className="text-gray-500">-{row.ties}</span></span>
                   )}
                 </td>
                 

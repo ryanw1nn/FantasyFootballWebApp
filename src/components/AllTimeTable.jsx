@@ -206,6 +206,11 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     >
                         L {getSortIcon("losses")}
                     </th>
+                    <th
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
+                        onClick={() => requestSort("ties")}
+                    >   T {getSortIcon("ties")}
+                    </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
                         onClick={() => requestSort("totalGames")}
@@ -220,15 +225,21 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
-                        onClick={() => requestSort("pChampionCount")}
+                        onClick={() => requestSort("rChampionCount")}
                     >
-                        🏆 {getSortIcon("pChampionCount")}
+                        RS {getSortIcon("rChampionCount")}
                     </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
-                        onClick={() => requestSort("rChampionCount")}
+                        onClick={() => requestSort("playoffRounds")}
                     >
-                        👑 {getSortIcon("rChampionCount")}
+                        Rounds {getSortIcon("playoffRounds")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("pChampionCount")}
+                    >
+                        PO {getSortIcon("pChampionCount")}
                     </th>
                     </tr>
                 </thead>
@@ -267,6 +278,11 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     <td className="px-4 py-3 text-center text-red-600 font-medium">
                         {player.losses}
                     </td>
+
+                    {/* Ties - Gray color */}
+                    <td className="px-4 py-3 text-center text-gray-600 font-medium">
+                        {player.ties}
+                    </td>
                     
                     {/* Games Played */}
                     <td className="px-4 py-3 text-center text-gray-700">
@@ -278,14 +294,6 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         {player.PFPG.toFixed(1)}
                     </td>
                     
-                    {/* Playoff Championships - Badge display */}
-                    <td className="px-4 py-3 text-center">
-                        {player.pChampionCount > 0 && (
-                        <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
-                            {player.pChampionCount}
-                        </span>
-                        )}
-                    </td>
                     
                     {/* Regular Season Championships - Badge display */}
                     <td className="px-4 py-3 text-center">
@@ -295,6 +303,25 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         </span>
                         )}
                     </td>
+
+                     {/* Playoff Rounds - Badge display */}
+                     <td className="px-4 py-3 text-center">
+                        {player.pChampionCount > 0 && (
+                        <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.playoffRounds}
+                        </span>
+                        )}
+                    </td>   
+
+                    {/* Playoff Championships - Badge display */}
+                    <td className="px-4 py-3 text-center">
+                        {player.pChampionCount > 0 && (
+                        <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.pChampionCount}
+                        </span>
+                        )}
+                    </td>
+
                     </tr>
                 ))}
                 </tbody>

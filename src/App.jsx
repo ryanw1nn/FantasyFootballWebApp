@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Trophy, TrendingUp, Medal } from 'lucide-react';
+import { Search, Trophy, TrendingUp, TrendingDown, Medal } from 'lucide-react';
 
 // import custom components
 import StatsCard from './components/StatsCard';
@@ -96,14 +96,17 @@ export default function App() {
       0
     );
 
-    // Calculate average points for per team
-    const avgPF = season.length > 0
-      ? season.reduce((sum, team) => sum + (team.pf || 0), 0) / season.length
-      : 0;
+    const totalPF = season.reduce((sum, team) => sum + (team.pf || 0), 0);
+    const totalPA = season.reduce((sum, team) => sum + (team.pa || 0), 0);
+
+    // Calculate league PFPG and PAPG
+    const leaguePFPG = totalGames > 0 ? totalPF / totalGames : 0;
+    const leaguePAPG = totalGames > 0 ? totalPA / totalGames : 0;
 
     return {
       totalGames,
-      avgPF,
+      leaguePFPG,
+      leaguePAPG,
       teams: season.length
     };
   }, [selectedYear]);
@@ -137,14 +140,14 @@ export default function App() {
         {viewMode === "season" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <StatsCard
-              title="Total Games Played"
-              value={currentSeasonStats.totalGames}
-              icon={Medal}
+              title="League PFPG"
+              value={currentSeasonStats.leaguePFPG.toFixed(1)}
+              icon={TrendingUp}
             />
             <StatsCard
-              title="Avg Points Per Team"
-              value={currentSeasonStats.avgPF.toFixed(1)}
-              icon={TrendingUp}
+              title="League PAPG"
+              value={currentSeasonStats.leaguePAPG.toFixed(1)}
+              icon={TrendingDown}
             />
             <StatsCard 
               title="Teams in League"
@@ -265,7 +268,7 @@ export default function App() {
           </div>
 
           {/* Table Content - Conditionally renders based on view mode */}
-          <div className="overflow-auto max-h-[600px]">
+          <div className="overflow-x-auto">
             {viewMode === "season" ? (
               // Season View - shows single season rankings
               <SeasonTable 
@@ -296,8 +299,9 @@ export default function App() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700">
             <div><strong>PFPG:</strong> Points For Per Game</div>
             <div><strong>PAPG:</strong> Points Against Per Game</div>
-            <div><strong>🏆:</strong> Playoff Champion</div>
-            <div><strong>👑:</strong> Regular Season Champion</div>
+            <div><strong>RS:</strong> Regular Season Champion</div>
+            <div><strong>Rounds:</strong> Playoff Rounds</div>
+            <div><strong>PO:</strong> Playoff Champion</div>            
             <div><strong>GP:</strong> Games Played</div>
             <div><strong>Δ:</strong> Rank Change</div>
           </div>
