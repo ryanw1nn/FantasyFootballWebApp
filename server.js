@@ -1,3 +1,6 @@
+// ===============================
+// IMPORTS & SETUP
+// ===============================
 import express from "express";
 import cors from "cors";
 import fs from "fs";
@@ -11,14 +14,26 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 5000;
 
-// Middleware
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json());
+// ===============================
+// MIDDLEWARE
+// ===============================
+app.use(cors({ origin: "http://localhost:5173" })); // Allow requests from Vite dev server
+app.use(express.json()); // Parse JSOn request bodies
 
-// Path to the JSON file
+// ===============================
+// DATA FILE PATHS
+// ===============================
 const dataFile = path.join(__dirname, "src", "data", "seasons.json");
+const backupDir = path.join(__dirname, "backups");
 
-// Load the data into memory
+// Create backup directory if it doesn't exist
+if (!fs.existsSync(backupDir)) {
+  fs.mkdirSync(backupDir);
+}
+
+// ===============================
+// LOAD DATA INTO MEMORY
+// ===============================
 let seasonsData = {};
 try {
   const raw = fs.readFileSync(dataFile, "utf-8");
@@ -26,7 +41,9 @@ try {
   console.log("Seasons data loaded. Years:", Object.keys(seasonsData));
 } catch (err) {
   console.error("Could not load seasons.json:", err);
+  process.exit(1); // Exit if data can't be loaded
 }
+
 
 // ===============================
 // HELPER FUNCTIONS
@@ -115,7 +132,7 @@ function recalculateStandings(year) {
 }
 
 // ===============================
-// EXISTING ROUTES (probably fix later.)
+// ROUTES 
 // ===============================
 
 // GET all seasons
