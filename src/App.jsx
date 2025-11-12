@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Trophy, TrendingUp, TrendingDown, Medal } from 'lucide-react';
+import { Search, Trophy, TrendingUp, TrendingDown, Medal, Edit } from 'lucide-react';
 
 // import custom components
 import StatsCard from './components/StatsCard';
@@ -110,6 +110,10 @@ export default function App() {
       teams: season.length
     };
   }, [selectedYear]);
+
+  if (viewMode === "editSeason") {
+    return <EditSeasonPageSimple selectedYear={selectedYear} onBack={() => setViewMode("season")} />;
+  }
 
   // ======================================
   // RENDER
@@ -231,19 +235,30 @@ export default function App() {
               </div>
           </div>
 
-          {/* Year Selector - Only visible in season view */}
+          {/* Year Selector + Edit Button - Only visible in season view */}
           {viewMode === "season" && (
-            <div className="mt-4 flex items-center gap-3">
-              <label className="font-semibold text-gray-700">Season:</label>
-              <select 
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium"
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <label className="font-semibold text-gray-700">Season:</label>
+                <select 
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium"
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Edit Season Button */}
+              <button 
+                onClick={() => setViewMode("editSeason")}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md"
               >
-                {years.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+                <Edit className="w-5 h-5" />
+                Edit Season
+              </button>
             </div>
           )}
         </div> 
@@ -306,6 +321,55 @@ export default function App() {
             <div><strong>Δ:</strong> Rank Change</div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** EditSeasonPage Component (inline)
+ * PLACEHOLDER: MOVE INTO ANOTHER FILE
+ */
+function EditSeasonPageSimple({ selectedYear, onBack }) {
+  const [weeks, setWeeks] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    fetch(`http://localhost:5000/api/seasons/${selectedYear}/weeks`)
+      .then(res => res.json())
+      .then(data => {
+        setWeeks(data.weeks || {});
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load:', err);
+        setLoading(false);
+      });
+  }, [selectedYear]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+      <div className="max-w-4xl mx-auto">
+        <button
+          onClick={onBack}
+          className="mb-6 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+        >
+          ← Back to Dashboard
+        </button>
+      
+        <h1 className="text-3xl font-bold mb-6">Edit {selectedYear} Season</h1>
+      
+        {loading ? (
+          <p>Loading...</p>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <p className="text-gray-700">
+              Found {Object.keys(weeks).length} weeks of data
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Full edit interface coming soon! This is a placeholder.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
