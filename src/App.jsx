@@ -5,6 +5,7 @@ import { Search, Trophy, TrendingUp, TrendingDown, Medal, Edit } from 'lucide-re
 import StatsCard from './components/StatsCard';
 import AllTimeTable from './components/AllTimeTable';
 import SeasonTable from './components/SeasonTable';
+import EditSeasonPage from './components/EditSeasonPage';
 
 // import season data
 import data from './data/seasons.json';
@@ -68,7 +69,13 @@ export default function App() {
    * @return {Array} Filtered array of teams
    */
   const filterTeams = (seasonData) => {
-    return seasonData.filter((team) => filters[team.state]);
+    let teams = seasonData;
+
+    if (!Array.isArray(seasonData)) {
+      teams = seasonData?.standings || seasonData?.teams || [];
+    }
+
+    return teams.filter((team) => filters[team.state]);
   };
 
   /**
@@ -88,7 +95,16 @@ export default function App() {
    * Memoized to avoid recalculation on every render
    */
   const currentSeasonStats = useMemo(() => {
-    const season = data[selectedYear] || [];
+    // Handle both old format (array) and new format (object with standings)
+     let seasonData = data[selectedYear];
+
+    // if it's the new format, use standings array
+    if (seasonData && !Array.isArray(seasonData)) {
+      seasonData = seasonData.standings || seasonData.teams || [];
+    }
+
+    // fallback to empty array if nothing is found
+    const season = Array.isArray(seasonData) ? seasonData : [];
 
     // Calculate total games across all teams
     const totalGames = season.reduce(
@@ -97,22 +113,21 @@ export default function App() {
     );
 
     const totalPF = season.reduce((sum, team) => sum + (team.pf || 0), 0);
-    const totalPA = season.reduce((sum, team) => sum + (team.pa || 0), 0);
+    // unused const totalPA = season.reduce((sum, team) => sum + (team.pa || 0), 0);
 
     // Calculate league PFPG and PAPG
     const leaguePFPG = totalGames > 0 ? totalPF / totalGames : 0;
-    const leaguePAPG = totalGames > 0 ? totalPA / totalGames : 0;
+    // unused const leaguePAPG = totalGames > 0 ? totalPA / totalGames : 0;
 
     return {
       totalGames,
       leaguePFPG,
-      leaguePAPG,
       teams: season.length
     };
   }, [selectedYear]);
 
   if (viewMode === "editSeason") {
-    return <EditSeasonPageSimple selectedYear={selectedYear} onBack={() => setViewMode("season")} />;
+    return <EditSeasonPage selectedYear={selectedYear} onBack={() => setViewMode("season")} />;
   }
 
   // ======================================
@@ -144,14 +159,14 @@ export default function App() {
         {viewMode === "season" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <StatsCard
+              title="Total Games Played"
+              value={currentSeasonStats.totalGames}
+              icon={TrendingDown}
+            />
+            <StatsCard
               title="League PFPG"
               value={currentSeasonStats.leaguePFPG.toFixed(1)}
               icon={TrendingUp}
-            />
-            <StatsCard
-              title="League PAPG"
-              value={currentSeasonStats.leaguePAPG.toFixed(1)}
-              icon={TrendingDown}
             />
             <StatsCard 
               title="Teams in League"
@@ -326,51 +341,51 @@ export default function App() {
   );
 }
 
-/** EditSeasonPage Component (inline)
- * PLACEHOLDER: MOVE INTO ANOTHER FILE
- */
-function EditSeasonPageSimple({ selectedYear, onBack }) {
-  const [weeks, setWeeks] = useState({});
-  const [loading, setLoading] = useState(true);
+// /** EditSeasonPage Component (inline)
+//  * PLACEHOLDER: MOVE INTO ANOTHER FILE
+//  */
+// function EditSeasonPageSimple({ selectedYear, onBack }) {
+//   const [weeks, setWeeks] = useState({});
+//   const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
-    fetch(`http://localhost:5000/api/seasons/${selectedYear}/weeks`)
-      .then(res => res.json())
-      .then(data => {
-        setWeeks(data.weeks || {});
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Failed to load:', err);
-        setLoading(false);
-      });
-  }, [selectedYear]);
+//   React.useEffect(() => {
+//     fetch(`http://localhost:5000/api/seasons/${selectedYear}/weeks`)
+//       .then(res => res.json())
+//       .then(data => {
+//         setWeeks(data.weeks || {});
+//         setLoading(false);
+//       })
+//       .catch(err => {
+//         console.error('Failed to load:', err);
+//         setLoading(false);
+//       });
+//   }, [selectedYear]);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-4xl mx-auto">
-        <button
-          onClick={onBack}
-          className="mb-6 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-        >
-          ← Back to Dashboard
-        </button>
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+//       <div className="max-w-4xl mx-auto">
+//         <button
+//           onClick={onBack}
+//           className="mb-6 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+//         >
+//           ← Back to Dashboard
+//         </button>
       
-        <h1 className="text-3xl font-bold mb-6">Edit {selectedYear} Season</h1>
+//         <h1 className="text-3xl font-bold mb-6">Edit {selectedYear} Season</h1>
       
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <p className="text-gray-700">
-              Found {Object.keys(weeks).length} weeks of data
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Full edit interface coming soon! This is a placeholder.
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+//         {loading ? (
+//           <p>Loading...</p>
+//         ) : (
+//           <div className="bg-white rounded-lg shadow-md p-6">
+//             <p className="text-gray-700">
+//               Found {Object.keys(weeks).length} weeks of data
+//             </p>
+//             <p className="text-sm text-gray-500 mt-2">
+//               Full edit interface coming soon! This is a placeholder.
+//             </p>
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }

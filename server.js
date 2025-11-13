@@ -17,8 +17,13 @@ const PORT = 5000;
 // ===============================
 // MIDDLEWARE
 // ===============================
-app.use(cors({ origin: "http://localhost:5173" })); // Allow requests from Vite dev server
-app.use(express.json()); // Parse JSOn request bodies
+app.use(cors({ 
+  origin: "http://localhost:5173", // Vite dev server
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+})); 
+app.use(express.json()); // Parse JSON request bodies
 
 // ===============================
 // DATA FILE PATHS

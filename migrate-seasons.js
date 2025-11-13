@@ -65,7 +65,7 @@ const DEFAULT_WEEKS = 14;
  * Create a backup of the original files
  */
 function createBackup(data) {
-    const timestamp = new Data().toISOString().replace(/[:.]/g, "-");
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const backupFile = path.join(BACKUP_DIR, `seasons-pre-migration-${timestamp}.json`);
 
     // Create backups directory if it doesn't exist
@@ -82,7 +82,7 @@ function createBackup(data) {
  * Generate empty matchups structure for a season
  * This creates placeholders that can be filled in via the edit interface
  */
-function createBackup(data) {
+function generateEmptyMatchups(teams, numWeeks = DEFAULT_WEEKS) {
     const weeks = {};
     const teamCount = teams.length;
     const matchupsPerWeek = Math.floor(teamCount / 2);
