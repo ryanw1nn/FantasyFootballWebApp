@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 5000;
+const PORT = 5001;
 
 // ===============================
 // MIDDLEWARE
@@ -339,4 +339,19 @@ app.get("/api/seasons/:year/standings", (req, res) => {
 // START SERVER
 // ===============================
 
-app.listen(PORT, () => console.log(`Backend running at http://localhost:${PORT}`));
+const server = app.listen(PORT, () => {
+  console.log(`Backend is running at http://localhost:${PORT}`);
+  console.log(`Server is ready to accept requests...`)
+  console.log(`Press Ctrl+C to stop the server`);
+});
+
+// Handle server errors
+server.on('error', (err) => {
+  if(err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use!`);
+    console.error(`Try: lsoi -i :${PORT} to see what's using it`);
+  } else {
+    console.error('❌ Server error:', err);
+  }
+  process.exit(1);
+});
