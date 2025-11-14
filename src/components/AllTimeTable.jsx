@@ -8,11 +8,11 @@ export default function AllTimeTable({ allData }) {
 
     // aggregate data by player name
     const allTimeStats = {};
-    Object.values(allData).forEach((season) => {
+    Object.entries(allData).forEach(([seasonYear, season]) => {
         season.forEach((row) => {
             const name = row.name;
             if(!allTimeStats[name]) {
-                allTimeStats[name] = { wins: 0, losses: 0, ties: 0, PF: 0, PA: 0, rChampionCount: 0, playoffRounds: 0, pChampionCount: 0 };
+                allTimeStats[name] = { wins: 0, losses: 0, ties: 0, PF: 0, PA: 0, rChampionYears: [], playoffRounds: 0, pChampionYears: [] };
             }
 
             allTimeStats[name].wins += row.wins || 0;
@@ -21,14 +21,14 @@ export default function AllTimeTable({ allData }) {
             allTimeStats[name].PF += row.pf || 0;
             allTimeStats[name].PA += row.pa || 0;
 
-            if (row.rChampion) allTimeStats[name].rChampionCount += 1;
+            if (row.rChampion) allTimeStats[name].rChampionYears.push(seasonYear);
             if (row.playoff?.made){
                 let rounds = row.playoff.rounds || 0;
                 if (row.playoff.pChampion) rounds += 1;
                 allTimeStats[name].playoffRounds += rounds;
             }
 
-            if (row.playoff?.pChampion) allTimeStats[name].pChampionCount += 1;
+            if (row.playoff?.pChampion) allTimeStats[name].pChampionYears.push(seasonYear);
 
         });
     });
@@ -40,9 +40,9 @@ export default function AllTimeTable({ allData }) {
         const pfpg = totalGames ? stats.PF / totalGames : 0;
         const papg = totalGames ? stats.PA / totalGames : 0;
 
-        const regSeasonChamps = stats.rChampionCount || 0;
+        const regSeasonChamps = stats.rChampionYears.map(y => `'${y.slice(2)}`).join(", ");
         const playoffRounds = stats.playoffRounds || 0;
-        const postSeasonChamps = stats.pChampionCount || 0;
+        const postSeasonChamps = stats.pChampionYears.map(y => `'${y.slice(2)}`).join(", ");
 
         return {
             name,
