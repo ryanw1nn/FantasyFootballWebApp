@@ -4711,39 +4711,39 @@
         "matchups": [
           {
             "team1": "Woody \"skid\" Marks and Co.",
-            "team1Score": null,
+            "team1Score": 1,
             "team2": "Lil Tom",
-            "team2Score": null
+            "team2Score": 100
           },
           {
             "team1": "Welsh Wales",
-            "team1Score": null,
+            "team1Score": 2,
             "team2": "Bistro Beverages",
-            "team2Score": null
+            "team2Score": 100
           },
           {
             "team1": "Dr. Fish",
-            "team1Score": null,
+            "team1Score": 2.8,
             "team2": "EPATHI",
-            "team2Score": null
+            "team2Score": 99.8
           },
           {
             "team1": "Cali Awhitty",
-            "team1Score": null,
+            "team1Score": 4,
             "team2": "Craven Moore",
-            "team2Score": null
+            "team2Score": 99.8
           },
           {
             "team1": "Jay Cutler's Mistress",
-            "team1Score": null,
+            "team1Score": 5,
             "team2": "Ginja Ninjas",
-            "team2Score": null
+            "team2Score": 99.8
           },
           {
             "team1": "gabe uhtsecs",
-            "team1Score": null,
+            "team1Score": 6,
             "team2": "Boner Garage",
-            "team2Score": null
+            "team2Score": 100
           }
         ]
       },

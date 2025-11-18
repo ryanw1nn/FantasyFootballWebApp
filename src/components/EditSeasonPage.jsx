@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, ChevronDown, ChevronRight, ArrowLeft, Users } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 /**
  * EditSeasonPage Component
  * 
@@ -34,7 +36,7 @@ export default function EditSeasonPage() {
   async function loadSeasonData() {
     setLoading(true);
     try {
-                  const response = await fetch(`http://localhost:5001/api/seasons/${selectedYear}/weeks`);
+      const response = await fetch(`${API_BASE_URL}/api/seasons/${selectedYear}/weeks`);
       const data = await response.json();
       
       setWeeks(data.weeks || {});
@@ -93,7 +95,7 @@ export default function EditSeasonPage() {
     
     try {
       const response = await fetch(
-        `http://localhost:5000/api/seasons/${selectedYear}/weeks/${weekNum}`,
+        `${API_BASE_URL}/api/seasons/${selectedYear}/weeks/${weekNum}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
