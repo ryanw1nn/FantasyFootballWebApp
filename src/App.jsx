@@ -7,8 +7,7 @@ import AllTimeTable from './components/AllTimeTable';
 import SeasonTable from './components/SeasonTable';
 import EditSeasonPage from './components/EditSeasonPage';
 
-// Import season data
-import data from './data/seasons.json';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
  * Root component for Fantasy Football League dashboard.
@@ -31,6 +30,45 @@ export default function App() {
   const years = Object.keys(data).map(Number).sort((a, b) => b - a);
   const [selectedYear, setSelectedYear] = useState(years[0]);
   
+  // ============================================
+  // DATA FETCHING
+  // ============================================
+
+  /**
+   * Fetch all seasons data from backend on mount
+   */
+  useEffect(() => {
+    fetchAllSeasons();
+  }, []);
+
+  /**
+   * Refetch data when returning from edit mode
+   */
+  useEffect(() => {
+    if (viewMode !== 'edit') {
+      fetchAllSeasons();
+    }
+  }, [viewMode]);
+
+  async function fetchAllSeasons() {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/seasons`);
+      const seasonsData = await response.json();
+      setData(seasonsData);
+
+      // Set initial year if not set
+      if (!selectedYear && Object.keys(seasonsData).length > 0) {
+        const latestYear = Math.max(...Object.keys(seasonsData).map(Number));
+        setSelectedYear(latestYear);
+      }
+    } catch (err) {
+      console.error('Failed to fetch seasons:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
@@ -67,67 +105,80 @@ export default function App() {
     const avgPF = season.length > 0
       ? season.reduce((sum, team) => sum + (team.pf || 0), 0) / season.length
       : 0;
+
+    const activeTeams = season.filter(team => team.state === 'actice').length;
     
     return {
       totalGames,
       avgPF,
-      teams: season.length
+      activeTeams
     };
-  }, [selectedYear]);
+  }, [selectedYear, data]);
   
   // ============================================
-  // EDIT SEASON VIEW
+  // RENDER: EDIT MODE
   // ============================================
   
   if (viewMode === "editSeason") {
-    return <EditSeasonPage selectedYear={selectedYear} onBack={() => setViewMode("season")} />;
+    return <EditSeasonPage onBack={() => setViewMode("season")} />;
   }
   
   // ============================================
-  // MAIN DASHBOARD RENDER
+  // RENDER: LOADING STATE
+  // ============================================
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading season data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================
+  // RENDER: MAIN DASHBOARD
   // ============================================
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="max-w-7xl mx-auto p-6">
       
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">Fantasy Football League</h1>
-              <p className="text-indigo-100">Performance Analytics & Rankings</p>
-            </div>
-            <Trophy className="w-16 h-16 text-yellow-300" />
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+          <Trophy className="text-yellow-500" size={40}/>
+          Fantasy Football League
+        </h1>
+        <p className="text-gray-600">Track your league's performance across all seasons</p>
+      </div>
         
-        {/* Stats Cards - Only in season view */}
-        {viewMode === "season" && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <StatsCard
-              title="Total Games Played"
-              value={currentSeasonStats.totalGames}
-              icon={Medal}
-            />
-            <StatsCard
-              title="Avg Points Per Team"
-              value={currentSeasonStats.avgPF.toFixed(1)}
-              icon={TrendingUp}
-            />
-            <StatsCard 
-              title="Teams in League"
-              value={currentSeasonStats.teams}
-              icon={Trophy}
-            />
-          </div>
-        )}
+      {/* Stats Cards - Only in season view */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <StatsCard
+          title="Total Games"
+          value={currentSeasonStats.totalGames}
+          icon={<TrendingUp />}
+          color="blue"
+        />
+        <StatsCard
+          title="Avg Points/Game"
+          value={currentSeasonStats.avgPF.toFixed(1)}
+          icon={<Medal />}
+          color="green"
+        />
+        <StatsCard 
+          title="Active Teams"
+          value={currentSeasonStats.activeTeams}
+          icon={<Trophy />}
+          color="purple"
+        />
+      </div>
 
-        {/* Controls Section */}       
-        <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+      {/* Controls Section */}       
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
 
             {/* View Mode Toggle Buttons */}
