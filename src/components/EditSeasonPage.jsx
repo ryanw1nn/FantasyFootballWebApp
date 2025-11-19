@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
  * Main interface for editing season data week-by-week
  * Allows updating matchup scores and automatically recalculates standings
  */
-export default function EditSeasonPage() {
+export default function EditSeasonPage({ onBack }) {
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -248,10 +248,11 @@ export default function EditSeasonPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => window.history.back()}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                onClick={onBack}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
               >
-                <ArrowLeft className="w-6 h-6" />
+                <ArrowLeft size={18} />
+                Back to Dashboard
               </button>
               <div>
                 <h1 className="text-3xl font-bold">Edit Season</h1>

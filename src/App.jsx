@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Trophy, TrendingUp, Medal, Edit } from 'lucide-react';
 
 // Import custom components
@@ -26,9 +26,11 @@ export default function App() {
     botted: false,
   });
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [data, setData] = useState({});
+  const [loading, setLoading] = useState(true);
   
   const years = Object.keys(data).map(Number).sort((a, b) => b - a);
-  const [selectedYear, setSelectedYear] = useState(years[0]);
+  const [selectedYear, setSelectedYear] = useState(years[0] || 2025);
   
   // ============================================
   // DATA FETCHING
@@ -106,7 +108,7 @@ export default function App() {
       ? season.reduce((sum, team) => sum + (team.pf || 0), 0) / season.length
       : 0;
 
-    const activeTeams = season.filter(team => team.state === 'actice').length;
+    const activeTeams = season.filter(team => team.state === 'active').length;
     
     return {
       totalGames,
@@ -119,7 +121,7 @@ export default function App() {
   // RENDER: EDIT MODE
   // ============================================
   
-  if (viewMode === "editSeason") {
+  if (viewMode === "edit") {
     return <EditSeasonPage onBack={() => setViewMode("season")} />;
   }
   
@@ -160,172 +162,167 @@ export default function App() {
         <StatsCard
           title="Total Games"
           value={currentSeasonStats.totalGames}
-          icon={<TrendingUp />}
-          color="blue"
+          icon={TrendingUp}
+          subtitle="This season"
         />
         <StatsCard
           title="Avg Points/Game"
           value={currentSeasonStats.avgPF.toFixed(1)}
-          icon={<Medal />}
-          color="green"
+          icon={Medal}
+          subtitle="League average"
         />
         <StatsCard 
           title="Active Teams"
           value={currentSeasonStats.activeTeams}
-          icon={<Trophy />}
-          color="purple"
+          icon={Trophy}
+          subtitle="Currently competing"
         />
       </div>
 
       {/* Controls Section */}       
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap gap-4 items-center justify-between">
 
-            {/* View Mode Toggle Buttons */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("season")}
-                className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
+          {/* View Mode Toggle  */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewMode("season")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 viewMode === "season"
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-105"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                Season View
-              </button>
-              <button
-                onClick={() => setViewMode("allTime")}
-                className={`px-6 py-2.5 rounded-lg font-semibold transition-all ${
-                  viewMode === "allTime"
-                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg scale-105"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                All-Time Rankings
-              </button>
-            </div>
-
-            {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input 
-                type="text"
-                placeholder="Search players or teams..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Filter Dropdown */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowFilterMenu(!showFilterMenu)}
-                className="px-4 py-2.5 rounded-lg bg-gray-100 border border-gray-300 hover:bg-gray-200 transition-colors font-medium"
-              >
-                Filters {showFilterMenu ? "▲" : "▼"}
-              </button>
-
-              {showFilterMenu && (
-                <div className="absolute right-0 top-12 bg-white border border-gray-300 rounded-lg p-4 shadow-xl w-56 z-20">
-                  <h4 className="font-semibold mb-3 text-gray-900">Filter Teams</h4>
-                  {Object.keys(filters).map((stateKey) => (
-                    <label
-                      key={stateKey}
-                      className="flex items-center mb-2 text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer"
-                    >
-                      <input 
-                        type="checkbox"
-                        checked={filters[stateKey]}
-                        onChange={() => toggleFilter(stateKey)}
-                        className="mr-3 w-4 h-4 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <span className="capitalize">{stateKey}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              Season
+            </button>
+            <button
+              onClick={() => setViewMode("alltime")}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                viewMode === "alltime"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              All-Time
+            </button>
+            <button
+              onClick={() => setViewMode("edit")}
+              className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
+            >
+              <Edit size={18} />
+              Edit Season Data
+            </button>
           </div>
 
-          {/* Year Selector + Edit Button - Only in season view */}
+          {/* Year Selector (Season view only) */}
           {viewMode === "season" && (
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <label className="font-semibold text-gray-700">Season:</label>
-                <select 
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-medium"
-                >
-                  {years.map((year) => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Edit Season Button */}
-              <button
-                onClick={() => setViewMode("editSeason")}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md"
-              >
-                <Edit className="w-5 h-5" />
-                Edit Season
-              </button>
-            </div>
+            <select 
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year} Season
+                </option>
+              ))}
+            </select>
           )}
-        </div> 
 
-        {/* Table Section */}  
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {viewMode === "season"
-                ? `${selectedYear} Season Rankings`
-                : "All-Time Player Rankings"}
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {viewMode === "season"
-                ? "Current season standings and statistics"
-                : "Career statistics across all seasons"}
-            </p>
+          {/* Search Bar */}
+          <div className="relative flex-1 min-w-[200px] max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" size={20} />
+            <input 
+              type="text"
+              placeholder="Search players or teams..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
           </div>
 
-          <div className="overflow-auto max-h-[600px]">
-            {viewMode === "season" ? (
-              <SeasonTable 
-                seasonData={filterTeams(getSeasonArray(selectedYear))}
-                year={selectedYear}
-                searchQuery={searchQuery}
-              />
-            ) : (
-              <AllTimeTable 
-                allData={Object.fromEntries(
-                  Object.entries(data).map(([year, seasonData]) => [
-                    year,
-                    filterTeams(getSeasonArray(year))
-                  ])
-                )}
-                searchQuery={searchQuery}
-              />
+          {/* Filter Button */}
+          <div className="relative">
+            <button
+              onClick={() =>setShowFilterMenu(!showFilterMenu)}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              Filters
+            </button>
+
+            {showFilterMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-10">
+                <h3 className="font-semibold text-gray-900 mb-2">Team States</h3>
+                {Object.entries(filters).map(([key, value]) => (
+                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={() => toggleFilter(key)}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                      <span className="text-sm text-gray-700 capitalize">{key}</span>
+                  </label>
+                ))}
+              </div>
             )}
           </div>
         </div>
+      </div>
+      
+      {/* Table Section */}  
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {viewMode === "season"
+              ? `${selectedYear} Season Rankings`
+              : "All-Time Player Rankings"}
+          </h2>
+          <p className="text-gray-600 mt-1">
+            {viewMode === "season"
+              ? "Current season standings and statistics"
+              : "Career statistics across all seasons"}
+          </p>
+        </div>
 
-        {/* Legend */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-4">
-          <h3 className="font-semibold text-gray-900 mb-2">Legend</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700">
-            <div><strong>PFPG:</strong> Points For Per Game</div>
-            <div><strong>PAPG:</strong> Points Against Per Game</div>
-            <div><strong>🏆:</strong> Playoff Champion</div>
-            <div><strong>👑:</strong> Regular Season Champion</div>
-            <div><strong>GP:</strong> Games Played</div>
-            <div><strong>Δ:</strong> Rank Change</div>
-          </div>
+        <div className="overflow-auto max-h-[600px]">
+          {viewMode === "season" ? (
+             <SeasonTable 
+              seasonData={filterTeams(getSeasonArray(selectedYear))}
+              year={selectedYear}
+              searchQuery={searchQuery}
+            />
+          ) : (
+            <AllTimeTable 
+              allData={Object.fromEntries(
+                Object.entries(data).map(([year, seasonData]) => [
+                  year,
+                  filterTeams(getSeasonArray(year))
+                ])
+              )}
+              searchQuery={searchQuery}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-6 bg-white rounded-lg shadow-md p-4">
+        <h3 className="font-semibold text-gray-900 mb-2">Legend</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700">
+          <div><strong>PFPG:</strong> Points For Per Game</div>
+          <div><strong>PAPG:</strong> Points Against Per Game</div>
+          <div><strong>🏆:</strong> Playoff Champion</div>
+          <div><strong>👑:</strong> Regular Season Champion</div>
+          <div><strong>GP:</strong> Games Played</div>
+          <div><strong>Δ:</strong> Rank Change</div>
         </div>
       </div>
     </div>
+  </div>
   );
 }
+

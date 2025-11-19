@@ -10,46 +10,7 @@ import { fileURLToPath } from "url";
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
-
-// ===============================
-// PORT MANAGEMENT
-// ===============================
-const DEFAULT_PORT = 5001;
-const FALLBACK_PORT = 5000;
-
-/**
- * Find an available port, trying DEFAULT_PORT first, then FALLBACK_PORT
- */
-async function findAvailablePort() {
-  const net = await import('net');
-
-  return new Promise((resolve) => {
-    const server = net.createServer();
-
-    server.listen(DEFAULT_PORT, () => {
-      server.close(() => resolve(DEFAULT_PORT));
-    });
-
-    server.on('error', () => {
-      // Port 5000 in use, try fallback
-      const fallbackServer = net.createServer();
-
-      fallbackServer.listen(FALLBACK_PORT, () => {
-        fallbackServer.close(() => resolve(FALLBACK_PORT));
-      });
-
-      fallbackServer.on('error', () => {
-        console.error('❌ Both ports 5000 and 5001 are in use!');
-        console.error('Kill the process: lsof -ti:5000 | xargs kill -9');
-        process.exit(1);
-      });
-    });
-  });
-}
-
-
 
 // ===============================
 // MIDDLEWARE
@@ -109,9 +70,23 @@ function saveData() {
  */
 function recalculateStandings(year) {
   const season = seasonsData[year];
-  if (!season) return;
+  if (!season || !season.teams) return;
 
-  // Initialize team stats
+  // Skip old format seasons (arrays)
+  if (Array.isArray(season)) {
+    console.log(`⏭️  ${year} - old format, skipping`);
+    return;
+  }
+  
+  // Skip seasons without proper weeks structure
+  if (!season.weeks || typeof season.weeks !== 'object' || Array.isArray(season.weeks)) {
+    console.log(`⏭️  ${year} - no weeks data, skipping`);
+    return;
+  }
+
+  console.log(`\n Recalculatng ${year}...`);
+
+  // Initialize team stats to zero
   const stats = {};
   season.teams.forEach(team => {
     stats[team.name] = {
@@ -123,65 +98,67 @@ function recalculateStandings(year) {
     };
   });
 
-  // check if we have weekly matchup data
-  let hasWeeklyData = false;
-
-  if (season.weeks && Object.keys(season.weeks).length > 0) {
-    // Aggregate from weekly matchups
-    Object.values(season.weeks).forEach(week => {
-      week.matchups.forEach(matchup => {
-        const score1 = parseFloat(matchup.team1Score);
-        const score2 = parseFloat(matchup.team2Score);
-
-        // Check if we have ANY non=zero scores (null, 0, NaN treated as no data)
-        const hasValidScore1 = !isNaN(score1) && score1 !== null && score1 > 0;
-        const hasValidScore2 = !isNaN(score2) && score2 !== null && score2 > 0;
-
-        // if either score is non-zero, we have weekly data
-        if (hasValidScore1 || hasValidScore2) {
-          hasWeeklyData = true;
-
-          const team1 = matchup.team1;
-          const team2 = matchup.team2;
-          const s1 = hasValidScore1 ? score1 : 0;
-          const s2 = hasValidScore2 ? score2 : 0;
+  // process all weeks, treating null/empty as 0
+  let processedGames = 0;
+  if (season.weeks) {
+    Object.entries(season.weeks).forEach(([weekNum, week]) => {
+      if (!week || !week.matchups || !Array.isArray(week.matchups)) return;
       
-          if (stats[team1] && stats[team2]) {
-            // accumulate points
-            stats[team1].pf += s1;
-            stats[team1].pa += s2;
-            stats[team2].pf += s2;
-            stats[team2].pa += s1;
+      week.matchups.forEach(matchup => {
+        // get scores - treat null/undefined as 0
+        const score1 = parseFloat(matchup.team1Score) || 0;
+        const score2 = parseFloat(matchup.team2Score) || 0;
 
-            // determine winner and update records
-            if (hasValidScore1 && hasValidScore2) {
-              if (s1 > s2) {
-                stats[team1].wins++;
-                stats[team2].losses++;
-              } else if (s2 > s1) {
-                stats[team2].wins++;
-                stats[team1].losses++;
-              } else {
-                // tie game
-                stats[team1].ties++;
-                stats[team2].ties++;
-              }
-            }
+        const name1 = matchup.team1;
+        const name2 = matchup.team2;
+
+        // skip if either team doesn't exist in roster
+        if (!stats[name1] || !stats[name2]) {
+          console.log(`⚠️ Week ${weekNum}: Unknown team "${name1}" or "${name2}"`);
+          return;
+        }
+
+        // accumulate points
+        stats[name1].pf += score1;
+        stats[name1].pa += score2;
+        stats[name2].pf += score2;
+        stats[name2].pa += score1;
+
+        // determine winner and update records
+        if (score1 > 0 && score2 > 0) {
+          if (score1 > score2) {
+            stats[name1].wins++;
+            stats[name2].losses++;
+            processedGames++;
+          } else if (score2 > score1) {
+            stats[name2].wins++;
+            stats[name1].losses++;
+            processedGames++;
+          } else {
+            // tie game
+            stats[name1].ties++;
+            stats[name2].ties++;
+            processedGames++;
           }
         }
       });
     });
   }
 
+  console.log(`   Processed ${processedGames} completed games`);
+
+
   // fallback if no weekly data exists, use end-of-season stats from standings
-  if (!hasWeeklyData && season.standings && Array.isArray(season.standings)) {
+  if (processedGames === 0 && season.standings) {
     season.standings.forEach(team => {
       if (stats[team.name]) {
-        stats[team.name].wins = team.wins || 0;
-        stats[team.name].losses = team.losses || 0;
-        stats[team.name].ties = team.ties || 0;
-        stats[team.name].pf = team.pf || 0;
-        stats[team.name].pa = team.pa || 0;
+        stats[team.name] = {
+         wins: team.wins || 0,
+         losses: team.losses || 0,
+         ties: team.ties || 0,
+         pf: team.pf || 0,
+         pa: team.pa || 0 
+        };
       }
     });
   }
@@ -213,6 +190,8 @@ function recalculateStandings(year) {
   season.standings.forEach((team, idx) => {
     team.place = idx + 1;
   });
+
+  console.log(`✅ Standings updated for ${year}\n`);
 }
 
 // ===============================
@@ -221,6 +200,7 @@ function recalculateStandings(year) {
 
 // GET all seasons
 app.get("/seasons", (req, res) => {
+  Object.keys(seasonsData).forEach(year => recalculateStandings(year));
   res.json(seasonsData);
 });
 
@@ -228,43 +208,8 @@ app.get("/seasons", (req, res) => {
 app.get("/seasons/:year", (req, res) => {
   const { year } = req.params;
   if (!seasonsData[year]) return res.status(404).json({ error: "Year not found"});
+  recalculateStandings(year);
   res.json(seasonsData[year]);
-});
-
-// UPDATE a season (replace the whole array)
-app.post("/seasons/:year", (req, res) => {
-  const { year } = req.params;
-  const newData = req.body;
-  if(!Array.isArray(newData)) return res.status(400).json({ error: "Data must be an array" });
-
-  seasonsData[year] = newData;
-  const result = saveData();
-
-  if (result.success) {
-    res.json({ success: true, year });
-  } else {
-    res.status(500).json({ error: "Failed to save data" });
-  }
-});
-
-// UPDATE a single team in a season
-app.patch("/seasons/:year/:team", (req, res) => {
-  const { year, team } = req.params;
-  const updatedTeam = req.body;
-
-  if (!seasonsData[year]) return res.status(404).json({ error: "Year not found" });
-
-  const teamIndex = seasonsData[year].findIndex(t => t.team === team);
-  if (teamIndex === -1) return res.status(404).json({ error: "Team not found "});
-
-  seasonsData[year][teamIndex] = { ...seasonsData[year][teamIndex], ...updatedTeam };
-  const result = saveData();
-
-  if (result.success) {
-    res.json({ success: true, team });
-  } else {
-    res.status(500).json({ error: "Failed to save data" });
-  }
 });
 
 /**
@@ -274,161 +219,217 @@ app.patch("/seasons/:year/:team", (req, res) => {
 app.get("/api/seasons/:year/weeks", (req, res) => {
   const { year } = req.params;
   const season = seasonsData[year];
-
-  if (!season) return res.status(404).json({ error: "Season ont found" });
-
+  if (!season) return res.status(404).json({ error: "Season not found" });
   res.json({
     weeks: season.weeks || {},
     teams: season.teams || []
   });
 });
 
-/**
- * GET a specific week's matchups
- * Returns: {matchups: [...] }
- */
-app.get("/api/seasons/:year/weeks/:weekNum", (req, res) => {
-  const { year, weekNum } = req.params;
-  const season = seasonsData[year];
-
-  if (!season) return res.status(404).json({ error: "Season not found "});
-  if (!season.weeks || !season.weeks[weekNum]) {
-    return res.status(404).json({ error: "Week not found" });
-  }
-
-  res.json(season.weeks[weekNum]);
-});
-
-/**
- * UPDATE a specific week's matchups
- * Body: { matchups: [...] }
- */
+// UPDATE week
 app.put("/api/seasons/:year/weeks/:weekNum", (req, res) => {
-  const { year, weekNum } = req.params;
-  const { matchups } = req.body;
+  const {year, weekNum } = req.params;
+  const {matchups} = req.body;
 
-  if (!seasonsData[year]) return res.status(404).json({ error: "Season not found "});
-  if (!Array.isArray(matchups)) return res.status(400).json({ error: "Matchups must be an array" });
+  if (!seasonsData[year]) return res.status(404).json({ error: "Not found" });
+  if (!Array.isArray(matchups)) return res.status(400).json({ error: "Invalid data" });
 
-  // Initialize weeks object if it doesn't exist
-  if(!seasonsData[year].weeks) {
-    seasonsData[year].weeks = {};
-  }
-
-  // Update the week's matchups
-  seasonsData[year].weeks[weekNum] = { matchups };
+  if (!seasonsData[year].weeks) seasonsData[year].weeks = {};
   
-  // Recalculate standings
-  recalculateStandings(year);
-
-  const result = saveData();
-
-  if(result.success) {
-    res.json({
-      success: true,
-      week: weekNum,
-      standings: seasonsData[year].standings
-    });
-  } else {
-    res.status(500).json({ error: "Failed to save data" });
-  }
-});
-
-/**
- * CREATE a new week
- * Body: { matchups: [...] }
- */
-app.post("/api/seasons/:year/weeks/:weekNum", (req, res) => {
-  const { year, weekNum } = req.params;
-  const { matchups } = req.body;
-  
-  if (!seasonsData[year]) return res.status(404).json({ error: "Season not found" });
-  if (!Array.isArray(matchups)) return res.status(400).json({ error: "Matchups must be an array" });
-
-  if (!seasonsData[year].weeks) {
-    seasonsData[year].weeks = {};
-  }
-
-  if (seasonsData[year].weeks[weekNum]) {
-    return res.status(409).json({ error: "Week already exists" });
-  }
-
   seasonsData[year].weeks[weekNum] = { matchups };
   recalculateStandings(year);
-
+  
   const result = saveData();
-
   if (result.success) {
-    res.json({ success: true, week: weekNum });
+    res.json({ success: true, standings: seasonsData[year].standings });
   } else {
-    res.status(500).json({ error: "Failed to save data" });
+    res.status(500).json({ error: "Save failed" });
   }
 });
+
+// UNUSED
+// // UPDATE a season (replace the whole array)
+// app.post("/seasons/:year", (req, res) => {
+//   const { year } = req.params;
+//   const newData = req.body;
+//   if(!Array.isArray(newData)) return res.status(400).json({ error: "Data must be an array" });
+
+//   seasonsData[year] = newData;
+//   const result = saveData();
+
+//   if (result.success) {
+//     res.json({ success: true, year });
+//   } else {
+//     res.status(500).json({ error: "Failed to save data" });
+//   }
+// });
+
+// // UPDATE a single team in a season
+// app.patch("/seasons/:year/:team", (req, res) => {
+//   const { year, team } = req.params;
+//   const updatedTeam = req.body;
+
+//   if (!seasonsData[year]) return res.status(404).json({ error: "Year not found" });
+
+//   const teamIndex = seasonsData[year].findIndex(t => t.team === team);
+//   if (teamIndex === -1) return res.status(404).json({ error: "Team not found "});
+
+//   seasonsData[year][teamIndex] = { ...seasonsData[year][teamIndex], ...updatedTeam };
+//   const result = saveData();
+
+//   if (result.success) {
+//     res.json({ success: true, team });
+//   } else {
+//     res.status(500).json({ error: "Failed to save data" });
+//   }
+// });
+
+// /**
+//  * GET a specific week's matchups
+//  * Returns: {matchups: [...] }
+//  */
+// app.get("/api/seasons/:year/weeks/:weekNum", (req, res) => {
+//   const { year, weekNum } = req.params;
+//   const season = seasonsData[year];
+
+//   if (!season) return res.status(404).json({ error: "Season not found "});
+//   if (!season.weeks || !season.weeks[weekNum]) {
+//     return res.status(404).json({ error: "Week not found" });
+//   }
+
+//   res.json(season.weeks[weekNum]);
+// });
+
+
+
+// UNUSED
+// /**
+//  * UPDATE a specific week's matchups
+//  * Body: { matchups: [...] }
+//  */
+// app.put("/api/seasons/:year/weeks/:weekNum", (req, res) => {
+//   const { year, weekNum } = req.params;
+//   const { matchups } = req.body;
+
+//   if (!seasonsData[year]) return res.status(404).json({ error: "Season not found "});
+//   if (!Array.isArray(matchups)) return res.status(400).json({ error: "Matchups must be an array" });
+
+//   // Initialize weeks object if it doesn't exist
+//   if(!seasonsData[year].weeks) {
+//     seasonsData[year].weeks = {};
+//   }
+
+//   // Update the week's matchups
+//   seasonsData[year].weeks[weekNum] = { matchups };
+  
+//   // Recalculate standings
+//   recalculateStandings(year);
+
+//   const result = saveData();
+//   if (result.success) {
+//     res.json({success: true, standings: seasonsData[year].standings });
+//   } else {
+//     res.status(500).json({ error: "Save failed"})
+//   }
+
+//   if(result.success) {
+//     res.json({
+//       success: true,
+//       week: weekNum,
+//       standings: seasonsData[year].standings
+//     });
+//   } else {
+//     res.status(500).json({ error: "Failed to save data" });
+//   }
+// });
+
+// /**
+//  * CREATE a new week
+//  * Body: { matchups: [...] }
+//  */
+// app.post("/api/seasons/:year/weeks/:weekNum", (req, res) => {
+//   const { year, weekNum } = req.params;
+//   const { matchups } = req.body;
+  
+//   if (!seasonsData[year]) return res.status(404).json({ error: "Season not found" });
+//   if (!Array.isArray(matchups)) return res.status(400).json({ error: "Matchups must be an array" });
+
+//   if (!seasonsData[year].weeks) {
+//     seasonsData[year].weeks = {};
+//   }
+
+//   if (seasonsData[year].weeks[weekNum]) {
+//     return res.status(409).json({ error: "Week already exists" });
+//   }
+
+//   seasonsData[year].weeks[weekNum] = { matchups };
+//   recalculateStandings(year);
+
+//   const result = saveData();
+
+//   if (result.success) {
+//     res.json({ success: true, week: weekNum });
+//   } else {
+//     res.status(500).json({ error: "Failed to save data" });
+//   }
+//});
 
 // ===============================
 // TEAM MANAGEMENT ROUTES
 // ===============================
 
-/**
- * GET all teams for a season
- */
-app.get("/api/seasons/:year/teams", (req, res) => {
-  const { year } = req.params;
-  const season = seasonsData[year];
+// /**
+//  * GET all teams for a season
+//  */
+// app.get("/api/seasons/:year/teams", (req, res) => {
+//   const { year } = req.params;
+//   const season = seasonsData[year];
 
-  if (!season) return res.status(404).json({ error: "Season not found" });
+//   if (!season) return res.status(404).json({ error: "Season not found" });
 
-  res.json({ teams: season.teams || [] });
-});
+//   res.json({ teams: season.teams || [] });
+// });
 
-/**
- * UPDATE team roster for a season
- * Body: { teams: [...] }
- */
-app.put("/api/seasons/:year/teams", (req, res) => {
-  const { year } = req.params;
-  const { teams } = req.body;
+// /**
+//  * UPDATE team roster for a season
+//  * Body: { teams: [...] }
+//  */
+// app.put("/api/seasons/:year/teams", (req, res) => {
+//   const { year } = req.params;
+//   const { teams } = req.body;
 
-  if (!seasonsData[year]) return res.status(404).json({ error: "Season not found" });
-  if (!Array.isArray(teams)) return res.status(400).json({ error: "Teams must be an array" });
+//   if (!seasonsData[year]) return res.status(404).json({ error: "Season not found" });
+//   if (!Array.isArray(teams)) return res.status(400).json({ error: "Teams must be an array" });
 
-  seasonsData[year].teams = teams;
-  const result = saveData();
+//   seasonsData[year].teams = teams;
+//   const result = saveData();
 
-  if (result.success) {
-    res.json({ success: true, teams });
-  } else {
-    res.status(500).json({ error: "Failed to save data" });
-  }
-});
+//   if (result.success) {
+//     res.json({ success: true, teams });
+//   } else {
+//     res.status(500).json({ error: "Failed to save data" });
+//   }
+// });
 
-/**
- * GET current standings for a season
- */
-app.get("/api/seasons/:year/standings", (req, res) => {
-  const { year } = req.params;
-  const season = seasonsData[year];
+// /**
+//  * GET current standings for a season
+//  */
+// app.get("/api/seasons/:year/standings", (req, res) => {
+//   const { year } = req.params;
+//   const season = seasonsData[year];
   
-  if (!season) return res.status(404).json({ error: "Season not found" });
+//   if (!season) return res.status(404).json({ error: "Season not found" });
   
-  res.json({ standings: season.standings || season || [] });
-});
+//   res.json({ standings: season.standings || season || [] });
+// });
 
 // ===============================
 // START SERVER
 // ===============================
 
-(async () => {
-  const PORT = await findAvailablePort();
+const PORT = process.env.PORT || 5001;
 
-  const server = app.listen(PORT, () => {
-    console.log(`Backend is running at http://localhost:${PORT}`);
-    console.log(`Server is ready to accept requests...`)
-    console.log(`Press Ctrl+C to stop the server`);
-  });
-
-  server.on('error', (err) => {
-    console.error('❌ Server error:', err);
-    process.exit(1);
-  });
-})();
+app.listen(PORT, () => {
+  console.log(`\n Server running on http://localhost:${PORT}`);
+  console.log(`Ready to serve data\n`)
+});
