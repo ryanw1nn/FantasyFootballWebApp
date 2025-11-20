@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, LucidePanelTopBottomDashed } from 'lucide-react';
+import { Save, ChevronDown, ChevronRight, ArrowLeft, Users } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -8,7 +8,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
  * 
  * Main interface for editing season data week-by-week
  * Allows updating matchup scores and automatically recalculates standings
- * Updates matchups
  */
 export default function EditSeasonPage({ onBack }) {
   // ============================================
@@ -141,6 +140,45 @@ export default function EditSeasonPage({ onBack }) {
       !assignedTeams.has(team.name) || team.name === currentValue 
     );
   }
+
+  /**
+   * Add a new empty matchup to a week
+   */
+  function addMatchup(weekNum) {
+    setWeeks(prev => {
+      const newWeeks = { ...prev };
+      const week = newWeeks[weekNum];
+
+      if (!week) return prev;
+
+      const matchups = [...(week.matchups || [])];
+      matchups.push({
+        team1: null,
+        team1Score: null,
+        team2: null,
+        team2Score: null
+      });
+
+      newWeeks[weekNum] = { matchups };
+      return newWeeks;
+    });
+  }
+
+  /**
+   * Remove a matchup from a week
+   */
+  function removeMatchup(weekNum, matchupIndex) {
+    setWeeks(prev => {
+      const newWeeks = { ...prev };
+      const week = newWeeks[weekNum];
+
+      if (!week || !week.matchups) return prev;
+
+      const matchups = week.matchups.filter((_, idx) => idx !== matchupIndex);
+      newWeeks[weekNum] = { matchups };
+      return newWeeks;
+    });
+  }
   
   /**
    * Save a specific week's data to backend
@@ -229,7 +267,7 @@ export default function EditSeasonPage({ onBack }) {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Team 2
             </label>
-            {renderTeamSelector(weekNum, index, 'team2', matchup.team1)}
+            {renderTeamSelector(weekNum, index, 'team2', matchup.team2)}
           </div>
         </div>
         
