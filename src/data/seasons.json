@@ -18,7 +18,7 @@
         "state": "jake2020",
         "playoff": {
           "made": false,
-          "rounds": 0,
+          "rounds": 3,
           "pChampion": false
         },
         "rChampion": false
@@ -2791,7 +2791,7 @@
           "rounds": 3,
           "pChampion": false
         },
-        "rChampion": false
+        "rChampion": true
       },
       {
         "team": "Dr. Fish",
@@ -2835,7 +2835,7 @@
           "rounds": 3,
           "pChampion": true
         },
-        "rChampion": true
+        "rChampion": false
       },
       {
         "team": "Mike Hawk",
@@ -4719,7 +4719,7 @@
         "matchups": [
           {
             "team1": "TJ Cairney",
-            "team1Score": 102.78,
+            "team1Score": 102.68,
             "team2": "Ryan Winn",
             "team2Score": 99.52
           },
@@ -5290,7 +5290,7 @@
         "wins": 10,
         "losses": 1,
         "ties": 0,
-        "pf": 1305.48,
+        "pf": 1305.3799999999999,
         "pa": 1156.5400000000002,
         "place": 1
       },
@@ -5359,7 +5359,7 @@
         "losses": 5,
         "ties": 0,
         "pf": 1361.6399999999996,
-        "pa": 1283.6000000000001,
+        "pa": 1283.5,
         "place": 5
       },
       {

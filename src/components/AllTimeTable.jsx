@@ -48,6 +48,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
         // Loop through each season's data
         Object.values(allData).forEach((season) => {
+            if (!Array.isArray(season)) return;
             season.forEach((row) => {
                 const name = row.name;
 
@@ -306,7 +307,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
                      {/* Playoff Rounds - Badge display */}
                      <td className="px-4 py-3 text-center">
-                        {player.pChampionCount > 0 && (
+                        {player.playoffRounds > 0 && (
                         <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
                             {player.playoffRounds}
                         </span>

@@ -108,11 +108,18 @@ export default function App() {
       ? season.reduce((sum, team) => sum + (team.pf || 0), 0) / season.length
       : 0;
 
+    const avgPFPG = season.length > 0
+      ? season.reduce((sum, team) => {
+        const games = (team.wins || 0) + (team.losses || 0) + (team.ties || 0);
+        return sum + (games > 0 ? (team.pf || 0) / games : 0);
+        }, 0) / season.length
+      : 0;
+
     const activeTeams = season.filter(team => team.state === 'active').length;
     
     return {
       totalGames,
-      avgPF,
+      avgPFPG,
       activeTeams
     };
   }, [selectedYear, data]);
@@ -166,8 +173,8 @@ export default function App() {
           subtitle="This season"
         />
         <StatsCard
-          title="Avg Points/Game"
-          value={currentSeasonStats.avgPF.toFixed(1)}
+          title="Avg PFPG"
+          value={currentSeasonStats.avgPFPG.toFixed(1)}
           icon={Medal}
           subtitle="League average"
         />
@@ -288,7 +295,7 @@ export default function App() {
           </p>
         </div>
 
-        <div className="overflow-auto max-h-[600px]">
+        <div className="overflow-auto max-h-[800px]">
           {viewMode === "season" ? (
              <SeasonTable 
               seasonData={filterTeams(getSeasonArray(selectedYear))}
