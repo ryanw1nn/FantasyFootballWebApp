@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, ChevronDown, ChevronRight, ArrowLeft, Users } from 'lucide-react';
+import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -15,6 +15,7 @@ export default function EditSeasonPage({ onBack }) {
   // ============================================
   
   const [selectedYear, setSelectedYear] = useState('2025');
+  const [availableYears, setAvailableYears] = useState([]);
   const [weeks, setWeeks] = useState({});
   const [teams, setTeams] = useState([]);
   const [expandedWeek, setExpandedWeek] = useState(null);
@@ -27,11 +28,39 @@ export default function EditSeasonPage({ onBack }) {
   // ============================================
   
   /**
-   * Load week data for selected season
+   * Load available years on mount
    */
   useEffect(() => {
-    loadSeasonData();
+    loadAvailableYears();
+  }, []);
+
+  /**
+   * Load week data when year changes
+   */
+  useEffect(() => {
+    if (selectedYear) {
+      loadSeasonData();
+    }
   }, [selectedYear]);
+
+  async function loadAvailableYears() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/seasons`);
+      const data = await response.json();
+
+      // extract years and sort descending (newest first)
+      const years = Object.keys(data).sort((a, b) => Number(b) - Number(a));
+      setAvailableYears(years);
+
+      // set the most recent year as default if not already set
+      if (years.length > 0 && !selectedYear) {
+        setSelectedYear(years[0]);
+      }
+    } catch (err) {
+      console.error('Failed to load available years:', err);
+      setMessage('⚠️ Failed to load available years');
+    }
+  }
   
   async function loadSeasonData() {
     setLoading(true);
@@ -220,9 +249,74 @@ export default function EditSeasonPage({ onBack }) {
   // ============================================
 
   /**
+   * Get week title with special teams for playoff weeks
+   */
+  function getWeekTitle(weekNum) {
+    const num = parseInt(weekNum);
+    if (num === 15) return 'Week 15 - Playoff/TB Round 1';
+    if (num === 16) return 'Week 16 - Playoff/TB Round 2';
+    if (num === 17) return 'Week 17 - Super Bowl Week';
+    return `Week ${weekNum}`;
+  }
+
+  /**
+   * Check if a week is a playoff week
+   */
+  function isPlayoffWeek(weekNum) {
+    const num = parseInt(weekNum);
+    return num >= 15 && num <= 17;
+  }
+
+  /**
+   * Get status badge styling
+   */
+  function getStatusBadgeClass(status) {
+    switch (status) {
+      case 'playoff':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'toilet':
+        return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'out':
+        return 'bg-gray-100 text-gray-600 border-gray-300';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+    }
+  }
+
+  /**
+   * Get status display text
+   */
+  function getStatusText(status) {
+    switch (status) {
+      case 'playoff':
+        return '🏆 Playoff';
+      case 'toilet':
+        return '🚽 Toilet Bowl'
+      case 'out':
+        return '❌ Out';
+      default:
+        return status;
+    }
+  }
+  
+  // ============================================
+  // WEEK MANAGEMENT
+  // ============================================
+
+  /**
    * Render team selector dropdown
    */
   function renderTeamSelector(weekNum, matchupIndex, field, currentValue) {
+    // if the value is BYE, render it as text isntead of dropdowjn
+    if (currentValue === 'BYE') {
+      return (
+        <div className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-gray-600 font-semibold text-center">
+          BYE
+        </div>
+      );
+    }
+
+
     const availableTeams = getAvailableTeams(weekNum, matchupIndex, field);
 
     return (
@@ -245,11 +339,31 @@ export default function EditSeasonPage({ onBack }) {
    * Render a single matchup editor
    */
   function renderMatchup(weekNum, matchup, index) {
+    const hasLabel = matchup.label;
+    const hasStatus = matchup.status;
+    const isPlayoff = isPlayoffWeek(weekNum);
+
     return (
       <div 
         key={index} 
         className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3"
       >
+        {/* matchup header (for playoff weeks) */}
+        {isPlayoff && (hasLabel || hasStatus) && (
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-300">
+            {hasLabel && (
+              <span className="text-sm font-semibold text-gray-700">
+                {matchup.label}
+              </span>
+            )}
+            {hasStatus && (
+              <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(matchup.status)}`}>
+                {getStatusText(matchup.status)}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-4">
           {/* Team 1 */}
           <div className="flex-1">
@@ -285,12 +399,12 @@ export default function EditSeasonPage({ onBack }) {
               value={matchup.team1Score ?? ''}
               onChange={(e) => updateMatchupScore(weekNum, index, 'team1Score', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:rind-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={!matchup.team1}
+              disabled={!matchup.team1 || matchup.team1 === 'BYE'}
             />
           </div>
 
-        {/* Spacer */}
-        <div className="w-12"></div>
+          {/* Spacer */}
+          <div className="w-12"></div>
 
           {/* Team 2 Score */}
           <div className="flex-1">
@@ -304,80 +418,25 @@ export default function EditSeasonPage({ onBack }) {
               value={matchup.team2Score ?? ''}
               onChange={(e) => updateMatchupScore(weekNum, index, 'team2Score', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:rind-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={!matchup.team2}
+              disabled={!matchup.team2 || matchup.team2 === 'BYE'}
             />
           </div>
         </div>
+
+        {/* delete button for regular weeks only */}
+        {!isPlayoff && (
+          <div className="flex justify-end pt-2">
+            <button 
+              onClick={() => removeMatchup(weekNum, index)}
+              className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        )}
       </div>
     );
-  }
-  
-  // /** UNUSED
-  //  * Render a single week accordion
-  //  */
-  // function renderWeek(weekNum) {
-  //   const isExpanded = expandedWeek === weekNum;
-  //   const week = weeks[weekNum];
-    
-  //   if (!week) return null;
-    
-  //   // Check if week has any scores entered
-  //   const hasScores = week.matchups?.some(m => 
-  //     m.team1Score !== null || m.team2Score !== null
-  //   );
-    
-  //   return (
-  //     <div key={weekNum} className="border border-gray-300 rounded-lg overflow-hidden">
-  //       {/* Week Header */}
-  //       <button
-  //         onClick={() => toggleWeek(weekNum)}
-  //         className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors"
-  //       >
-  //         <div className="flex items-center gap-3">
-  //           {isExpanded ? (
-  //             <ChevronDown className="w-5 h-5 text-gray-500" />
-  //           ) : (
-  //             <ChevronRight className="w-5 h-5 text-gray-500" />
-  //           )}
-  //           <span className="font-semibold text-lg text-gray-900">
-  //             Week {weekNum}
-  //           </span>
-  //           {hasScores && (
-  //             <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-  //               ✓ Scores Entered
-  //             </span>
-  //           )}
-  //         </div>
-          
-  //         <div className="text-sm text-gray-500">
-  //           {week.matchups?.length || 0} matchups
-  //         </div>
-  //       </button>
-        
-  //       {/* Week Content (Matchups) */}
-  //       {isExpanded && (
-  //         <div className="p-4 bg-gray-100 border-t border-gray-300">
-  //           <div className="space-y-3 mb-4">
-  //             {week.matchups?.map((matchup, idx) => 
-  //               renderMatchup(weekNum, matchup, idx)
-  //             )}
-  //           </div>
-            
-  //           {/* Save Button */}
-  //           <button
-  //             onClick={() => saveWeek(weekNum)}
-  //             disabled={saving}
-  //             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-  //           >
-  //             <Save className="w-5 h-5" />
-  //             {saving ? 'Saving...' : `Save Week ${weekNum}`}
-  //           </button>
-  //         </div>
-  //       )}
-  //     </div>
-  //   );
-  // }
-  
+  }  
  
   // ============================================
   // RENDER
@@ -422,9 +481,14 @@ export default function EditSeasonPage({ onBack }) {
             onChange={(e) => setSelectedYear(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
           >
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-            <option value="2023">2023</option>
+            {availableYears.length === 0 && (
+              <option value="">Loading years...</option>
+            )}
+            {availableYears.map(year => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
           </select>
         </div>
         
@@ -442,9 +506,14 @@ export default function EditSeasonPage({ onBack }) {
           {Object.keys(weeks).sort((a, b) => Number(a) - Number(b)).map(weekNum => {
             const week = weeks[weekNum];
             const isExpanded = expandedWeek === weekNum;
+            const isPlayoff = isPlayoffWeek(weekNum);
             
             return (
-              <div key={weekNum} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div 
+                key={weekNum}
+                className={`bg-white rounded-lg shadow-md overflow-hidden 
+                ${isPlayoff ? 'border-2 border-indigo-300' : ''}`}
+              >
                 
                 {/* Week Header */}
                 <button
@@ -467,6 +536,15 @@ export default function EditSeasonPage({ onBack }) {
                   <div className="px-6 py-4 border-t border-gray-200 space-y-4">
                     {week.matchups && week.matchups.map((matchup, idx) => 
                       renderMatchup(weekNum, matchup, idx)
+                    )}
+
+                    {!isPlayoff && (
+                      <button 
+                        onClick={() => addMatchup(weekNum)}
+                        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition-colors"
+                      >
+                        + Add Matchup
+                      </button>
                     )}
                     
                     {/* Save Button */}

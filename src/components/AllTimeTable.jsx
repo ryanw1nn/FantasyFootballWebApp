@@ -13,7 +13,7 @@ import React, { useState, useMemo } from 'react';
  *  - Calculates career win percentage and per-game averages
  *  - Tracks championship counts (regular season and playoff)
  *  - Sortable columns
- *  Search filtering by player name
+ *   - Search filtering by player name
  * 
  *  @param {Object} props - Component props
  *  @param {Object} props.allData - Object containing all season data, keyed by year
@@ -47,8 +47,9 @@ export default function AllTimeTable({ allData, searchQuery }) {
         const stats = {};
 
         // Loop through each season's data
-        Object.values(allData).forEach((season) => {
+        Object.entries(allData).forEach(([seasonYear, season]) => {
             if (!Array.isArray(season)) return;
+
             season.forEach((row) => {
                 const name = row.name;
 
@@ -60,9 +61,9 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         ties: 0,
                         PF: 0,
                         PA: 0,
-                        rChampionCount: 0,
+                        rChampionYears: [],
                         playoffRounds: 0,
-                        pChampionCount: 0
+                        pChampionYears: []
                     };
                 }
 
@@ -75,7 +76,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
                 // Track championships
                 if (row.rChampion) {
-                    stats[name].rChampionCount += 1;
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].rChampionYears.push(shortYear);
                 }
 
                 // Track playoff rounds won
@@ -88,7 +90,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
                 // Track playoff championships
                 if (row.playoff?.pChampion) {
-                    stats[name].pChampionCount += 1;
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].pChampionYears.push(shortYear);
                 }
             });
         });
@@ -107,6 +110,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                 winPct,
                 PFPG: totalGames ? s.PF / totalGames : 0,
                 PAPG: totalGames ? s.PA / totalGames : 0,
+                rChampionCount: s.rChampionYears.length,
+                pChampionCount: s.pChampionYears.length
             };
         });
 
@@ -296,11 +301,11 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     </td>
                     
                     
-                    {/* Regular Season Championships - Badge display */}
+                    {/* Regular Season Championships - show years won */}
                     <td className="px-4 py-3 text-center">
-                        {player.rChampionCount > 0 && (
+                        {player.rChampionYears.length > 0 && (
                         <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-semibold">
-                            {player.rChampionCount}
+                            {player.rChampionYears.join(', ')}
                         </span>
                         )}
                     </td>
@@ -314,11 +319,11 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         )}
                     </td>   
 
-                    {/* Playoff Championships - Badge display */}
+                    {/* Playoff Championships - show years won */}
                     <td className="px-4 py-3 text-center">
-                        {player.pChampionCount > 0 && (
+                        {player.pChampionYears.length > 0 && (
                         <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
-                            {player.pChampionCount}
+                            {player.pChampionYears.join(', ')}
                         </span>
                         )}
                     </td>

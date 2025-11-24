@@ -3934,170 +3934,6 @@
             "team2Score": null
           }
         ]
-      },
-      "15": {
-        "matchups": [
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": "BYE",
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#1 SEED VS BYE"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#4 SEED vs #5 SEED"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#3 SEED vs #6 SEED"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": "BYE",
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#2 SEED vs BYE"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
-            "label": "#9 SEED vs #12 SEED"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
-            "label": "#10 SEED vs #11 SEED"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "#7 SEED vs #8 SEED"
-          }
-        ]
-      },
-      "16": {
-        "matchups": [
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#1 SEED vs winner #4/#5"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#2 SEED vs winner #3/#6"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
-            "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "loser #4/#5 vs loser #3/#6"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "#7 SEED vs winner #10/#11"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "#8 SEED vs winner #9/#12"
-          }
-        ]
-      },
-      "17": {
-        "matchups": [
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "playoff",
-            "label": "Winner Matchup 1 vs Winner Matchup 2 - SUPER BOWL"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "loser Matchup 1 vs loser Matchup 2 - Third Place"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "winner Matchup 3 vs winner Matchup 4"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "winner Matchup 5 vs loser Matchup 6"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "loser Matchup 5 vs winner Matchup 6"
-          },
-          {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "out",
-            "label": "loser Matchup 3 vs loser Matchup 4"
-          }
-        ]
       }
     },
     "standings": [
@@ -5014,170 +4850,6 @@
             "team2Score": 180.4
           }
         ]
-      },
-      "15": {
-        "matchups": [
-          {
-            "team1": "Brett Lewis",
-            "team1Score": 149.58,
-            "team2": "BYE",
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#1 SEED VS BYE"
-          },
-          {
-            "team1": "TJ Cairney",
-            "team1Score": 95.64,
-            "team2": "Keith John",
-            "team2Score": 104.76,
-            "status": "playoff",
-            "label": "#4 SEED vs #5 SEED"
-          },
-          {
-            "team1": "Austin Whittaker",
-            "team1Score": 118.78,
-            "team2": "Garret Vivian",
-            "team2Score": 90.94,
-            "status": "playoff",
-            "label": "#3 SEED vs #6 SEED"
-          },
-          {
-            "team1": "Will Friedenberger",
-            "team1Score": 164.6,
-            "team2": "BYE",
-            "team2Score": null,
-            "status": "playoff",
-            "label": "#2 SEED vs BYE"
-          },
-          {
-            "team1": "Noah Roberts",
-            "team1Score": 115.92,
-            "team2": "Michael Cassidy",
-            "team2Score": 119.94,
-            "status": "toilet",
-            "label": "#9 SEED vs #12 SEED"
-          },
-          {
-            "team1": "Max Strater",
-            "team1Score": 121.7,
-            "team2": "Ryan Winn",
-            "team2Score": 154.3,
-            "status": "toilet",
-            "label": "#10 SEED vs #11 SEED"
-          },
-          {
-            "team1": "Jimmy Beer",
-            "team1Score": 170.74,
-            "team2": "Josh Whelan",
-            "team2Score": 108.8,
-            "status": "out",
-            "label": "#7 SEED vs #8 SEED"
-          }
-        ]
-      },
-      "16": {
-        "matchups": [
-          {
-            "team1": "Brett Lewis",
-            "team1Score": 131.06,
-            "team2": "Keith John",
-            "team2Score": 132.9,
-            "status": "playoff",
-            "label": "#1 SEED vs winner #4/#5"
-          },
-          {
-            "team1": "Will Friedenberger",
-            "team1Score": 109.88,
-            "team2": "Austin Whittaker",
-            "team2Score": 135.58,
-            "status": "playoff",
-            "label": "#2 SEED vs winner #3/#6"
-          },
-          {
-            "team1": "Noah Roberts",
-            "team1Score": 144.82,
-            "team2": "Max Strater",
-            "team2Score": 128.86,
-            "status": "toilet",
-            "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
-          },
-          {
-            "team1": "Garret Vivian",
-            "team1Score": 109.1,
-            "team2": "TJ Cairney",
-            "team2Score": 149.94,
-            "status": "out",
-            "label": "loser #4/#5 vs loser #3/#6"
-          },
-          {
-            "team1": "Jimmy Beer",
-            "team1Score": 169.42,
-            "team2": "Michael Cassidy",
-            "team2Score": 125.06,
-            "status": "out",
-            "label": "#7 SEED vs winner #10/#11"
-          },
-          {
-            "team1": "Ryan Winn",
-            "team1Score": 146.22,
-            "team2": "Josh Whelan",
-            "team2Score": 70.64,
-            "status": "out",
-            "label": "#8 SEED vs winner #9/#12"
-          }
-        ]
-      },
-      "17": {
-        "matchups": [
-          {
-            "team1": "Keith John",
-            "team1Score": 133.6,
-            "team2": "Austin Whittaker",
-            "team2Score": 80.24,
-            "status": "playoff",
-            "label": "Winner Matchup 1 vs Winner Matchup 2 - SUPER BOWL"
-          },
-          {
-            "team1": "Brett Lewis",
-            "team1Score": 187.08,
-            "team2": "Will Friedenberger",
-            "team2Score": 143.12,
-            "status": "out",
-            "label": "loser Matchup 1 vs loser Matchup 2 - Third Place"
-          },
-          {
-            "team1": "Garret Vivian",
-            "team1Score": 85.4,
-            "team2": "TJ Cairney",
-            "team2Score": 103.98,
-            "status": "out",
-            "label": "winner Matchup 3 vs winner Matchup 4"
-          },
-          {
-            "team1": "Noah Roberts",
-            "team1Score": 132.26,
-            "team2": "Jimmy Beer",
-            "team2Score": 112.28,
-            "status": "out",
-            "label": "winner Matchup 5 vs loser Matchup 6"
-          },
-          {
-            "team1": "Ryan Winn",
-            "team1Score": 125.96,
-            "team2": "Max Strater",
-            "team2Score": 129.34,
-            "status": "out",
-            "label": "loser Matchup 5 vs winner Matchup 6"
-          },
-          {
-            "team1": "Michael Cassidy",
-            "team1Score": 137.08,
-            "team2": "Josh Whelan",
-            "team2Score": 60.88,
-            "status": "out",
-            "label": "loser Matchup 3 vs loser Matchup 4"
-          }
-        ]
       }
     },
     "standings": [
@@ -5191,85 +4863,13 @@
           "pChampion": false
         },
         "rChampion": true,
-        "wins": 11,
-        "losses": 5,
+        "wins": 10,
+        "losses": 4,
         "ties": 0,
-        "pf": 2150.84,
-        "pa": 1911.3200000000002,
+        "pf": 1832.7,
+        "pa": 1635.3,
         "place": 1,
         "prevPlace": 1
-      },
-      {
-        "team": "EPA THI",
-        "name": "Keith John",
-        "state": "active",
-        "playoff": {
-          "made": true,
-          "rounds": 3,
-          "pChampion": true
-        },
-        "rChampion": false,
-        "wins": 11,
-        "losses": 6,
-        "ties": 0,
-        "pf": 1803.1,
-        "pa": 1828.8600000000001,
-        "place": 2,
-        "prevPlace": 3
-      },
-      {
-        "team": "Cali Awhitty",
-        "name": "Austin Whittaker",
-        "state": "active",
-        "playoff": {
-          "made": true,
-          "rounds": 3,
-          "pChampion": false
-        },
-        "rChampion": false,
-        "wins": 10,
-        "ties": 0,
-        "losses": 7,
-        "pf": 1968.62,
-        "pa": 1867.38,
-        "place": 3,
-        "prevPlace": 2
-      },
-      {
-        "team": "Lil Tom",
-        "name": "TJ Cairney",
-        "state": "active",
-        "playoff": {
-          "made": true,
-          "rounds": 1,
-          "pChampion": false
-        },
-        "rChampion": false,
-        "wins": 9,
-        "losses": 8,
-        "ties": 0,
-        "pf": 2125,
-        "pa": 2081.66,
-        "place": 4,
-        "prevPlace": 6
-      },
-      {
-        "team": "Bistro Beverages",
-        "name": "Jimmy Beer",
-        "state": "active",
-        "playoff": {
-          "made": false,
-          "rounds": 0,
-          "pChampion": false
-        },
-        "rChampion": false,
-        "wins": 9,
-        "losses": 8,
-        "ties": 0,
-        "pf": 2055.6400000000003,
-        "pa": 2046.6200000000001,
-        "place": 5,
-        "prevPlace": 4
       },
       {
         "team": "Lights, Kamara, Jackson",
@@ -5282,66 +4882,66 @@
         },
         "rChampion": false,
         "wins": 9,
-        "losses": 7,
+        "losses": 5,
         "ties": 0,
-        "pf": 2035.6799999999998,
-        "pa": 1968.84,
-        "place": 6,
-        "prevPlace": 5
+        "pf": 1782.68,
+        "pa": 1646.18,
+        "place": 2,
+        "prevPlace": 2
       },
       {
-        "team": "Dr. Fish",
-        "name": "Noah Roberts",
+        "team": "Cali Awhitty",
+        "name": "Austin Whittaker",
         "state": "active",
         "playoff": {
-          "made": false,
-          "rounds": 0,
+          "made": true,
+          "rounds": 3,
           "pChampion": false
         },
         "rChampion": false,
         "wins": 8,
-        "losses": 9,
         "ties": 0,
-        "pf": 2060.4400000000005,
-        "pa": 1903.66,
-        "place": 7,
-        "prevPlace": 7
+        "losses": 6,
+        "pf": 1634.02,
+        "pa": 1532.96,
+        "place": 3,
+        "prevPlace": 3
       },
       {
-        "team": "Ginja Ninjas",
-        "name": "Ryan Winn",
+        "team": "EPA THI",
+        "name": "Keith John",
         "state": "active",
         "playoff": {
-          "made": false,
-          "rounds": 0,
-          "pChampion": false
+          "made": true,
+          "rounds": 3,
+          "pChampion": true
         },
         "rChampion": false,
-        "wins": 7,
-        "losses": 10,
+        "wins": 8,
+        "losses": 6,
         "ties": 0,
-        "pf": 2050.36,
-        "pa": 2200.94,
-        "place": 8,
-        "prevPlace": 8
+        "pf": 1431.84,
+        "pa": 1521.92,
+        "place": 4,
+        "prevPlace": 4
       },
       {
-        "team": "Mike Hawk",
-        "name": "Michael Cassidy",
-        "state": "inactive",
+        "team": "Lil Tom",
+        "name": "TJ Cairney",
+        "state": "active",
         "playoff": {
-          "made": false,
-          "rounds": 0,
+          "made": true,
+          "rounds": 1,
           "pChampion": false
         },
         "rChampion": false,
         "wins": 7,
-        "losses": 10,
+        "losses": 7,
         "ties": 0,
-        "pf": 1977.9599999999998,
-        "pa": 2007.54,
-        "place": 9,
-        "prevPlace": 10
+        "pf": 1775.4399999999998,
+        "pa": 1782.4,
+        "place": 5,
+        "prevPlace": 5
       },
       {
         "team": "Craven Moore",
@@ -5354,16 +4954,34 @@
         },
         "rChampion": false,
         "wins": 7,
-        "losses": 10,
+        "losses": 7,
         "ties": 0,
-        "pf": 1938.66,
-        "pa": 2011.8799999999999,
-        "place": 10,
-        "prevPlace": 9
+        "pf": 1653.22,
+        "pa": 1639.1799999999998,
+        "place": 6,
+        "prevPlace": 7
       },
       {
-        "team": "gabe uhtsecs",
-        "name": "Max Strater",
+        "team": "Bistro Beverages",
+        "name": "Jimmy Beer",
+        "state": "active",
+        "playoff": {
+          "made": false,
+          "rounds": 0,
+          "pChampion": false
+        },
+        "rChampion": false,
+        "wins": 7,
+        "losses": 7,
+        "ties": 0,
+        "pf": 1603.2,
+        "pa": 1680.5000000000002,
+        "place": 7,
+        "prevPlace": 6
+      },
+      {
+        "team": "Dr. Fish",
+        "name": "Noah Roberts",
         "state": "active",
         "playoff": {
           "made": false,
@@ -5372,12 +4990,12 @@
         },
         "rChampion": false,
         "wins": 6,
-        "losses": 10,
-        "ties": 1,
-        "pf": 1898.2,
-        "pa": 2052.9799999999996,
-        "place": 11,
-        "prevPlace": 12
+        "losses": 8,
+        "ties": 0,
+        "pf": 1667.4400000000003,
+        "pa": 1542.58,
+        "place": 8,
+        "prevPlace": 9
       },
       {
         "team": "Boner Garage",
@@ -5390,10 +5008,64 @@
         },
         "rChampion": false,
         "wins": 6,
-        "losses": 10,
+        "losses": 7,
         "ties": 1,
-        "pf": 1879.9200000000003,
-        "pa": 2062.74,
+        "pf": 1639.6000000000001,
+        "pa": 1608.6999999999998,
+        "place": 9,
+        "prevPlace": 8
+      },
+      {
+        "team": "Ginja Ninjas",
+        "name": "Ryan Winn",
+        "state": "active",
+        "playoff": {
+          "made": false,
+          "rounds": 0,
+          "pChampion": false
+        },
+        "rChampion": false,
+        "wins": 5,
+        "losses": 9,
+        "ties": 0,
+        "pf": 1623.88,
+        "pa": 1879.26,
+        "place": 10,
+        "prevPlace": 12
+      },
+      {
+        "team": "Mike Hawk",
+        "name": "Michael Cassidy",
+        "state": "inactive",
+        "playoff": {
+          "made": false,
+          "rounds": 0,
+          "pChampion": false
+        },
+        "rChampion": false,
+        "wins": 5,
+        "losses": 9,
+        "ties": 0,
+        "pf": 1595.8799999999999,
+        "pa": 1661.3199999999997,
+        "place": 11,
+        "prevPlace": 10
+      },
+      {
+        "team": "gabe uhtsecs",
+        "name": "Max Strater",
+        "state": "active",
+        "playoff": {
+          "made": false,
+          "rounds": 0,
+          "pChampion": false
+        },
+        "rChampion": false,
+        "wins": 5,
+        "losses": 8,
+        "ties": 1,
+        "pf": 1518.3000000000002,
+        "pa": 1627.8999999999999,
         "place": 12,
         "prevPlace": 11
       }

@@ -261,7 +261,7 @@ export default function App() {
             </button>
 
             {showFilterMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-10">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50">
                 <h3 className="font-semibold text-gray-900 mb-2">Team States</h3>
                 {Object.entries(filters).map(([key, value]) => (
                   <label key={key} className="flex items-center gap-2 py-1 cursor-pointer">
