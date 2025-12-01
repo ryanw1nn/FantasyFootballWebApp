@@ -89,17 +89,13 @@ function recalculateStandings(year) {
 
   // Skip old format seasons (arrays)
   if (Array.isArray(season)) {
-    //console.log(`⏭️  ${year} - old format, skipping`);
     return;
   }
   
   // Skip seasons without proper weeks structure
   if (!season.weeks || typeof season.weeks !== 'object' || Array.isArray(season.weeks)) {
-    //console.log(`⏭️  ${year} - no weeks data, skipping`);
     return;
   }
-
-  //console.log(`\n Recalculatng ${year}...`);
 
   // Initialize team stats to zero
   const stats = {};
@@ -109,7 +105,13 @@ function recalculateStandings(year) {
       losses: 0,
       ties: 0,
       pf: 0,
-      pa: 0
+      pa: 0,
+      // playoff stats by status
+      playoffStats: {
+        playoff: { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0},
+        toilet: { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0},
+        out: { wins: 0, losses: 0, ties: 0, pf: 0, pa: 0}
+      }
     };
   });
 
@@ -136,6 +138,9 @@ function recalculateStandings(year) {
 
     if (!weekData || !weekData.matchups) continue;
   
+    // determine if this is a playoff week (15+)
+    const isPlayoffWeek = weekNum >= 15;
+
     // process this week's matchups
     weekData.matchups.forEach(matchup => {
       // get scores - treat null/undefined as 0
@@ -145,51 +150,68 @@ function recalculateStandings(year) {
       const name1 = matchup.team1;
       const name2 = matchup.team2;
 
-      // skip if either team doesn't exist in roster
-      if (!stats[name1] || !stats[name2]) return;
+      // skip if either team doesn't exist in roster or is BYE
+      if (!stats[name1] || !stats[name2] || name1 === 'BYE' || 'name2' === 'BYE') return;
       
+      let statBucket1, statBucket2;
+
+      if(!isPlayoffWeek) {
+        // regular week - use main stats
+        statBucket1 = stats[name1];
+        statBucket2 = stats[name2];
+      } else {
+        // playoff week - use status-specific bucket
+        const status = matchup.status || 'out'; //defaults to out
+        statBucket1 = stats[name1].playoffStats[status];
+        statBucket2 = stats[name2].playoffStats[status];
+      }
+
       // accumulate points
-      stats[name1].pf += score1;
-      stats[name1].pa += score2;
-      stats[name2].pf += score2;
-      stats[name2].pa += score1;
+      statBucket1.pf += score1;
+      statBucket1.pa += score2;
+      statBucket2.pf += score2;
+      statBucket2.pa += score1;
 
       // determine winner and update records
       if (score1 > 0 && score2 > 0) {
         if (score1 > score2) {
-          stats[name1].wins++;
-          stats[name2].losses++;
+          statBucket1.wins++;
+          statBucket2.losses++;
         } else if (score2 > score1) {
-          stats[name2].wins++;
-          stats[name1].losses++;
+          statBucket2.wins++;
+          statBucket1.losses++;
         } else {
           // tie game
-          stats[name1].ties++;
-          stats[name2].ties++;
+          statBucket1.ties++;
+          statBucket2.ties++;
         }
       }
     });
 
-    // process last weeks matchups
-    if (i === weeksWithScores.length - 2) {
-      const currentStandings = season.teams.map(team => ({
-        name: team.name,
-        wins: stats[team.name].wins,
-        pf: stats[team.name].pf
-      }));
+    // tracks place after second-to-last REGULAR season week (before playoff start)
+    // only consider regular season weeks for this calculation
+    if (!isPlayoffWeek) {
+      const regularSeasonWeeks = weeksWithScores.filter(w => w < 15);
+      const currentRegularWeekIndex = regularSeasonWeeks.indexOf(weekNum);
 
-      currentStandings.sort((a, b) => {
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        return b.pf - a.pf;
-      });
-      
-      currentStandings.forEach((team, idx) => {
-        prevWeekPlaces[team.name] = idx + 1;
-      });
+      if (currentRegularWeekIndex === regularSeasonWeeks.length - 2) {
+        const currentStandings = season.teams.map(team => ({
+          name: team.name,
+          wins: stats[team.name].wins,
+          pf: stats[team.name].pf
+        }));
+
+        currentStandings.sort((a, b) => {
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          return b.pf - a.pf;
+        });
+
+        currentStandings.forEach((team, idx) => {
+          prevWeekPlaces[team.name] = idx + 1;
+        });
+      }
     }
   }
-
-  //console.log(`   Processed ${processedGames} completed games`);
 
   if (weeksWithScores.length === 0) {
     return;
@@ -197,18 +219,19 @@ function recalculateStandings(year) {
 
   // Update standings array with calculated stats
   season.standings = season.teams.map(team => {
-  // Preserve existing metadata (playoff info, championships, etc.)
-  const existingTeam = season.standings?.find(t => t.name === team.name) || {};
+    // Preserve existing metadata (playoff info, championships, etc.)
+    const existingTeam = season.standings?.find(t => t.name === team.name) || {};
 
-  return {
-    ...team,
-    ...existingTeam,
-    wins: stats[team.name].wins,
-    losses: stats[team.name].losses,
-    ties: stats[team.name].ties,
-    pf: stats[team.name].pf,
-    pa: stats[team.name].pa
-  };
+    return {
+      ...team,
+      ...existingTeam,
+      wins: stats[team.name].wins,
+      losses: stats[team.name].losses,
+      ties: stats[team.name].ties,
+      pf: stats[team.name].pf,
+      pa: stats[team.name].pa,
+      playoffStats: stats[team.name].playoffStats
+    };
   });
 
   // Sort by wins (descending), then by PF (descending)
@@ -225,8 +248,6 @@ function recalculateStandings(year) {
     team.place = currentPlace;
     team.prevPlace = previousPlace;
   });
-
-  //console.log(`✅ Standings updated for ${year}\n`);
 }
 
 // ===============================

@@ -34,6 +34,21 @@ export default function AllTimeTable({ allData, searchQuery }) {
         direction: "desc"
     });
 
+    /**
+     * Playoff stat filters
+     * Controls which playoff stats to include in the all-time totals
+     */
+    const [playoffFilters, setPlayoffFilters] = useState({
+        playoff: false,
+        toilet: false,
+        out: false
+    });
+
+    /**
+     * Toggle visibility of playoff filter menu
+     */
+    const [showPlayoffFilters, setShowPlayoffFilters] = useState(false);
+
     // ==================================
     // DATA AGGREGATION & FILTERING
     // ==================================
