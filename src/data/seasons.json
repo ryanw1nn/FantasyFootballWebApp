@@ -700,7 +700,7 @@
           {
             "team1": null,
             "team1Score": null,
-            "team2": null,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#1 SEED VS BYE"
@@ -724,7 +724,7 @@
           {
             "team1": null,
             "team1Score": null,
-            "team2": null,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#2 SEED vs BYE"
@@ -1218,618 +1218,618 @@
       "1": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 126.48,
+            "team2": "Ryan Winn",
+            "team2Score": 121.02
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 153.88,
+            "team2": "Garret Vivian",
+            "team2Score": 132.64
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 159.76,
+            "team2": "Max Strater",
+            "team2Score": 106.64
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 145.36,
+            "team2": "Josh Whelan",
+            "team2Score": 144.76
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 143.82,
+            "team2": "Noah Roberts",
+            "team2Score": 103.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 83.42,
+            "team2": "Austin Whittaker",
+            "team2Score": 127.1
           }
         ]
       },
       "2": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 87.97,
+            "team2": "Brett Lewis",
+            "team2Score": 135.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 136.6,
+            "team2": "TJ Cairney",
+            "team2Score": 108.34
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 169.12,
+            "team2": "Michael Cassidy",
+            "team2Score": 121.42
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 129.66,
+            "team2": "Jimmy Beer",
+            "team2Score": 134
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 112.86,
+            "team2": "Josh Whelan",
+            "team2Score": 173.54
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 126.66,
+            "team2": "Keith John",
+            "team2Score": 121.72
           }
         ]
       },
       "3": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 94.62,
+            "team2": "Austin Whittaker",
+            "team2Score": 106.48
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 125.36,
+            "team2": "Michael Cassidy",
+            "team2Score": 114.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 141.72,
+            "team2": "Noah Roberts",
+            "team2Score": 114.72
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 151.28,
+            "team2": "Max Strater",
+            "team2Score": 161.72
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 107.54,
+            "team2": "Garret Vivian",
+            "team2Score": 97.72
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 148.74,
+            "team2": "Aaron Griffith",
+            "team2Score": 108.54
           }
         ]
       },
       "4": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 119.72,
+            "team2": "Ryan Winn",
+            "team2Score": 110.62
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 108.84,
+            "team2": "Brett Lewis",
+            "team2Score": 118.56
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 112.02,
+            "team2": "Jimmy Beer",
+            "team2Score": 118.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 115.22,
+            "team2": "Keith John",
+            "team2Score": 119.28
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 109.36,
+            "team2": "TJ Cairney",
+            "team2Score": 169.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 131.5,
+            "team2": "Noah Roberts",
+            "team2Score": 127.82
           }
         ]
       },
       "5": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 94.18,
+            "team2": "Aaron Griffith",
+            "team2Score": 89.86
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 154.12,
+            "team2": "Michael Cassidy",
+            "team2Score": 119.88
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 126.58,
+            "team2": "Max Strater",
+            "team2Score": 150.7
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 183.96,
+            "team2": "Josh Whelan",
+            "team2Score": 155.74
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 99.18,
+            "team2": "Noah Roberts",
+            "team2Score": 178.4
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 167.78,
+            "team2": "Garret Vivian",
+            "team2Score": 90.5
           }
         ]
       },
       "6": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 115.48,
+            "team2": "Ryan Winn",
+            "team2Score": 109.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 130.94,
+            "team2": "TJ Cairney",
+            "team2Score": 142.68
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 157.28,
+            "team2": "Keith John",
+            "team2Score": 120.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 132.22,
+            "team2": "Jimmy Beer",
+            "team2Score": 138.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 131.52,
+            "team2": "Garret Vivian",
+            "team2Score": 150.34
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 122.96,
+            "team2": "Austin Whittaker",
+            "team2Score": 109.58
           }
         ]
       },
       "7": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 109.5,
+            "team2": "Josh Whelan",
+            "team2Score": 132.24
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 96.42,
+            "team2": "Noah Roberts",
+            "team2Score": 136.44
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 129.26,
+            "team2": "Max Strater",
+            "team2Score": 122.06
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 197.48,
+            "team2": "Michael Cassidy",
+            "team2Score": 104.74
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 131.44,
+            "team2": "Aaron Griffith",
+            "team2Score": 91.04
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 70.68,
+            "team2": "Brett Lewis",
+            "team2Score": 145.82
           }
         ]
       },
       "8": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 129.36,
+            "team2": "Ryan Winn",
+            "team2Score": 106.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 140.62,
+            "team2": "Jimmy Beer",
+            "team2Score": 84.26
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 147.6,
+            "team2": "Austin Whittaker",
+            "team2Score": 113.54
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 118.42,
+            "team2": "Aaron Griffith",
+            "team2Score": 64.06
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 135.7,
+            "team2": "Keith John",
+            "team2Score": 111.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 68.3,
+            "team2": "Garret Vivian",
+            "team2Score": 124.76
           }
         ]
       },
       "9": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 112.98,
+            "team2": "Max Strater",
+            "team2Score": 87.86
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 86.48,
+            "team2": "Josh Whelan",
+            "team2Score": 108.98
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 139.54,
+            "team2": "TJ Cairney",
+            "team2Score": 109.36
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 110.18,
+            "team2": "Brett Lewis",
+            "team2Score": 106.24
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 102.86,
+            "team2": "Austin Whittaker",
+            "team2Score": 120.34
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 121.44,
+            "team2": "Michael Cassidy",
+            "team2Score": 94.44
           }
         ]
       },
       "10": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 104.64,
+            "team2": "Ryan Winn",
+            "team2Score": 121.94
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 87.14,
+            "team2": "Garret Vivian",
+            "team2Score": 120.46
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 96.12,
+            "team2": "Austin Whittaker",
+            "team2Score": 87.92
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 160.56,
+            "team2": "Aaron Griffith",
+            "team2Score": 101.4
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 79.38,
+            "team2": "Keith John",
+            "team2Score": 79.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 114.44,
+            "team2": "Michael Cassidy",
+            "team2Score": 150.94
           }
         ]
       },
       "11": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 105.74,
+            "team2": "Jimmy Beer",
+            "team2Score": 163.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 114.92,
+            "team2": "TJ Cairney",
+            "team2Score": 128.82
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 115.6,
+            "team2": "Josh Whelan",
+            "team2Score": 70.48
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 144.92,
+            "team2": "Max Strater",
+            "team2Score": 96.62
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 67.16,
+            "team2": "Noah Roberts",
+            "team2Score": 136.46
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 109.8,
+            "team2": "Keith John",
+            "team2Score": 150.28
           }
         ]
       },
       "12": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 135.4,
+            "team2": "Keith John",
+            "team2Score": 135.62
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 96.92,
+            "team2": "TJ Cairney",
+            "team2Score": 120.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 99.58,
+            "team2": "Aaron Griffith",
+            "team2Score": 67.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 75.3,
+            "team2": "Jimmy Beer",
+            "team2Score": 172.38
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 91.04,
+            "team2": "Brett Lewis",
+            "team2Score": 69.28
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 145.6,
+            "team2": "Michael Cassidy",
+            "team2Score": 106.28
           }
         ]
       },
       "13": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 156.36,
+            "team2": "Ryan Winn",
+            "team2Score": 152.02
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 109.52,
+            "team2": "Noah Roberts",
+            "team2Score": 95
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 111.32,
+            "team2": "Garret Vivian",
+            "team2Score": 100.1
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 112.74,
+            "team2": "Aaron Griffith",
+            "team2Score": 120.42
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 119.26,
+            "team2": "Max Strater",
+            "team2Score": 101.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 143.08,
+            "team2": "Austin Whittaker",
+            "team2Score": 100.32
           }
         ]
       },
       "14": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 141.68,
+            "team2": "Ryan Winn",
+            "team2Score": 109.44
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 94.52,
+            "team2": "Brett Lewis",
+            "team2Score": 120.1
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 172.32,
+            "team2": "TJ Cairney",
+            "team2Score": 76.48
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 120.22,
+            "team2": "Jimmy Beer",
+            "team2Score": 150.64
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 123.08,
+            "team2": "Josh Whelan",
+            "team2Score": 123.92
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 99.44,
+            "team2": "Keith John",
+            "team2Score": 132.1
           }
         ]
       },
       "15": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
+            "team1": "Jimmy Beer",
+            "team1Score": 148.52,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#1 SEED VS BYE"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Max Strater",
+            "team1Score": 120.56,
+            "team2": "Brett Lewis",
+            "team2Score": 111.86,
             "status": "playoff",
             "label": "#4 SEED vs #5 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Austin Whittaker",
+            "team1Score": 74,
+            "team2": "Keith John",
+            "team2Score": 119.14,
             "status": "playoff",
             "label": "#3 SEED vs #6 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
+            "team1": "Josh Whelan",
+            "team1Score": 120.67,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#2 SEED vs BYE"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "TJ Cairney",
+            "team1Score": 117.24,
+            "team2": "Noah Roberts",
+            "team2Score": 103.3,
+            "status": "out",
             "label": "#9 SEED vs #12 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "Michael Cassidy",
+            "team1Score": 111.6,
+            "team2": "Garret Vivian",
+            "team2Score": 85.98,
+            "status": "out",
             "label": "#10 SEED vs #11 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Ryan Winn",
+            "team1Score": 68.28,
+            "team2": "Aaron Griffith",
+            "team2Score": 71.88,
             "status": "out",
             "label": "#7 SEED vs #8 SEED"
           }
@@ -1838,50 +1838,50 @@
       "16": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Jimmy Beer",
+            "team1Score": 144.08,
+            "team2": "Max Strater",
+            "team2Score": 113.98,
             "status": "playoff",
             "label": "#1 SEED vs winner #4/#5"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Keith John",
+            "team1Score": 115.14,
+            "team2": "Josh Whelan",
+            "team2Score": 119.58,
             "status": "playoff",
             "label": "#2 SEED vs winner #3/#6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "Ryan Winn",
+            "team1Score": 153.2,
+            "team2": "Noah Roberts",
+            "team2Score": 157.16,
+            "status": "out",
             "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Austin Whittaker",
+            "team1Score": 120.34,
+            "team2": "Brett Lewis",
+            "team2Score": 131.7,
             "status": "out",
             "label": "loser #4/#5 vs loser #3/#6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Aaron Griffith",
+            "team1Score": 60.2,
+            "team2": "Garret Vivian",
+            "team2Score": 119.4,
             "status": "out",
             "label": "#7 SEED vs winner #10/#11"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "TJ Cairney",
+            "team1Score": 75.52,
+            "team2": "Michael Cassidy",
+            "team2Score": 75.42,
             "status": "out",
             "label": "#8 SEED vs winner #9/#12"
           }
@@ -1890,50 +1890,50 @@
       "17": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Josh Whelan",
+            "team1Score": 120.5,
+            "team2": "Jimmy Beer",
+            "team2Score": 157.42,
             "status": "playoff",
             "label": "Winner Matchup 1 vs Winner Matchup 2 - SUPER BOWL"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Max Strater",
+            "team1Score": 81.06,
+            "team2": "Keith John",
+            "team2Score": 145.98,
             "status": "out",
             "label": "loser Matchup 1 vs loser Matchup 2 - Third Place"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Austin Whittaker",
+            "team1Score": 123.48,
+            "team2": "Brett Lewis",
+            "team2Score": 147.46,
             "status": "out",
             "label": "winner Matchup 3 vs winner Matchup 4"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Noah Roberts",
+            "team1Score": 119.7,
+            "team2": "Garret Vivian",
+            "team2Score": 154.04,
             "status": "out",
             "label": "winner Matchup 5 vs loser Matchup 6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Ryan Winn",
+            "team1Score": 114.64,
+            "team2": "Aaron Griffith",
+            "team2Score": 121.42,
             "status": "out",
             "label": "loser Matchup 5 vs winner Matchup 6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "TJ Cairney",
+            "team1Score": 67.1,
+            "team2": "Michael Cassidy",
+            "team2Score": 99.46,
             "status": "out",
             "label": "loser Matchup 3 vs loser Matchup 4"
           }
@@ -1953,11 +1953,34 @@
         "rChampion": true,
         "wins": 12,
         "losses": 2,
-        "pf": 1808.26,
+        "pf": 1808.2600000000002,
         "pa": 1614.86,
         "place": 1,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 1,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 2,
+            "losses": 0,
+            "ties": 0,
+            "pf": 301.5,
+            "pa": 234.48000000000002
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          }
+        }
       },
       {
         "team": "Boner Garage",
@@ -1971,11 +1994,34 @@
         "rChampion": false,
         "wins": 9,
         "losses": 5,
-        "pf": 1836.3,
+        "pf": 1836.2999999999997,
         "pa": 1708.18,
         "place": 2,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 2,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 240.07999999999998,
+            "pa": 272.56
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          }
+        }
       },
       {
         "team": "EPA THI",
@@ -1989,11 +2035,34 @@
         "rChampion": false,
         "wins": 9,
         "losses": 5,
-        "pf": 1737.3,
-        "pa": 1798.58,
+        "pf": 1737.2999999999997,
+        "pa": 1643.62,
         "place": 3,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 3,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 234.28,
+            "pa": 193.57999999999998
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 145.98,
+            "pa": 81.06
+          }
+        }
       },
       {
         "team": "Welsh Wales",
@@ -2008,10 +2077,33 @@
         "wins": 8,
         "losses": 6,
         "pf": 1739.52,
-        "pa": 1641.06,
+        "pa": 1641.05,
         "place": 4,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 4,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 111.86,
+            "pa": 120.56
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 2,
+            "losses": 0,
+            "ties": 0,
+            "pf": 279.15999999999997,
+            "pa": 243.82
+          }
+        }
       },
       {
         "team": "gabe uhtsecs",
@@ -2026,10 +2118,33 @@
         "wins": 7,
         "losses": 7,
         "pf": 1713.54,
-        "pa": 1727.02,
+        "pa": 1727.0200000000002,
         "place": 5,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 5,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 234.54000000000002,
+            "pa": 255.94
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 81.06,
+            "pa": 145.98
+          }
+        }
       },
       {
         "team": "Cali Awhitty",
@@ -2044,10 +2159,33 @@
         "wins": 7,
         "losses": 7,
         "pf": 1697.94,
-        "pa": 1636.82,
+        "pa": 1636.8199999999997,
         "place": 6,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 7,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 74,
+            "pa": 119.14
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 2,
+            "ties": 0,
+            "pf": 243.82,
+            "pa": 279.15999999999997
+          }
+        }
       },
       {
         "team": "Lil T",
@@ -2061,11 +2199,34 @@
         "rChampion": false,
         "wins": 7,
         "losses": 7,
-        "pf": 1663.18,
-        "pa": 1798.58,
+        "pf": 1663.1800000000003,
+        "pa": 1798.5800000000002,
         "place": 7,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 6,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 117.24,
+            "pa": 103.3
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 142.62,
+            "pa": 174.88
+          }
+        }
       },
       {
         "team": "Mike Hawk",
@@ -2079,11 +2240,34 @@
         "rChampion": false,
         "wins": 6,
         "losses": 8,
-        "pf": 1659,
-        "pa": 1732.1,
+        "pf": 1658.9999999999998,
+        "pa": 1732.1000000000001,
         "place": 8,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 10,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 111.6,
+            "pa": 85.98
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 174.88,
+            "pa": 142.62
+          }
+        }
       },
       {
         "team": "Craven Moore",
@@ -2097,11 +2281,34 @@
         "rChampion": false,
         "wins": 6,
         "losses": 8,
-        "pf": 1625.1,
+        "pf": 1625.1000000000001,
         "pa": 1621.34,
         "place": 9,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 8,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 85.98,
+            "pa": 111.6
+          },
+          "out": {
+            "wins": 2,
+            "losses": 0,
+            "ties": 0,
+            "pf": 273.44,
+            "pa": 179.9
+          }
+        }
       },
       {
         "team": "Dr. Fish",
@@ -2115,11 +2322,34 @@
         "rChampion": false,
         "wins": 5,
         "losses": 9,
-        "pf": 1696.7,
-        "pa": 1675.44,
+        "pf": 1696.6999999999998,
+        "pa": 1675.4399999999998,
         "place": 10,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 9,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 260.46,
+            "pa": 270.44
+          },
+          "out": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 119.7,
+            "pa": 154.04
+          }
+        }
       },
       {
         "team": "Johnny Sins PHPremium",
@@ -2133,11 +2363,34 @@
         "rChampion": false,
         "wins": 5,
         "losses": 9,
-        "pf": 1486.58,
+        "pf": 1486.5800000000004,
         "pa": 1691.04,
         "place": 11,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 11,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 2,
+            "losses": 1,
+            "ties": 0,
+            "pf": 253.5,
+            "pa": 302.32
+          }
+        }
       },
       {
         "team": "Ginja Ninjas",
@@ -2151,11 +2404,34 @@
         "rChampion": false,
         "wins": 3,
         "losses": 11,
-        "pf": 1571.24,
-        "pa": 1744.6,
+        "pf": 1571.2300000000002,
+        "pa": 1744.6000000000001,
         "place": 12,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 12,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 153.2,
+            "pa": 157.16
+          },
+          "out": {
+            "wins": 0,
+            "losses": 2,
+            "ties": 0,
+            "pf": 182.92000000000002,
+            "pa": 193.3
+          }
+        }
       }
     ]
   },
@@ -2298,618 +2574,618 @@
       "1": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 105.52,
+            "team2": "Noah Roberts",
+            "team2Score": 95.86
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 140.7,
+            "team2": "Max Strater",
+            "team2Score": 126.42
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 130.58,
+            "team2": "Brett Lewis",
+            "team2Score": 111.02
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 103.72,
+            "team2": "Aaron Griffith",
+            "team2Score": 108.6
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 87.88,
+            "team2": "TJ Cairney",
+            "team2Score": 138.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 110,
+            "team2": "Austin Whittaker",
+            "team2Score": 141.76
           }
         ]
       },
       "2": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 186.98,
+            "team2": "Ryan Winn",
+            "team2Score": 94.96
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 129.22,
+            "team2": "Michael Cassidy",
+            "team2Score": 141.56
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 105.24,
+            "team2": "TJ Cairney",
+            "team2Score": 85.7
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 107.08,
+            "team2": "Austin Whittaker",
+            "team2Score": 132.16
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 99.8,
+            "team2": "Max Strater",
+            "team2Score": 182.02
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 145.58,
+            "team2": "Keith John",
+            "team2Score": 66.86
           }
         ]
       },
       "3": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 76.84,
+            "team2": "Ryan Winn",
+            "team2Score": 136.7
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 94.36,
+            "team2": "Michael Cassidy",
+            "team2Score": 101.14
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 115.6,
+            "team2": "TJ Cairney",
+            "team2Score": 98.38
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 141.5,
+            "team2": "Josh Whelan",
+            "team2Score": 106.04
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 112.6,
+            "team2": "Max Strater",
+            "team2Score": 148.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 71.96,
+            "team2": "Austin Whittaker",
+            "team2Score": 104.58
           }
         ]
       },
       "4": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 107.36,
+            "team2": "Ryan Winn",
+            "team2Score": 102.18
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 110.06,
+            "team2": "Josh Whelan",
+            "team2Score": 117.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 135.72,
+            "team2": "Max Strater",
+            "team2Score": 110.86
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 117.76,
+            "team2": "Noah Roberts",
+            "team2Score": 115.82
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 81.34,
+            "team2": "Austin Whittaker",
+            "team2Score": 178.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 136.18,
+            "team2": "Keith John",
+            "team2Score": 140.68
           }
         ]
       },
       "5": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 105.02,
+            "team2": "Ryan Winn",
+            "team2Score": 86.48
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 171.34,
+            "team2": "Noah Roberts",
+            "team2Score": 151.14
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 121.66,
+            "team2": "Keith John",
+            "team2Score": 105.46
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 125.06,
+            "team2": "Jimmy Beer",
+            "team2Score": 136.48
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 114.18,
+            "team2": "Josh Whelan",
+            "team2Score": 119.2
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 109.88,
+            "team2": "TJ Cairney",
+            "team2Score": 132.2
           }
         ]
       },
       "6": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 78.28,
+            "team2": "Ryan Winn",
+            "team2Score": 132.4
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 105.82,
+            "team2": "Jimmy Beer",
+            "team2Score": 110.26
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 95.92,
+            "team2": "Austin Whittaker",
+            "team2Score": 118.96
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 101.1,
+            "team2": "Keith John",
+            "team2Score": 102.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 111.34,
+            "team2": "Noah Roberts",
+            "team2Score": 136.4
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 111.62,
+            "team2": "Max Strater",
+            "team2Score": 87.5
           }
         ]
       },
       "7": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 64.5,
+            "team2": "Ryan Winn",
+            "team2Score": 138.04
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 96.88,
+            "team2": "Josh Whelan",
+            "team2Score": 112.1
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 138.1,
+            "team2": "Keith John",
+            "team2Score": 99.82
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 117.22,
+            "team2": "Garret Vivian",
+            "team2Score": 90.02
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 144.76,
+            "team2": "Austin Whittaker",
+            "team2Score": 123.12
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 106.4,
+            "team2": "Michael Cassidy",
+            "team2Score": 112.06
           }
         ]
       },
       "8": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 118.26,
+            "team2": "Ryan Winn",
+            "team2Score": 130.98
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 146.08,
+            "team2": "Keith John",
+            "team2Score": 130.68
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 140.34,
+            "team2": "Austin Whittaker",
+            "team2Score": 154.5
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 108.78,
+            "team2": "Brett Lewis",
+            "team2Score": 114.84
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 117.8,
+            "team2": "Jimmy Beer",
+            "team2Score": 150.12
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 121.12,
+            "team2": "TJ Cairney",
+            "team2Score": 126.44
           }
         ]
       },
       "9": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 134.8,
+            "team2": "Ryan Winn",
+            "team2Score": 117.54
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 115.18,
+            "team2": "Brett Lewis",
+            "team2Score": 126.74
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 101.5,
+            "team2": "Jimmy Beer",
+            "team2Score": 141.1
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 147.32,
+            "team2": "TJ Cairney",
+            "team2Score": 112.7
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 145.82,
+            "team2": "Keith John",
+            "team2Score": 103.46
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 132.2,
+            "team2": "Max Strater",
+            "team2Score": 102.22
           }
         ]
       },
       "10": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 134,
+            "team2": "Ryan Winn",
+            "team2Score": 106.24
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 147.08,
+            "team2": "TJ Cairney",
+            "team2Score": 91.66
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 128.6,
+            "team2": "Austin Whittaker",
+            "team2Score": 106.24
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 95,
+            "team2": "Max Strater",
+            "team2Score": 83.12
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 145.6,
+            "team2": "Brett Lewis",
+            "team2Score": 146.64
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 88.7,
+            "team2": "Noah Roberts",
+            "team2Score": 96
           }
         ]
       },
       "11": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 90.38,
+            "team2": "Ryan Winn",
+            "team2Score": 130.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Max Strater",
+            "team1Score": 98.86,
+            "team2": "Aaron Griffith",
+            "team2Score": 135.42
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 131.44,
+            "team2": "Brett Lewis",
+            "team2Score": 138.96
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 115.4,
+            "team2": "Austin Whittaker",
+            "team2Score": 87.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 111.38,
+            "team2": "TJ Cairney",
+            "team2Score": 107.24
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 151.5,
+            "team2": "Keith John",
+            "team2Score": 83.68
           }
         ]
       },
       "12": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 116.94,
+            "team2": "Ryan Winn",
+            "team2Score": 121.2
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Michael Cassidy",
+            "team1Score": 121.86,
+            "team2": "Max Strater",
+            "team2Score": 97.86
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 104.42,
+            "team2": "Brett Lewis",
+            "team2Score": 145.8
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 124.32,
+            "team2": "Aaron Griffith",
+            "team2Score": 96.1
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 191.06,
+            "team2": "TJ Cairney",
+            "team2Score": 115.84
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 117.28,
+            "team2": "Austin Whittaker",
+            "team2Score": 131.36
           }
         ]
       },
       "13": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 113.24,
+            "team2": "Ryan Winn",
+            "team2Score": 115.34
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 122.46,
+            "team2": "Austin Whittaker",
+            "team2Score": 156.9
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 107.24,
+            "team2": "TJ Cairney",
+            "team2Score": 115.98
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 121.9,
+            "team2": "Michael Cassidy",
+            "team2Score": 135.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Josh Whelan",
+            "team1Score": 109.42,
+            "team2": "Max Strater",
+            "team2Score": 74.84
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 89.36,
+            "team2": "Brett Lewis",
+            "team2Score": 145.32
           }
         ]
       },
       "14": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Ryan Winn",
+            "team1Score": 119.06,
+            "team2": "Keith John",
+            "team2Score": 152.88
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Aaron Griffith",
+            "team1Score": 104.7,
+            "team2": "Michael Cassidy",
+            "team2Score": 75.6
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jimmy Beer",
+            "team1Score": 112.56,
+            "team2": "TJ Cairney",
+            "team2Score": 91.96
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 127.28,
+            "team2": "Josh Whelan",
+            "team2Score": 125.38
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Noah Roberts",
+            "team1Score": 110.26,
+            "team2": "Max Strater",
+            "team2Score": 26.3
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Austin Whittaker",
+            "team1Score": 113.28,
+            "team2": "Brett Lewis",
+            "team2Score": 119.28
           }
         ]
       },
       "15": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
+            "team1": "Jimmy Beer",
+            "team1Score": 123,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#1 SEED VS BYE"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Ryan Winn",
+            "team1Score": 112.6,
+            "team2": "Michael Cassidy",
+            "team2Score": 119.46,
             "status": "playoff",
             "label": "#4 SEED vs #5 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Aaron Griffith",
+            "team1Score": 105.48,
+            "team2": "Austin Whittaker",
+            "team2Score": 126.52,
             "status": "playoff",
             "label": "#3 SEED vs #6 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
+            "team1": "Brett Lewis",
+            "team1Score": 132.24,
+            "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
             "label": "#2 SEED vs BYE"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "Josh Whelan",
+            "team1Score": 142.76,
+            "team2": "Garret Vivian",
+            "team2Score": 125.3,
+            "status": "out",
             "label": "#9 SEED vs #12 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "TJ Cairney",
+            "team1Score": 131.04,
+            "team2": "Noah Roberts",
+            "team2Score": 149.84,
+            "status": "out",
             "label": "#10 SEED vs #11 SEED"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Keith John",
+            "team1Score": 95.26,
+            "team2": "Max Strater",
+            "team2Score": 54.9,
             "status": "out",
             "label": "#7 SEED vs #8 SEED"
           }
@@ -2918,50 +3194,50 @@
       "16": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Michael Cassidy",
+            "team1Score": 125.5,
+            "team2": "Jimmy Beer",
+            "team2Score": 135.9,
             "status": "playoff",
             "label": "#1 SEED vs winner #4/#5"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Austin Whittaker",
+            "team1Score": 110.4,
+            "team2": "Brett Lewis",
+            "team2Score": 126.56,
             "status": "playoff",
             "label": "#2 SEED vs winner #3/#6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
-            "status": "toilet",
+            "team1": "Max Strater",
+            "team1Score": 106.8,
+            "team2": "TJ Cairney",
+            "team2Score": 94,
+            "status": "out",
             "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Aaron Griffith",
+            "team1Score": 107.86,
+            "team2": "Ryan Winn",
+            "team2Score": 160.5,
             "status": "out",
             "label": "loser #4/#5 vs loser #3/#6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Noah Roberts",
+            "team1Score": 79.64,
+            "team2": "Josh Whelan",
+            "team2Score": 124.88,
             "status": "out",
             "label": "#7 SEED vs winner #10/#11"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Keith John",
+            "team1Score": 110.74,
+            "team2": "Garret Vivian",
+            "team2Score": 103.26,
             "status": "out",
             "label": "#8 SEED vs winner #9/#12"
           }
@@ -2970,50 +3246,50 @@
       "17": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Brett Lewis",
+            "team1Score": 104.92,
+            "team2": "Jimmy Beer",
+            "team2Score": 149.56,
             "status": "playoff",
             "label": "Winner Matchup 1 vs Winner Matchup 2 - SUPER BOWL"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Michael Cassidy",
+            "team1Score": 62.8,
+            "team2": "Austin Whittaker",
+            "team2Score": 91.68,
             "status": "out",
             "label": "loser Matchup 1 vs loser Matchup 2 - Third Place"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Aaron Griffith",
+            "team1Score": 145.2,
+            "team2": "Ryan Winn",
+            "team2Score": 73.5,
             "status": "out",
             "label": "winner Matchup 3 vs winner Matchup 4"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Max Strater",
+            "team1Score": 57,
+            "team2": "Noah Roberts",
+            "team2Score": 110.18,
             "status": "out",
             "label": "winner Matchup 5 vs loser Matchup 6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "TJ Cairney",
+            "team1Score": 37.78,
+            "team2": "Garret Vivian",
+            "team2Score": 123.18,
             "status": "out",
             "label": "loser Matchup 5 vs winner Matchup 6"
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null,
+            "team1": "Josh Whelan",
+            "team1Score": 82.4,
+            "team2": "Keith John",
+            "team2Score": 80.7,
             "status": "out",
             "label": "loser Matchup 3 vs loser Matchup 4"
           }
@@ -3033,11 +3309,34 @@
         "rChampion": true,
         "wins": 11,
         "losses": 3,
-        "pf": 1823.56,
-        "pa": 1520.48,
+        "pf": 1823.5599999999997,
+        "pa": 1520.4799999999998,
         "place": 1,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 1,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 2,
+            "losses": 0,
+            "ties": 0,
+            "pf": 285.46000000000004,
+            "pa": 230.42000000000002
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          }
+        }
       },
       {
         "team": "Welsh Wales",
@@ -3052,10 +3351,33 @@
         "wins": 11,
         "losses": 3,
         "pf": 1712.22,
-        "pa": 1521.98,
+        "pa": 1521.9799999999998,
         "place": 2,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 3,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 231.48000000000002,
+            "pa": 259.96000000000004
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          }
+        }
       },
       {
         "team": "Cali Awhitty",
@@ -3069,11 +3391,34 @@
         "rChampion": false,
         "wins": 10,
         "losses": 4,
-        "pf": 1786.28,
-        "pa": 1543.12,
+        "pf": 1786.2800000000004,
+        "pa": 1543.1200000000001,
         "place": 3,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 2,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 236.92000000000002,
+            "pa": 232.04000000000002
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 91.68,
+            "pa": 62.8
+          }
+        }
       },
       {
         "team": "Mike Hawk",
@@ -3087,11 +3432,34 @@
         "rChampion": false,
         "wins": 9,
         "losses": 5,
-        "pf": 1641.72,
-        "pa": 1686,
+        "pf": 1641.7199999999998,
+        "pa": 1685.66,
         "place": 4,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 4,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 244.95999999999998,
+            "pa": 248.5
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 62.8,
+            "pa": 91.68
+          }
+        }
       },
       {
         "team": "Ginja Ninjas",
@@ -3106,10 +3474,33 @@
         "wins": 8,
         "losses": 6,
         "pf": 1637.54,
-        "pa": 1575.34,
+        "pa": 1575.3399999999997,
         "place": 5,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 5,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 112.6,
+            "pa": 119.46
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 234,
+            "pa": 253.06
+          }
+        }
       },
       {
         "team": "Johnny Sins PHPremium",
@@ -3126,8 +3517,31 @@
         "pf": 1684.7,
         "pa": 1595.46,
         "place": 6,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 6,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 105.48,
+            "pa": 126.52
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 253.06,
+            "pa": 234
+          }
+        }
       },
       {
         "team": "Craven Moore",
@@ -3141,11 +3555,34 @@
         "rChampion": false,
         "wins": 7,
         "losses": 7,
-        "pf": 1657.86,
-        "pa": 1595.46,
+        "pf": 1657.8600000000001,
+        "pa": 1599.52,
         "place": 7,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 8,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 125.3,
+            "pa": 142.76
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 226.44,
+            "pa": 148.51999999999998
+          }
+        }
       },
       {
         "team": "Boner Garage",
@@ -3159,11 +3596,34 @@
         "rChampion": false,
         "wins": 6,
         "losses": 8,
-        "pf": 1664.24,
-        "pa": 1750.98,
+        "pf": 1663.9,
+        "pa": 1750.9800000000002,
         "place": 8,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 7,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 142.76,
+            "pa": 125.3
+          },
+          "out": {
+            "wins": 2,
+            "losses": 0,
+            "ties": 0,
+            "pf": 207.28,
+            "pa": 160.34
+          }
+        }
       },
       {
         "team": "Lil Tom",
@@ -3177,11 +3637,34 @@
         "rChampion": false,
         "wins": 5,
         "losses": 9,
-        "pf": 1575.62,
-        "pa": 1752.56,
+        "pf": 1575.6200000000001,
+        "pa": 1752.5599999999997,
         "place": 9,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 9,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 2,
+            "ties": 0,
+            "pf": 225.04,
+            "pa": 256.64
+          },
+          "out": {
+            "wins": 0,
+            "losses": 1,
+            "ties": 0,
+            "pf": 37.78,
+            "pa": 123.18
+          }
+        }
       },
       {
         "team": "Dr. Fish",
@@ -3196,10 +3679,33 @@
         "wins": 4,
         "losses": 10,
         "pf": 1617.66,
-        "pa": 1638.82,
+        "pa": 1638.8200000000002,
         "place": 10,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 10,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 149.84,
+            "pa": 131.04
+          },
+          "out": {
+            "wins": 1,
+            "losses": 1,
+            "ties": 0,
+            "pf": 189.82,
+            "pa": 181.88
+          }
+        }
       },
       {
         "team": "EPA THI",
@@ -3216,8 +3722,31 @@
         "pf": 1468.02,
         "pa": 1856.22,
         "place": 11,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 12,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 2,
+            "losses": 1,
+            "ties": 0,
+            "pf": 286.7,
+            "pa": 240.56
+          }
+        }
       },
       {
         "team": "gabe uhtsecs",
@@ -3231,11 +3760,34 @@
         "rChampion": false,
         "wins": 3,
         "losses": 11,
-        "pf": 1445.6,
-        "pa": 1674.54,
+        "pf": 1445.5999999999995,
+        "pa": 1674.5400000000002,
         "place": 12,
-        "prevPlace": "🥇",
-        "ties": 0
+        "prevPlace": 11,
+        "ties": 0,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 1,
+            "losses": 0,
+            "ties": 0,
+            "pf": 106.8,
+            "pa": 94
+          },
+          "out": {
+            "wins": 0,
+            "losses": 2,
+            "ties": 0,
+            "pf": 111.9,
+            "pa": 205.44
+          }
+        }
       }
     ]
   },
@@ -3974,7 +4526,7 @@
             "team1Score": 134.96,
             "team2": "Max Strater",
             "team2Score": 99.34,
-            "status": "toilet",
+            "status": "out",
             "label": "#9 SEED vs #12 SEED"
           },
           {
@@ -3982,7 +4534,7 @@
             "team1Score": 42.1,
             "team2": "Botted Season",
             "team2Score": 176.86,
-            "status": "toilet",
+            "status": "out",
             "label": "#10 SEED vs #11 SEED"
           },
           {
@@ -4018,7 +4570,7 @@
             "team1Score": 110.18,
             "team2": "TJ Cairney",
             "team2Score": 73.1,
-            "status": "toilet",
+            "status": "out",
             "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
           },
           {
@@ -6570,40 +7122,40 @@
       "13": {
         "matchups": [
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Will Friedenberger",
+            "team1Score": 161.44,
+            "team2": "Ryan Winn",
+            "team2Score": 123.34
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "TJ Cairney",
+            "team1Score": 100.98,
+            "team2": "Josh Whelan",
+            "team2Score": 103.64
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Brett Lewis",
+            "team1Score": 102.92,
+            "team2": "Max Strater",
+            "team2Score": 105.8
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Keith John",
+            "team1Score": 85.66,
+            "team2": "Jimmy Beer",
+            "team2Score": 113.32
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Garret Vivian",
+            "team1Score": 131.86,
+            "team2": "Noah Roberts",
+            "team2Score": 68.84
           },
           {
-            "team1": null,
-            "team1Score": null,
-            "team2": null,
-            "team2Score": null
+            "team1": "Jake Strater",
+            "team1Score": 110.44,
+            "team2": "Austin Whittaker",
+            "team2Score": 94.04
           }
         ]
       },
@@ -6824,10 +7376,10 @@
         },
         "rChampion": false,
         "wins": 10,
-        "losses": 2,
+        "losses": 3,
         "ties": 0,
-        "pf": 1421.9399999999998,
-        "pa": 1317.5600000000002,
+        "pf": 1522.9199999999998,
+        "pa": 1421.2000000000003,
         "place": 1,
         "prevPlace": 1,
         "playoffStats": {
@@ -6864,13 +7416,13 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 9,
+        "wins": 10,
         "losses": 3,
         "ties": 0,
-        "pf": 1347.8600000000001,
-        "pa": 1193.5199999999998,
+        "pf": 1453.66,
+        "pa": 1296.4399999999998,
         "place": 2,
-        "prevPlace": 3,
+        "prevPlace": 2,
         "playoffStats": {
           "playoff": {
             "wins": 0,
@@ -6906,12 +7458,12 @@
         },
         "rChampion": false,
         "wins": 8,
-        "losses": 4,
+        "losses": 5,
         "ties": 0,
-        "pf": 1509.38,
-        "pa": 1316.7399999999998,
+        "pf": 1612.3000000000002,
+        "pa": 1422.5399999999997,
         "place": 3,
-        "prevPlace": 4,
+        "prevPlace": 3,
         "playoffStats": {
           "playoff": {
             "wins": 0,
@@ -6947,12 +7499,12 @@
         },
         "rChampion": false,
         "wins": 8,
-        "losses": 4,
+        "losses": 5,
         "ties": 0,
-        "pf": 1400.7600000000002,
-        "pa": 1318.0400000000002,
+        "pf": 1494.8000000000002,
+        "pa": 1428.4800000000002,
         "place": 4,
-        "prevPlace": 2,
+        "prevPlace": 4,
         "playoffStats": {
           "playoff": {
             "wins": 0,
@@ -6988,10 +7540,10 @@
         },
         "rChampion": false,
         "wins": 7,
-        "losses": 5,
+        "losses": 6,
         "ties": 0,
-        "pf": 1522.6599999999996,
-        "pa": 1400.06,
+        "pf": 1645.9999999999995,
+        "pa": 1561.5,
         "place": 5,
         "prevPlace": 5,
         "playoffStats": {
@@ -7029,10 +7581,10 @@
         },
         "rChampion": false,
         "wins": 7,
-        "losses": 5,
+        "losses": 6,
         "ties": 0,
-        "pf": 1479.52,
-        "pa": 1414.0400000000002,
+        "pf": 1548.36,
+        "pa": 1545.9,
         "place": 6,
         "prevPlace": 6,
         "playoffStats": {
@@ -7069,11 +7621,11 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 5,
+        "wins": 6,
         "losses": 7,
         "ties": 0,
-        "pf": 1424.52,
-        "pa": 1414.96,
+        "pf": 1528.16,
+        "pa": 1515.94,
         "place": 7,
         "prevPlace": 7,
         "playoffStats": {
@@ -7110,11 +7662,11 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 4,
+        "wins": 5,
         "losses": 8,
         "ties": 0,
-        "pf": 1386.4999999999998,
-        "pa": 1499.8999999999996,
+        "pf": 1518.3599999999997,
+        "pa": 1568.7399999999996,
         "place": 8,
         "prevPlace": 8,
         "playoffStats": {
@@ -7151,53 +7703,12 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 4,
+        "wins": 5,
         "losses": 8,
         "ties": 0,
-        "pf": 1352.08,
-        "pa": 1507.2600000000002,
+        "pf": 1513.52,
+        "pa": 1630.6000000000001,
         "place": 9,
-        "prevPlace": 10,
-        "playoffStats": {
-          "playoff": {
-            "wins": 0,
-            "losses": 0,
-            "ties": 0,
-            "pf": 0,
-            "pa": 0
-          },
-          "toilet": {
-            "wins": 0,
-            "losses": 0,
-            "ties": 0,
-            "pf": 0,
-            "pa": 0
-          },
-          "out": {
-            "wins": 0,
-            "losses": 0,
-            "ties": 0,
-            "pf": 0,
-            "pa": 0
-          }
-        }
-      },
-      {
-        "team": "EPATHI",
-        "name": "Keith John",
-        "state": "active",
-        "playoff": {
-          "made": false,
-          "rounds": 0,
-          "pChampion": false
-        },
-        "rChampion": false,
-        "wins": 4,
-        "losses": 8,
-        "ties": 0,
-        "pf": 1253.8199999999997,
-        "pa": 1433.3400000000001,
-        "place": 10,
         "prevPlace": 9,
         "playoffStats": {
           "playoff": {
@@ -7233,13 +7744,13 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 3,
+        "wins": 4,
         "losses": 9,
         "ties": 0,
-        "pf": 1327.48,
-        "pa": 1430.42,
-        "place": 11,
-        "prevPlace": 12,
+        "pf": 1437.92,
+        "pa": 1524.46,
+        "place": 10,
+        "prevPlace": 11,
         "playoffStats": {
           "playoff": {
             "wins": 0,
@@ -7274,13 +7785,54 @@
           "pChampion": false
         },
         "rChampion": false,
-        "wins": 3,
+        "wins": 4,
         "losses": 9,
         "ties": 0,
-        "pf": 1313.2800000000002,
-        "pa": 1493.96,
+        "pf": 1426.6000000000001,
+        "pa": 1579.6200000000001,
+        "place": 11,
+        "prevPlace": 12,
+        "playoffStats": {
+          "playoff": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "toilet": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          },
+          "out": {
+            "wins": 0,
+            "losses": 0,
+            "ties": 0,
+            "pf": 0,
+            "pa": 0
+          }
+        }
+      },
+      {
+        "team": "EPATHI",
+        "name": "Keith John",
+        "state": "active",
+        "playoff": {
+          "made": false,
+          "rounds": 0,
+          "pChampion": false
+        },
+        "rChampion": false,
+        "wins": 4,
+        "losses": 9,
+        "ties": 0,
+        "pf": 1339.4799999999998,
+        "pa": 1546.66,
         "place": 12,
-        "prevPlace": 11,
+        "prevPlace": 10,
         "playoffStats": {
           "playoff": {
             "wins": 0,
