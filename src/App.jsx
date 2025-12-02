@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Trophy, TrendingUp, Medal, Edit } from 'lucide-react';
+import { Trophy, TrendingUp, Medal, Edit } from 'lucide-react';
 
 // Import custom components
 import StatsCard from './components/StatsCard';
 import AllTimeTable from './components/AllTimeTable';
 import SeasonTable from './components/SeasonTable';
 import EditSeasonPage from './components/EditSeasonPage';
+import PlayoffBracket from './components/PlayoffBracket';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -18,7 +19,6 @@ export default function App() {
   // ============================================
   
   const [viewMode, setViewMode] = useState("season");
-  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     active: true,
     inactive: false,
@@ -131,6 +131,80 @@ export default function App() {
   if (viewMode === "edit") {
     return <EditSeasonPage onBack={() => setViewMode("season")} />;
   }
+
+  // ============================================
+  // RENDER: BRACKET MODE
+  // ============================================
+
+  if (viewMode === "bracket") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="max-w-7xl mx-auto p-6">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+              <Trophy className="text-yellow-500" size={40}/>
+              Fantasy Football League
+            </h1>
+            <p className="text-gray-600">Track your league's performance across all seasons</p>
+          </div>
+
+          {/* Controls Section */}       
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div className="flex flex-wrap gap-4 items-center justify-between">
+
+              {/* View Mode Toggle */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode("season")}
+                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+                >
+                  Season
+                </button>
+                <button
+                  onClick={() => setViewMode("alltime")}
+                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+                >
+                  All-Time
+                </button>
+                <button
+                  onClick={() => setViewMode("bracket")}
+                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-indigo-600 text-white"
+                >
+                  Playoff Bracket
+                </button>
+                <button
+                  onClick={() => setViewMode("edit")}
+                  className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <Edit size={18} />
+                  Edit Season Data
+                </button>
+              </div>
+
+              {/* Year Selector */}
+              <select 
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year} Season
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Bracket Content */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <PlayoffBracket year={selectedYear} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // ============================================
   // RENDER: LOADING STATE
@@ -213,6 +287,12 @@ export default function App() {
               All-Time
             </button>
             <button
+              onClick={() => setViewMode("bracket")}
+              className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+            >
+              Playoff Bracket
+            </button>
+            <button
               onClick={() => setViewMode("edit")}
               className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
             >
@@ -235,18 +315,6 @@ export default function App() {
               ))}
             </select>
           )}
-
-          {/* Search Bar */}
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" size={20} />
-            <input 
-              type="text"
-              placeholder="Search players or teams..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
 
           {/* Filter Button */}
           <div className="relative">
@@ -300,7 +368,6 @@ export default function App() {
              <SeasonTable 
               seasonData={filterTeams(getSeasonArray(selectedYear))}
               year={selectedYear}
-              searchQuery={searchQuery}
             />
           ) : (
             <AllTimeTable 
@@ -310,7 +377,6 @@ export default function App() {
                   filterTeams(getSeasonArray(year))
                 ])
               )}
-              searchQuery={searchQuery}
             />
           )}
         </div>
