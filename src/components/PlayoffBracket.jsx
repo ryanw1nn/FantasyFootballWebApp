@@ -73,12 +73,21 @@ export default function PlayoffBracket({ year }) {
     }
 
     function getWinner(matchup) {
-        if (!matchup.team1Score || !matchup.team2Score) return null;
+        if ((!matchup.team2 || matchup.team2 === '') && matchup.team1Score != null) {
+            return 'team1';
+        }
+
+        if (matchup.team1Score == null || matchup.team2Score == null) return null;
         return matchup.team1Score > matchup.team2Score ? 'team1' : 'team2';
     }
 
     function renderMatchup(matchup, index, weekNum) {
-        if (!matchup || (!matchup.team1 && !matchup.team2)) {
+
+        const isByeWithScore = (!matchup?.team2 || matchup?.team2 === '') && matchup?.team1Score != null;
+        const hasRegularScores = matchup?.team1Score != null && matchup?.team2Score !== null;
+        const hasTeamNames = matchup?.team1 || matchup?.team2;
+
+        if (!matchup || (!hasTeamNames && !isByeWithScore && !hasRegularScores)) {
             return (
                 <div key={index} className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-3 text-center text-gray-400">
                     TBD
@@ -87,7 +96,6 @@ export default function PlayoffBracket({ year }) {
         }
 
         const winner = getWinner(matchup);
-        const hasScores = matchup.team1Score !== null && matchup.team2Score !== null;
 
         return (
             <div key={index} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
@@ -97,7 +105,7 @@ export default function PlayoffBracket({ year }) {
                     <span className={`font-medium ${winner === 'team1' ? 'text-green-900' : 'text-gray-900'}`}>
                         {matchup.team1 || 'TBD'}
                     </span>
-                    {hasScores && (
+                    {matchup.team1Score != null && (
                         <span className={`font-bold ${winner === 'team1' ? 'text-green-700' : 'text-gray-600'}`}>
                             {matchup.team1Score?.toFixed(1) || '-'}
                         </span>
@@ -110,7 +118,7 @@ export default function PlayoffBracket({ year }) {
                     <span className={`font-medium ${winner === 'team2' ? 'text-green-900' : 'text-gray-900'}`}>
                         {matchup.team2 || 'TBD'}
                     </span>
-                    {hasScores && (
+                    {matchup.team2Score && (
                         <span className={`font-bold ${winner === 'team2' ? 'text-green-700' : 'text-gray-600'}`}>
                             {matchup.team2Score?.toFixed(1) || '-'}
                         </span>
@@ -203,7 +211,7 @@ export default function PlayoffBracket({ year }) {
             {/* TOILET BOWL SECTION */}
             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border-2 border-blue-200">
                 <div className="flex items-center gap-2 mb-3">
-                    <Award className="w-6 h-6 text-blue-600" />
+                    <span className="text-2xl">🧻</span>
                     <h3 className="text-xl font-bold text-gray-800">Toilet Bowl</h3>
                 </div>
                 
