@@ -1,273 +1,337 @@
-# Network Intrusion Detection System (IDS)
+# Fantasy Football League Dashboard
 
-A Python-based Network Intrusion Detection System that monitors network traffic in real-time to detect potential security threats using both signature-based and anomaly-based detection methods.
+A comprehensive web application for tracking and managing fantasy football league statistics across multiple seasons. Built with React, Express, and Tailwind CSS, this dashboard provides real-time insights into team performance, head-to-head matchups, and playoff brackets.
 
 ## Features
 
-- **Real-time Packet Capture**: Monitors network interfaces for TCP/IP traffic
-- **Dual Detection Methods**:
-  - **Signature-based**: Detects known attack patterns (SYN floods, port scans)
-  - **Anomaly-based**: Uses machine learning (Isolation Forest) to identify unusual traffic
-- **Flow Tracking**: Maintains statistics for individual network flows
-- **Alert System**: Logs threats to file with JSON formatting
-- **Comprehensive Testing**: Unit tests and live network testing capabilities
-- **Extensible Architecture**: Easy to add custom detection rules
+### Core Functionality
+- **Multi-Season Tracking**: View and compare league statistics across different seasons
+- **Real-Time Statistics**: Live calculation of wins, losses, points for/against, and win percentages
+- **Interactive Dashboards**: Multiple view modes for different use cases
+- **Playoff Bracket Visualization**: Visual representation of playoff matchups and progression
+- **Season Editor**: Full CRUD operations for managing matchups, scores, and team data
 
-## Architecture
+### View Modes
+- **Season View**: Detailed standings and statistics for a selected season
+- **All-Time View**: Aggregated statistics across all seasons with sortable metrics
+- **Edit Mode**: Administrative interface for updating season data
+- **Bracket View**: Tournament-style visualization of playoff matchups
+
+### Key Metrics
+- Win-Loss-Tie records
+- Points For (PF) and Points Against (PA)
+- Points For Per Game (PFPG) and Points Against Per Game (PAPG)
+- Win percentage calculations
+- League-wide averages and totals
+
+## Technology Stack
+
+### Frontend
+- **React 19.1.1**: Component-based UI framework
+- **Vite 7.1.2**: Fast build tool and development server
+- **Tailwind CSS 3.4.18**: Utility-first CSS framework
+- **Lucide React 0.552.0**: Icon library
+
+### Backend
+- **Express 5.1.0**: Web application framework
+- **CORS 2.8.5**: Cross-origin resource sharing middleware
+- **Body Parser 2.2.0**: Request body parsing middleware
+
+## Project Structure
 
 ```
-┌─────────────────┐
-│ Packet Capture  │ ──> Captures TCP/IP packets from network interface
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│Traffic Analyzer │ ──> Extracts features and tracks flow statistics
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│Detection Engine │ ──> Applies signature rules and anomaly detection
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  Alert System   │ ──> Logs and notifies about detected threats
-└─────────────────┘
+fantasy-football-web/
+├── src/
+│   ├── App.jsx                      # Main application component
+│   ├── components/
+│   │   ├── AllTimeTable.jsx         # All-time statistics table
+│   │   ├── EditSeasonPage.jsx       # Season editing interface
+│   │   ├── PlayoffBracket.jsx       # Playoff bracket visualization
+│   │   ├── SeasonTable.jsx          # Season standings table
+│   │   └── StatsCard.jsx            # Reusable statistics card
+│   ├── index.css                    # Global styles and Tailwind imports
+│   └── main.jsx                     # Application entry point
+├── server.js                        # Express server configuration
+├── data/
+│   └── season_data.json             # League data storage
+├── public/                          # Static assets
+├── package.json                     # Project dependencies
+├── vite.config.js                   # Vite configuration
+├── tailwind.config.js               # Tailwind CSS configuration
+└── postcss.config.js                # PostCSS configuration
 ```
 
 ## Installation
 
 ### Prerequisites
+- Node.js (v18 or higher recommended)
+- npm or yarn package manager
 
-- Python 3.8 or higher
-- Root/sudo access (required for packet capture)
-
-### Setup
+### Setup Steps
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
-   cd IDS_project
+   git clone https://github.com/ryanw1nn/FantasyFootballWebApp.git
+   cd FantasyFootballWebApp
    ```
 
-2. **Create virtual environment**:
+2. **Install dependencies**:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   npm install
    ```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
+3. **Configure environment variables** (optional):
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_API_URL=http://localhost:5001
    ```
 
-### Dependencies
-
-```
-scapy>=2.5.0
-scikit-learn>=1.3.0
-numpy>=1.24.0
-```
+4. **Prepare data file**:
+   Ensure `data/season_data.json` exists with valid league data structure
 
 ## Usage
 
-### Running the IDS
+### Development Mode
 
-**Basic usage (monitors loopback interface)**:
-```bash
-sudo python3 -m ids.intrusion_detection_system
-```
-
-**Monitor specific interface**:
-```bash
-sudo python3 -m ids.intrusion_detection_system -i en0
-```
-
-**Find your network interface**:
-```bash
-# macOS/BSD
-ifconfig
-
-# Linux
-ip link show
-```
-
-Common interfaces:
-- `lo0` / `lo` - Loopback (local traffic)
-- `eth0` - Ethernet (Linux)
-- `en0` / `en1` - WiFi/Ethernet (macOS)
-- `wlan0` - WiFi (Linux)
-
-### Running Tests
-
-**Unit tests**:
-```bash
-python -m tests.test_ids
-```
-
-**PCAP file test** (generates synthetic attack traffic):
-```bash
-python -m tests.test_ids --pcap
-```
-
-**Live network test**:
-```bash
-sudo python3 -m tests.test_ids --live en0
-```
-
-### Viewing Alerts
-
-Alerts are logged to `ids_alerts.log` in JSON format:
+Run the development server with hot module replacement:
 
 ```bash
-cat ids_alerts.log
+npm run dev
 ```
 
-Example alert:
+The application will be available at `http://localhost:5173`
+
+### Production Mode
+
+1. **Build the application**:
+   ```bash
+   npm run build
+   ```
+
+2. **Start the production server**:
+   ```bash
+   npm start
+   ```
+
+The server will run on `http://localhost:5001`
+
+### Preview Production Build
+
+Test the production build locally:
+
+```bash
+npm run preview
+```
+
+## API Endpoints
+
+The Express backend provides the following endpoints:
+
+### Get Season Data
+```
+GET /api/seasons
+```
+Returns all season data from the JSON file.
+
+**Response**: `200 OK`
 ```json
 {
-  "timestamp": "2025-10-27T12:34:56.789",
-  "threat_type": "signature",
-  "rule": "syn_flood",
-  "severity": "high",
-  "confidence": 1.0,
-  "source_ip": "10.0.0.1",
-  "source_port": 5678,
-  "destination_ip": "192.168.1.2",
-  "destination_port": 80,
-  "description": "Potential SYN flood attack detected"
+  "2024": [
+    {
+      "name": "Team Name",
+      "wins": 10,
+      "losses": 3,
+      "ties": 1,
+      "pf": 1500.5,
+      "pa": 1200.3,
+      "state": "active"
+    }
+  ]
 }
 ```
 
-## Detection Methods
-
-### Signature-Based Detection
-
-Detects known attack patterns:
-
-1. **SYN Flood**: High rate of SYN packets without ACK responses
-   - Threshold: >100 packets/second
-   - Packet size: <100 bytes
-   - Severity: High
-
-2. **Port Scan**: Sequential connection attempts to multiple ports
-   - Threshold: >20 packets/second
-   - Flow duration: <2 seconds
-   - Severity: Medium
-
-3. **Large Packet**: Packets exceeding typical MTU size
-   - Threshold: >1500 bytes
-   - Severity: Low
-
-### Anomaly-Based Detection
-
-Uses Isolation Forest algorithm to detect unusual traffic patterns:
-- Learns baseline from normal traffic
-- Identifies statistical outliers
-- Features: packet size, packet rate, byte rate
-
-## Project Structure
-
+### Update Season Data
 ```
-IDS_project/
-├── ids/
-│   ├── __init__.py
-│   ├── intrusion_detection_system.py  # Main IDS orchestration
-│   ├── packet_capture.py              # Network packet capture
-│   ├── traffic_analyzer.py            # Flow tracking & feature extraction
-│   ├── detection_engine.py            # Threat detection logic
-│   └── alert_system.py                # Alert logging & notification
-├── tests/
-│   └── test_ids.py                    # Comprehensive test suite
-├── requirements.txt
-├── README.md
-└── ids_alerts.log                     # Generated alert log
+POST /api/seasons
+Content-Type: application/json
 ```
+Updates the season data file with new information.
+
+**Request Body**: Complete season data object
+
+**Response**: `200 OK`
+```json
+{
+  "message": "Season data updated successfully"
+}
+```
+
+## Data Structure
+
+### Season Data Format
+
+```json
+{
+  "YEAR": [
+    {
+      "name": "string",           // Team name (required)
+      "wins": "number",            // Number of wins
+      "losses": "number",          // Number of losses
+      "ties": "number",            // Number of ties
+      "pf": "number",              // Points for
+      "pa": "number",              // Points against
+      "state": "string"            // Team state: 'active' | 'out' | 'eliminated'
+    }
+  ],
+  "weeks": {
+    "WEEK_NUMBER": {
+      "matchups": [
+        {
+          "team1": "string",       // First team name or 'BYE'
+          "score1": "number",      // First team score (null if not played)
+          "team2": "string",       // Second team name or 'BYE'
+          "score2": "number",      // Second team score (null if not played)
+          "label": "string",       // Optional matchup label (e.g., "Semifinals")
+          "status": "string"       // Optional status: 'active' | 'eliminated' | 'out'
+        }
+      ]
+    }
+  }
+}
+```
+
+## Component Documentation
+
+### App.jsx
+Root component managing application state, view modes, and data fetching. Orchestrates all child components and handles API communication.
+
+### AllTimeTable.jsx
+Displays aggregated statistics across all seasons. Supports sorting by any metric and calculates career totals for each team.
+
+### SeasonTable.jsx
+Shows detailed standings for a single season. Calculates derived metrics like win percentage and points per game.
+
+### EditSeasonPage.jsx
+Administrative interface for modifying season data. Includes matchup editing, score updates, and team management.
+
+### PlayoffBracket.jsx
+Visual tournament bracket for playoff matchups. Supports multiple rounds and dynamic status indicators.
+
+### StatsCard.jsx
+Reusable component for displaying key statistics in a card format. Includes icon support and subtitle text.
 
 ## Configuration
 
-### Customizing Detection Rules
+### Tailwind CSS Customization
 
-Add custom signature rules:
+Edit `tailwind.config.js` to customize colors, spacing, and other design tokens:
 
-```python
-from ids.detection_engine import DetectionEngine
-
-engine = DetectionEngine()
-
-# Add custom rule
-engine.add_signature_rule(
-    name='custom_rule',
-    condition=lambda features: features['packet_rate'] > 500,
-    severity='high',
-    description='Custom high-rate detection'
-)
+```javascript
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,jsx}"
+  ],
+  theme: {
+    extend: {
+      // Add custom configurations
+    }
+  }
+}
 ```
 
-### Adjusting Parameters
+### Vite Configuration
 
-Key parameters can be modified during initialization:
+Modify `vite.config.js` for build optimization and plugin settings:
 
-```python
-from ids.intrusion_detection_system import IntrusionDetectionSystem
-from ids.traffic_analyzer import TrafficAnalyzer
-from ids.packet_capture import PacketCapture
+```javascript
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-# Custom configuration
-ids = IntrusionDetectionSystem(interface='en0')
-ids.traffic_analyzer = TrafficAnalyzer(max_flows=5000, flow_timeout=600)
-ids.packet_capture = PacketCapture(queue_size=2000)
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 5173
+  }
+})
 ```
-
-## Performance Considerations
-
-- **Queue Size**: Default 1000 packets - increase for high-traffic networks
-- **Max Flows**: Default 10,000 - adjust based on network size
-- **Flow Timeout**: Default 300s - shorter for high-churn environments
-- **Memory Usage**: ~100MB baseline + ~1KB per tracked flow
-
-## Limitations
-
-- **TCP Only**: Currently only monitors TCP traffic
-- **Single Interface**: Monitors one interface at a time
-- **No Payload Inspection**: Only analyzes packet headers
-- **Real-time Only**: Does not support offline PCAP analysis in production mode
 
 ## Troubleshooting
 
-### Permission Denied
-```bash
-# Solution: Run with sudo
-sudo python3 -m ids.intrusion_detection_system
+### Port Already in Use
+If port 5001 is occupied, modify the port in `server.js`:
+```javascript
+const PORT = process.env.PORT || 5001;
 ```
 
-### No Packets Captured
-- Verify interface name: `ifconfig` or `ip link show`
-- Check interface is up and has traffic
-- Try loopback (`lo0`/`lo`) with local traffic
+### Data Not Loading
+1. Verify `data/season_data.json` exists and contains valid JSON
+2. Check console for API errors
+3. Ensure backend server is running (`npm start`)
 
-### High False Positive Rate
-- Anomaly detection may need better training data
-- Adjust signature rule thresholds in `detection_engine.py`
-- Consider disabling anomaly detection for production use
+### Build Errors
+1. Clear node_modules and reinstall: `rm -rf node_modules && npm install`
+2. Clear Vite cache: `rm -rf .vite`
+3. Verify Node.js version compatibility
 
+### CORS Issues
+Ensure the Express server has CORS enabled (already configured in `server.js`):
+```javascript
+app.use(cors());
+```
 
-## Contributing
+## Development Guidelines
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new features
-4. Submit a pull request
+### Code Style
+- Use functional components with hooks
+- Follow React best practices for state management
+- Maintain consistent formatting with Prettier (if configured)
+- Use meaningful variable and function names
 
+### Component Structure
+- Keep components focused on single responsibilities
+- Extract reusable logic into custom hooks
+- Use PropTypes or TypeScript for type checking (if needed)
 
-## Authors
+### State Management
+- Use React hooks (useState, useEffect, useMemo) for local state
+- Lift state up when shared between components
+- Consider Context API for deeply nested prop drilling
 
-Ryan Winn
+## Performance Optimization
 
-## Acknowledgments
+### Implemented Optimizations
+- **useMemo**: Expensive calculations cached and recomputed only when dependencies change
+- **Component Code Splitting**: React.lazy() can be added for route-based code splitting
+- **Tailwind CSS Purging**: Unused styles automatically removed in production builds
 
-- Built with Scapy for packet capture
-- Uses scikit-learn's Isolation Forest for anomaly detection
-- Inspired by traditional IDS systems like Snort and Suricata
+### Recommendations
+- Implement pagination for large season datasets
+- Add debouncing to search/filter inputs
+- Consider lazy loading for playoff bracket images
+
+## Future Enhancements
+
+Potential features for future development:
+- User authentication and authorization
+- Real-time updates with WebSocket integration
+- Advanced analytics and data visualizations
+- Mobile-responsive design improvements
+- Export functionality (PDF, CSV)
+- Player-level statistics tracking
+- Draft history and analysis
+- Trade management system
+
+## License
+
+ISC
+
+## Repository
+
+**GitHub**: [https://github.com/ryanw1nn/FantasyFootballWebApp](https://github.com/ryanw1nn/FantasyFootballWebApp)
+
+**Issues**: [https://github.com/ryanw1nn/FantasyFootballWebApp/issues](https://github.com/ryanw1nn/FantasyFootballWebApp/issues)
+
+## Support
+
+For questions, issues, or feature requests, please open an issue on the GitHub repository.
