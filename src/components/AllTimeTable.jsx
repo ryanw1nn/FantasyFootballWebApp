@@ -1,143 +1,354 @@
-import React, {useState} from "react";
-import styles from "./Table.module.css";
+// ==================================
+// AllTimeTable.jsx
+// ==================================
 
-export default function AllTimeTable({ allData }) {
-    const [sortConfig, setSortConfig] = useState({ key: "winPct", direction: "desc" });
+import React, { useState, useMemo } from 'react';
 
-    if (!allData) return null;
+/**
+ * AllTimeTable Component
+ * 
+ * Displays aggregated career statistics for all players across all seasons.
+ * Features:
+ *  - Aggregates wins, losses, ties, points for/against across all seasons
+ *  - Calculates career win percentage and per-game averages
+ *  - Tracks championship counts (regular season and playoff)
+ *  - Sortable columns
+ *   - Search filtering by player name
+ * 
+ *  @param {Object} props - Component props
+ *  @param {Object} props.allData - Object containing all season data, keyed by year
+ *  @param {string} props.searchQuery - Search query to filter players by name
+ */
+export default function AllTimeTable({ allData, searchQuery }) {
 
-    // aggregate data by player name
-    const allTimeStats = {};
-    Object.entries(allData).forEach(([seasonYear, season]) => {
-        season.forEach((row) => {
-            const name = row.name;
-            if(!allTimeStats[name]) {
-                allTimeStats[name] = { wins: 0, losses: 0, ties: 0, PF: 0, PA: 0, rChampionYears: [], playoffRounds: 0, pChampionYears: [] };
-            }
+    // ==================================
+    // STATE MANAGEMENT
+    // ==================================
 
-            allTimeStats[name].wins += row.wins || 0;
-            allTimeStats[name].losses += row.losses || 0;
-            allTimeStats[name].ties += row.ties || 0;
-            allTimeStats[name].PF += row.pf || 0;
-            allTimeStats[name].PA += row.pa || 0;
+    /**
+     * Sorting configuration
+     * Defaults to sorting by win percentage (decending)
+     */
+    const [sortConfig, setSortConfig] = useState({
+        key: "winPct",
+        direction: "desc"
+    });
 
-            if (row.rChampion) allTimeStats[name].rChampionYears.push(seasonYear);
-            if (row.playoff?.made){
-                let rounds = row.playoff.rounds || 0;
-                if (row.playoff.pChampion) rounds += 1;
-                allTimeStats[name].playoffRounds += rounds;
-            }
+    /**
+     * Playoff stat filters
+     * Controls which playoff stats to include in the all-time totals
+     */
+    const [playoffFilters, setPlayoffFilters] = useState({
+        playoff: false,
+        toilet: false,
+        out: false
+    });
 
-            if (row.playoff?.pChampion) allTimeStats[name].pChampionYears.push(seasonYear);
+    /**
+     * Toggle visibility of playoff filter menu
+     */
+    const [showPlayoffFilters, setShowPlayoffFilters] = useState(false);
 
+    // ==================================
+    // DATA AGGREGATION & FILTERING
+    // ==================================
+
+    /**
+     * Aggregates all player statistics across all seasons
+     * Memoized to prevent recalculation on every render
+     */
+    
+    const allTimeStats = useMemo(() => {
+        const stats = {};
+
+        // Loop through each season's data
+        Object.entries(allData)
+            .filter(([year]) => !isNaN(Number(year)))
+            .forEach(([seasonYear, season]) => {
+            if (!Array.isArray(season)) return;
+
+            season.forEach((row) => {
+                const name = row.name;
+
+                // Initialize player stats if this is their first appearance
+                if (!stats[name]) {
+                    stats[name] = {
+                        wins: 0,
+                        losses: 0,
+                        ties: 0,
+                        PF: 0,
+                        PA: 0,
+                        rChampionYears: [],
+                        playoffRounds: 0,
+                        pChampionYears: []
+                    };
+                }
+
+                // Accumulate season stats
+                stats[name].wins += row.wins || 0;
+                stats[name].losses += row.losses || 0;
+                stats[name].ties += row.ties || 0;
+                stats[name].PF += row.pf || 0;
+                stats[name].PA += row.pa || 0;
+
+                // Track championships
+                if (row.rChampion) {
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].rChampionYears.push(shortYear);
+                }
+
+                // Track playoff rounds won
+                if (row.playoff?.made) {
+                    let rounds = row.playoff.rounds || 0;
+                    // Add an extra round if they won the championship
+                    if (row.playoff.pChampion) rounds += 1;
+                    stats[name].playoffRounds += rounds;
+                }
+
+                // Track playoff championships
+                if (row.playoff?.pChampion) {
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].pChampionYears.push(shortYear);
+                }
+            });
         });
-    });
 
-    // convert into array with computed fields
-    const players = Object.entries(allTimeStats).map(([name, stats]) => {
-        const totalGames = stats.wins + stats.losses + stats.ties;
-        const winPct = totalGames ? (stats.wins + 0.5 * stats.ties) / totalGames : 0;
-        const pfpg = totalGames ? stats.PF / totalGames : 0;
-        const papg = totalGames ? stats.PA / totalGames : 0;
+        // Convert stats object to array and calculate derived metrics
+        let players = Object.entries(stats).map(([name, s]) => {
+            const totalGames = s.wins + s.losses + s.ties;
 
-        const regSeasonChamps = stats.rChampionYears.map(y => `'${y.slice(2)}`).join(", ");
-        const playoffRounds = stats.playoffRounds || 0;
-        const postSeasonChamps = stats.pChampionYears.map(y => `'${y.slice(2)}`).join(", ");
+            // Calculate win percentage (ties count as 0.5 wins)
+            const winPct = totalGames ? (s.wins + 0.5 * s.ties) / totalGames : 0;
 
-        return {
-            name,
-            ...stats,
-            totalGames,
-            winPct,
-            PFPG: pfpg,
-            PAPG: papg,
-            regSeasonChamps,
-            playoffRounds,
-            postSeasonChamps,
-        };
-    });
+            return {
+                name,
+                ...s,
+                totalGames,
+                winPct,
+                PFPG: totalGames ? s.PF / totalGames : 0,
+                PAPG: totalGames ? s.PA / totalGames : 0,
+                rChampionCount: s.rChampionYears.length,
+                pChampionCount: s.pChampionYears.length
+            };
+        });
 
-    // apply sorting
-    const sortedPlayers = [...players].sort((a, b) => {
-        if (!sortConfig.key) return 0;
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
-
-        if (typeof aValue === "string" && typeof bValue ==="string") {
-            aValue = aValue.toLowerCase();
-            bValue = bValue.toLowerCase();
+        // Apply search filter if query exists
+        if (searchQuery) {
+            players = players.filter(p =>
+                p.name.toLowerCase().includes(searchQuery.toLowerCase())
+            );
         }
 
-        if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+        return players;
+    }, [allData, searchQuery]);
 
-        let aPF = a.PF ?? 0;
-        let bPF = b.PF ?? 0;
-        if (aPF < bPF) return sortConfig.direction === "asc" ? -1 : 1;
-        if (aPF > bPF) return sortConfig.direction === "asc" ? 1 : -1;
+    // ==================================
+    // SORTING
+    // ==================================
 
-        return 0;
-    });
+    /**
+     * Sorts players based on current sort configuration
+     * Memoized to prevent re-sorting on every render
+     */
+    const sortedPlayers = useMemo(() => {
+        return [...allTimeStats].sort((a, b) => {
+            if (!sortConfig.key) return 0;
 
-    // handle header click
+            let aValue = a[sortConfig.key];
+            let bValue = b[sortConfig.key];
+
+            // Convert strings to lower case for case-insensitive comparison
+            if (typeof aValue == "string") aValue = aValue.toLowerCase();
+            if (typeof bValue == "string") bValue = bValue.toLowerCase();
+
+            // Primary sort by selected column
+            if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
+
+            // Tie-breaker: sort by total Points For (descending)
+            return (b.PF || 0) - (a.PF || 0);
+        });
+    }, [allTimeStats, sortConfig]);
+
+    /**
+     * Handles column header clicks to change sorting
+     * Toggles between ascending and descending on repeated clicks
+     * 
+     * @param {string} key - The column key to sort by
+     */
     const requestSort = (key) => {
-        let direction = "asc";
-        if (sortConfig.key === key && sortConfig.direction === "asc") {
-            direction = "desc";
-        }
-        setSortConfig({ key, direction });
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc"
+        }));
     };
 
-    // arrow indicator
-    const getSortIndicator = (key) => {
-        if (sortConfig.key !== key) return null;
-        return sortConfig.direction === "asc" ? " ▲" : " ▼";
+    /**
+     * Returns the appropiate sort indicator for a column
+     * 
+     * @param {string} key - the column key
+     * @returns {string} Unicode arrow character or empty string
+     */
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) return "↕";
+        return sortConfig.direction === "asc" ? "↑" : "↓";
     };
+
+    // ==================================
+    // RENDER
+    // ==================================
 
     return (
-        <div className={styles.tableContainer}>
-            <h2 className={styles.title}>All-Time Rankings</h2>
-            <table className={styles.table}>
-                <thead>
+        <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+            
+                {/* Table Header - Sticky on scroll */}
+                <thead className="sticky top-0 bg-gradient-to-r from-indigo-600 to-indigo-700 text-white z-10">
                     <tr>
-                        <th className={styles.stickyHeader} onClick={() => requestSort("name")}>Player{getSortIndicator("name")}</th>
-                        <th onClick={() => requestSort("winPct")}>WIN%{getSortIndicator("winPct")}</th>
-                        <th onClick={() => requestSort("wins")}>Wins{getSortIndicator("wins")}</th>
-                        <th onClick={() => requestSort("losses")}>Losses{getSortIndicator("losses")}</th>
-                        <th onClick={() => requestSort("ties")}>Ties{getSortIndicator("ties")}</th>
-                        <th onClick={() => requestSort("totalGames")}>Total Games{getSortIndicator("totalGames")}</th>
-                        <th onClick={() => requestSort("PF")}>PF{getSortIndicator("PF")}</th>
-                        <th onClick={() => requestSort("PA")}>PA{getSortIndicator("PA")}</th>
-                        <th onClick={() => requestSort("PFPG")}>PFPG{getSortIndicator("PFPG")}</th>
-                        <th onClick={() => requestSort("PAPG")}>PAPG{getSortIndicator("PAPG")}</th>
-                        <th onClick={() => requestSort("regSeasonChamps")}>R-Champs{getSortIndicator("regSeasonChamps")}</th>
-                        <th onClick={() => requestSort("playoffRounds")}>P-Rounds{getSortIndicator("playoffRounds")}</th>
-                        <th onClick={() => requestSort("postSeasonChamps")}>P-Champs{getSortIndicator("postSeasonChamps")}</th>
-
+                    <th 
+                        className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("name")}
+                    >
+                        Player {getSortIcon("name")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("winPct")}
+                    >
+                        WIN% {getSortIcon("winPct")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("wins")}
+                    >
+                        W {getSortIcon("wins")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("losses")}
+                    >
+                        L {getSortIcon("losses")}
+                    </th>
+                    <th
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
+                        onClick={() => requestSort("ties")}
+                    >   T {getSortIcon("ties")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("totalGames")}
+                    >
+                        GP {getSortIcon("totalGames")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("PFPG")}
+                    >
+                        PFPG {getSortIcon("PFPG")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("rChampionCount")}
+                    >
+                        RS {getSortIcon("rChampionCount")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("playoffRounds")}
+                    >
+                        Rounds {getSortIcon("playoffRounds")}
+                    </th>
+                    <th 
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
+                        onClick={() => requestSort("pChampionCount")}
+                    >
+                        PO {getSortIcon("pChampionCount")}
+                    </th>
                     </tr>
                 </thead>
+
+                {/* Table Body */}
                 <tbody>
-                    {sortedPlayers.map((player, idx) => {
-                        return (
-                            <tr key={idx}>
-                                <td className={styles.stickyColumn}>{player.name}</td>
-                                <td>{(player.winPct * 100).toFixed(1)}%</td>
-                                <td>{player.wins}</td>
-                                <td>{player.losses}</td>
-                                <td>{player.ties}</td>
-                                <td>{player.totalGames}</td>
-                                <td>{player.PF.toFixed(2)}</td>
-                                <td>{player.PA.toFixed(2)}</td>
-                                <td>{player.PFPG.toFixed(1)}</td>
-                                <td>{player.PAPG.toFixed(1)}</td>
-                                <td>{player.regSeasonChamps}</td>
-                                <td>{player.playoffRounds}</td>
-                                <td>{player.postSeasonChamps}</td>
-                            </tr>
-                    );
-                })}
+                {sortedPlayers.map((player, idx) => (
+                    <tr 
+                    key={idx} 
+                    className={`border-b border-gray-200 hover:bg-indigo-50 transition-colors ${
+                        idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    }`}
+                    >
+                    {/* Player Name */}
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                        {player.name}
+                    </td>
+                    
+                    {/* Win Percentage - Color coded by performance */}
+                    <td className="px-4 py-3 text-center">
+                        <span className={`font-semibold ${
+                        player.winPct >= 0.6 ? 'text-green-600' :   // Great record
+                        player.winPct >= 0.5 ? 'text-blue-600' :    // Above .500
+                        'text-gray-600'                              // Below .500
+                        }`}>
+                        {(player.winPct * 100).toFixed(1)}%
+                        </span>
+                    </td>
+                    
+                    {/* Wins - Green color */}
+                    <td className="px-4 py-3 text-center text-green-600 font-medium">
+                        {player.wins}
+                    </td>
+                    
+                    {/* Losses - Red color */}
+                    <td className="px-4 py-3 text-center text-red-600 font-medium">
+                        {player.losses}
+                    </td>
+
+                    {/* Ties - Gray color */}
+                    <td className="px-4 py-3 text-center text-gray-600 font-medium">
+                        {player.ties}
+                    </td>
+                    
+                    {/* Games Played */}
+                    <td className="px-4 py-3 text-center text-gray-700">
+                        {player.totalGames}
+                    </td>
+                    
+                    {/* Points For Per Game */}
+                    <td className="px-4 py-3 text-center text-gray-700">
+                        {player.PFPG.toFixed(1)}
+                    </td>
+                    
+                    
+                    {/* Regular Season Championships - show years won */}
+                    <td className="px-4 py-3 text-center">
+                        {player.rChampionYears.length > 0 && (
+                        <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.rChampionYears.join(', ')}
+                        </span>
+                        )}
+                    </td>
+
+                     {/* Playoff Rounds - Badge display */}
+                     <td className="px-4 py-3 text-center">
+                        {player.playoffRounds > 0 && (
+                        <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.playoffRounds}
+                        </span>
+                        )}
+                    </td>   
+
+                    {/* Playoff Championships - show years won */}
+                    <td className="px-4 py-3 text-center">
+                        {player.pChampionYears.length > 0 && (
+                        <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.pChampionYears.join(', ')}
+                        </span>
+                        )}
+                    </td>
+
+                    </tr>
+                ))}
                 </tbody>
             </table>
         </div>
-    );
+    )
 }
