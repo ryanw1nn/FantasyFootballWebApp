@@ -62,7 +62,9 @@ export default function AllTimeTable({ allData, searchQuery }) {
         const stats = {};
 
         // Loop through each season's data
-        Object.entries(allData).forEach(([seasonYear, season]) => {
+        Object.entries(allData)
+            .filter(([year]) => !isNaN(Number(year)))
+            .forEach(([seasonYear, season]) => {
             if (!Array.isArray(season)) return;
 
             season.forEach((row) => {
