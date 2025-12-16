@@ -7,6 +7,7 @@ import AllTimeTable from './components/AllTimeTable';
 import SeasonTable from './components/SeasonTable';
 import EditSeasonPage from './components/EditSeasonPage';
 import PlayoffBracket from './components/PlayoffBracket';
+import PlayerStatsPage from './components/PlayerStatsPage';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -19,6 +20,7 @@ export default function App() {
   // ============================================
   
   const [viewMode, setViewMode] = useState("season");
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [filters, setFilters] = useState({
     active: true,
     inactive: false,
@@ -91,6 +93,23 @@ export default function App() {
   const toggleFilter = (stateKey) => {
     setFilters((prev) => ({...prev, [stateKey]: !prev[stateKey] }));
   };
+
+  /**
+   * Handles player name click - navigates to player stats view
+   */
+  const handlePlayerClick = (playerName) => {
+    setSelectedPlayer(playerName);
+    setViewMode("playerStats");
+  };
+
+  /**
+   * Handles back button from player stats - returns to previous view
+   */
+  const handleBackFromPlayerStats = () => {
+    setSelectedPlayer(null);
+    setViewMode("alltime");
+  }
+  
   
   // ============================================
   // COMPUTED VALUES
@@ -130,6 +149,20 @@ export default function App() {
   
   if (viewMode === "edit") {
     return <EditSeasonPage onBack={() => setViewMode("season")} />;
+  }
+
+  // ============================================
+  // RENDER: PLAYER STATS MODE
+  // ============================================
+
+  if (viewMode === "playerStats" && selectedPlayer) {
+    return (
+      <PlayerStatsPage 
+        playerName={selectedPlayer} 
+        allData={data} 
+        onBack={handleBackFromPlayerStats} 
+      />
+    );
   }
 
   // ============================================
@@ -233,9 +266,8 @@ export default function App() {
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
           <Trophy className="text-yellow-500" size={40}/>
-          Fantasy Football League
+          The Fan Club
         </h1>
-        <p className="text-gray-600">Track your league's performance across all seasons</p>
       </div>
         
       {/* Stats Cards - Only in season view */}
@@ -365,9 +397,10 @@ export default function App() {
 
         <div className="overflow-auto max-h-[800px]">
           {viewMode === "season" ? (
-             <SeasonTable 
+            <SeasonTable 
               seasonData={filterTeams(getSeasonArray(selectedYear))}
               year={selectedYear}
+              onPlayerClick={handlePlayerClick}
             />
           ) : (
             <AllTimeTable 
@@ -377,6 +410,7 @@ export default function App() {
                   filterTeams(getSeasonArray(year))
                 ])
               )}
+              onPlayerClick={handlePlayerClick}
             />
           )}
         </div>

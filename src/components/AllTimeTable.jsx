@@ -13,13 +13,15 @@ import React, { useState, useMemo } from 'react';
  *  - Calculates career win percentage and per-game averages
  *  - Tracks championship counts (regular season and playoff)
  *  - Sortable columns
- *   - Search filtering by player name
+ *  - Search filtering by player name
+ *  - Clickable player names to view detailed stats
  * 
  *  @param {Object} props - Component props
  *  @param {Object} props.allData - Object containing all season data, keyed by year
  *  @param {string} props.searchQuery - Search query to filter players by name
+ *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
  */
-export default function AllTimeTable({ allData, searchQuery }) {
+export default function AllTimeTable({ allData, searchQuery, onPlayerClick }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -27,7 +29,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
     /**
      * Sorting configuration
-     * Defaults to sorting by win percentage (decending)
+     * Defaults to sorting by win percentage (descending)
      */
     const [sortConfig, setSortConfig] = useState({
         key: "winPct",
@@ -62,11 +64,31 @@ export default function AllTimeTable({ allData, searchQuery }) {
         const stats = {};
 
         // Loop through each season's data
+        const pfLeadersByYear = {};
+        Object.entries(allData)
+            .filter(([year]) => !isNaN(Number(year)))
+            .forEach(([seasonYear, season]) => {
+                if (!Array.isArray(season)) return;
+
+                // Identify PF leader for the season
+                let maxPF = -1;
+                let pfLeader = null;
+                season.forEach((row) => {
+                    if ((row.pf || 0) > maxPF) {
+                        maxPF = row.pf || 0;
+                        pfLeader = row.name;
+                    }
+                });
+                if (pfLeader) {
+                    pfLeadersByYear[seasonYear] = pfLeader;
+                }
+            });
+
+        // Accumulate stats for each player in the season
         Object.entries(allData)
             .filter(([year]) => !isNaN(Number(year)))
             .forEach(([seasonYear, season]) => {
             if (!Array.isArray(season)) return;
-
             season.forEach((row) => {
                 const name = row.name;
 
@@ -80,7 +102,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         PA: 0,
                         rChampionYears: [],
                         playoffRounds: 0,
-                        pChampionYears: []
+                        pChampionYears: [],
+                        pfLeaderYears: []
                     };
                 }
 
@@ -91,10 +114,16 @@ export default function AllTimeTable({ allData, searchQuery }) {
                 stats[name].PF += row.pf || 0;
                 stats[name].PA += row.pa || 0;
 
-                // Track championships
+                // Track regular season championships
                 if (row.rChampion) {
                     const shortYear = "'" + seasonYear.toString().slice(-2);
                     stats[name].rChampionYears.push(shortYear);
+                }
+
+                // Track PF leader (regular season)
+                if (pfLeadersByYear[seasonYear] === name) {
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].pfLeaderYears.push(shortYear);
                 }
 
                 // Track playoff rounds won
@@ -128,7 +157,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                 PFPG: totalGames ? s.PF / totalGames : 0,
                 PAPG: totalGames ? s.PA / totalGames : 0,
                 rChampionCount: s.rChampionYears.length,
-                pChampionCount: s.pChampionYears.length
+                pChampionCount: s.pChampionYears.length,
+                pfLeaderCount: s.pfLeaderYears.length
             };
         });
 
@@ -158,8 +188,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
             let bValue = b[sortConfig.key];
 
             // Convert strings to lower case for case-insensitive comparison
-            if (typeof aValue == "string") aValue = aValue.toLowerCase();
-            if (typeof bValue == "string") bValue = bValue.toLowerCase();
+            if (typeof aValue === "string") aValue = aValue.toLowerCase();
+            if (typeof bValue === "string") bValue = bValue.toLowerCase();
 
             // Primary sort by selected column
             if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
@@ -184,7 +214,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
     };
 
     /**
-     * Returns the appropiate sort indicator for a column
+     * Returns the appropriate sort indicator for a column
      * 
      * @param {string} key - the column key
      * @returns {string} Unicode arrow character or empty string
@@ -232,7 +262,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     <th
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
                         onClick={() => requestSort("ties")}
-                    >   T {getSortIcon("ties")}
+                    >   
+                        T {getSortIcon("ties")}
                     </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
@@ -245,6 +276,13 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         onClick={() => requestSort("PFPG")}
                     >
                         PFPG {getSortIcon("PFPG")}
+                    </th>
+                    <th
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
+                        onClick={() => requestSort("pfLeaderCount")}
+                        title="Most Points For in Regular Season"
+                    >
+                        MPF {getSortIcon("pfLeaderCount")}
                     </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
@@ -276,9 +314,14 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     }`}
                     >
-                    {/* Player Name */}
+                    {/* Player Name - Clickable */}
                     <td className="px-4 py-3 font-medium text-gray-900">
-                        {player.name}
+                        <button
+                            onClick={() => onPlayerClick && onPlayerClick(player.name)}
+                            className="text-left w-full hover:text-indigo-600 transition-colors cursor-pointer"
+                        >
+                            {player.name}
+                        </button>
                     </td>
                     
                     {/* Win Percentage - Color coded by performance */}
@@ -317,6 +360,14 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         {player.PFPG.toFixed(1)}
                     </td>
                     
+                    {/* Most PF */}
+                    <td className="px-4 py-3 text-center">
+                        {player.pfLeaderCount > 0 && (
+                        <span className="inline-flex items-center justify-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.pfLeaderYears.join(', ')}
+                        </span>
+                        )}
+                    </td>
                     
                     {/* Regular Season Championships - show years won */}
                     <td className="px-4 py-3 text-center">
