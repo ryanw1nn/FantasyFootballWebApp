@@ -62,11 +62,31 @@ export default function AllTimeTable({ allData, searchQuery }) {
         const stats = {};
 
         // Loop through each season's data
+        const pfLeadersByYear = {};
+        Object.entries(allData)
+            .filter(([year]) => !isNaN(Number(year)))
+            .forEach(([seasonYear, season]) => {
+                if (!Array.isArray(season)) return;
+
+                // Identify PF leader for the season
+                let maxPF = -1;
+                let pfLeader = null;
+                season.forEach((row) => {
+                    if ((row.pf || 0) > maxPF) {
+                        maxPF = row.pf || 0;
+                        pfLeader = row.name;
+                    }
+                });
+                if (pfLeader) {
+                    pfLeadersByYear[seasonYear] = pfLeader;
+                }
+            });
+
+        // Accumulate stats for each player in the season
         Object.entries(allData)
             .filter(([year]) => !isNaN(Number(year)))
             .forEach(([seasonYear, season]) => {
             if (!Array.isArray(season)) return;
-
             season.forEach((row) => {
                 const name = row.name;
 
@@ -80,7 +100,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         PA: 0,
                         rChampionYears: [],
                         playoffRounds: 0,
-                        pChampionYears: []
+                        pChampionYears: [],
+                        pfLeaderYears: []
                     };
                 }
 
@@ -91,10 +112,16 @@ export default function AllTimeTable({ allData, searchQuery }) {
                 stats[name].PF += row.pf || 0;
                 stats[name].PA += row.pa || 0;
 
-                // Track championships
+                // Track regular season championships
                 if (row.rChampion) {
                     const shortYear = "'" + seasonYear.toString().slice(-2);
                     stats[name].rChampionYears.push(shortYear);
+                }
+
+                // Track PF leader (regular season)
+                if (pfLeadersByYear[seasonYear] === name) {
+                    const shortYear = "'" + seasonYear.toString().slice(-2);
+                    stats[name].pfLeaderYears.push(shortYear);
                 }
 
                 // Track playoff rounds won
@@ -128,7 +155,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                 PFPG: totalGames ? s.PF / totalGames : 0,
                 PAPG: totalGames ? s.PA / totalGames : 0,
                 rChampionCount: s.rChampionYears.length,
-                pChampionCount: s.pChampionYears.length
+                pChampionCount: s.pChampionYears.length,
+                pfLeaderCount: s.pfLeaderYears.length
             };
         });
 
@@ -246,6 +274,13 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     >
                         PFPG {getSortIcon("PFPG")}
                     </th>
+                    <th
+                        className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
+                        onClick={() => requestSort("pfLeaderCount")}
+                        title="Most Points For in Regular Season"
+                    >
+                        MPF {getSortIcon("pfLeaderCount")}
+                    </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
                         onClick={() => requestSort("rChampionCount")}
@@ -317,6 +352,14 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         {player.PFPG.toFixed(1)}
                     </td>
                     
+                    {/* Most PF */}
+                    <td className="px-4 py-3 text-center">
+                        {player.pfLeaderCount > 0 && (
+                        <span className="inline-flex items-center justify-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-semibold">
+                            {player.pfLeaderYears.join(', ')}
+                        </span>
+                        )}
+                    </td>
                     
                     {/* Regular Season Championships - show years won */}
                     <td className="px-4 py-3 text-center">

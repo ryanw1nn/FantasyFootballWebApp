@@ -6522,7 +6522,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": true
@@ -6555,7 +6555,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false
@@ -6577,7 +6577,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false
@@ -6621,7 +6621,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false
@@ -7203,7 +7203,7 @@
         "matchups": [
           {
             "team1": "TJ Cairney",
-            "team1Score": null,
+            "team1Score": 155,
             "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
@@ -7211,23 +7211,23 @@
           },
           {
             "team1": "Austin Whittaker",
-            "team1Score": null,
+            "team1Score": 91.86,
             "team2": "Ryan Winn",
-            "team2Score": null,
+            "team2Score": 88.1,
             "status": "playoff",
             "label": "#4 SEED vs #5 SEED"
           },
           {
             "team1": "Brett Lewis",
-            "team1Score": null,
+            "team1Score": 138.92,
             "team2": "Noah Roberts",
-            "team2Score": null,
+            "team2Score": 145.5,
             "status": "playoff",
             "label": "#3 SEED vs #6 SEED"
           },
           {
             "team1": "Max Strater",
-            "team1Score": null,
+            "team1Score": 142.6,
             "team2": "BYE",
             "team2Score": null,
             "status": "playoff",
@@ -7235,25 +7235,25 @@
           },
           {
             "team1": "Will Friedenberger",
-            "team1Score": null,
+            "team1Score": 111.26,
             "team2": "Keith John",
-            "team2Score": null,
+            "team2Score": 116.68,
             "status": "toilet",
             "label": "#9 SEED vs #12 SEED"
           },
           {
             "team1": "Jimmy Beer",
-            "team1Score": null,
+            "team1Score": 84.62,
             "team2": "Jake Strater",
-            "team2Score": null,
+            "team2Score": 90.6,
             "status": "toilet",
             "label": "#10 SEED vs #11 SEED"
           },
           {
             "team1": "Garret Vivian",
-            "team1Score": null,
+            "team1Score": 193.74,
             "team2": "Josh Whelan",
-            "team2Score": null,
+            "team2Score": 129.08,
             "status": "out",
             "label": "#7 SEED vs #8 SEED"
           }
@@ -7262,49 +7262,49 @@
       "16": {
         "matchups": [
           {
-            "team1": null,
+            "team1": "TJ Cairney",
             "team1Score": null,
-            "team2": null,
+            "team2": "Austin Whittaker",
             "team2Score": null,
             "status": "playoff",
             "label": "#1 SEED vs winner #4/#5"
           },
           {
-            "team1": null,
+            "team1": "Max Strater",
             "team1Score": null,
-            "team2": null,
+            "team2": "Noah Roberts",
             "team2Score": null,
             "status": "playoff",
             "label": "#2 SEED vs winner #3/#6"
           },
           {
-            "team1": null,
+            "team1": "Will Friedenberger",
             "team1Score": null,
-            "team2": null,
+            "team2": "Jimmy Beer",
             "team2Score": null,
             "status": "toilet",
             "label": "loser #9/#12 vs loser #10/#11 - Toilet Bowl Champ"
           },
           {
-            "team1": null,
+            "team1": "Ryan Winn",
             "team1Score": null,
-            "team2": null,
+            "team2": "Brett Lewis",
             "team2Score": null,
             "status": "out",
             "label": "loser #4/#5 vs loser #3/#6"
           },
           {
-            "team1": null,
+            "team1": "Garret Vivian",
             "team1Score": null,
-            "team2": null,
+            "team2": "Jake Strater",
             "team2Score": null,
             "status": "out",
             "label": "#7 SEED vs winner #10/#11"
           },
           {
-            "team1": null,
+            "team1": "Keith John",
             "team1Score": null,
-            "team2": null,
+            "team2": "Josh Whelan",
             "team2Score": null,
             "status": "out",
             "label": "#8 SEED vs winner #9/#12"
@@ -7371,7 +7371,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": true,
@@ -7412,7 +7412,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false,
@@ -7467,10 +7467,10 @@
         "playoffStats": {
           "playoff": {
             "wins": 0,
-            "losses": 0,
+            "losses": 1,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 138.92,
+            "pa": 145.5
           },
           "toilet": {
             "wins": 0,
@@ -7494,7 +7494,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false,
@@ -7507,11 +7507,11 @@
         "prevPlace": 4,
         "playoffStats": {
           "playoff": {
-            "wins": 0,
+            "wins": 1,
             "losses": 0,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 91.86,
+            "pa": 88.1
           },
           "toilet": {
             "wins": 0,
@@ -7549,10 +7549,10 @@
         "playoffStats": {
           "playoff": {
             "wins": 0,
-            "losses": 0,
+            "losses": 1,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 88.1,
+            "pa": 91.86
           },
           "toilet": {
             "wins": 0,
@@ -7576,7 +7576,7 @@
         "state": "active",
         "playoff": {
           "made": true,
-          "rounds": 1,
+          "rounds": 2,
           "pChampion": false
         },
         "rChampion": false,
@@ -7589,11 +7589,11 @@
         "prevPlace": 6,
         "playoffStats": {
           "playoff": {
-            "wins": 0,
+            "wins": 1,
             "losses": 0,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 145.5,
+            "pa": 138.92
           },
           "toilet": {
             "wins": 0,
@@ -7645,10 +7645,10 @@
           },
           "out": {
             "wins": 0,
-            "losses": 0,
+            "losses": 1,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 129.08,
+            "pa": 193.74
           }
         }
       },
@@ -7685,11 +7685,11 @@
             "pa": 0
           },
           "out": {
-            "wins": 0,
+            "wins": 1,
             "losses": 0,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 193.74,
+            "pa": 129.08
           }
         }
       },
@@ -7720,10 +7720,10 @@
           },
           "toilet": {
             "wins": 0,
-            "losses": 0,
+            "losses": 1,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 111.26,
+            "pa": 116.68
           },
           "out": {
             "wins": 0,
@@ -7760,11 +7760,11 @@
             "pa": 0
           },
           "toilet": {
-            "wins": 0,
+            "wins": 1,
             "losses": 0,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 90.6,
+            "pa": 84.62
           },
           "out": {
             "wins": 0,
@@ -7802,10 +7802,10 @@
           },
           "toilet": {
             "wins": 0,
-            "losses": 0,
+            "losses": 1,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 84.62,
+            "pa": 90.6
           },
           "out": {
             "wins": 0,
@@ -7842,11 +7842,11 @@
             "pa": 0
           },
           "toilet": {
-            "wins": 0,
+            "wins": 1,
             "losses": 0,
             "ties": 0,
-            "pf": 0,
-            "pa": 0
+            "pf": 116.68,
+            "pa": 111.26
           },
           "out": {
             "wins": 0,
