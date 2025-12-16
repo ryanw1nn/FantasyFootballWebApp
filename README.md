@@ -332,6 +332,7 @@ ISC
 
 **Issues**: [https://github.com/ryanw1nn/FantasyFootballWebApp/issues](https://github.com/ryanw1nn/FantasyFootballWebApp/issues)
 
+
 ## Support
 
-For questions, issues, or feature requests, please open an issue on the GitHub repository.
+For questions, issues, or feature requests, please open an issue on the GitHub repository. 

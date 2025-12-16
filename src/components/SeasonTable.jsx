@@ -15,13 +15,15 @@ import React, { useState, useMemo } from 'react';
  *  - Championship and playoff indicators
  *  - Sortable columns
  *  - Search filtering by player name or team name
+ *  - Clickable player names to view detailed stats
  * 
  * @param {Object} props - Component props
  * @param {Array} props.seasonData - Array of team objects for the season
  * @param {string|number} props.year - The year of the season being displayed
  * @param {string} props.searchQuery - Search query to filter teams/players
+ * @param {Function} props.onPlayerClick - Callback function when player name is clicked
  */
-export default function SeasonTable({ seasonData, year, searchQuery }) {
+export default function SeasonTable({ seasonData, year, searchQuery, onPlayerClick }) {
   // ==================================
   // STATE MANAGEMENT
   // ==================================
@@ -48,7 +50,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
       // ensure numeric values
       const wins = Number(row.wins) || 0;
       const losses = Number(row.losses) || 0;
-      const ties = Number (row.ties) || 0;
+      const ties = Number(row.ties) || 0;
       const totalGames = wins + losses + ties;
 
       // Calculates win percentage (ties = 0.5 wins)
@@ -65,7 +67,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
 
       if (typeof placeValue === 'string') {
         const parsed = parseInt(placeValue);
-        if(!isNaN(parsed)) {
+        if (!isNaN(parsed)) {
           placeValue = parsed;
         }
       }
@@ -85,10 +87,10 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
 
     // Apply search filter if query exists
     if (searchQuery) {
-        data = data.filter(d =>
-          d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.team.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+      data = data.filter(d =>
+        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (d.team && d.team.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
     }
 
     return data;
@@ -108,7 +110,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
       let key = sortConfig.key;
       const dir = sortConfig.direction === "asc" ? 1 : -1;
 
-      // Use placevalue for sorting when sorting by place
+      // Use placeValue for sorting when sorting by place
       if (key === "place") {
         key = "placeValue";
       }
@@ -125,7 +127,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
       if (aVal < bVal) return -1 * dir;
       if (aVal > bVal) return 1 * dir;
 
-      // Tie-breaker; sort by PF (desc)
+      // Tie-breaker: sort by PF (desc)
       return (b.pf || 0) - (a.pf || 0);
     });
   }, [preparedData, sortConfig]);
@@ -144,7 +146,7 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
   };
 
   /**
-   * Returns the appropiate sort indicator for a column
+   * Returns the appropriate sort indicator for a column
    * 
    * @param {string} key - The column key
    * @returns {string} Unicode arrow character or empty string
@@ -300,9 +302,14 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
                   {row.team}
                 </td>
                 
-                {/* Owner Name */}
-                <td className="px-4 py-3 text-gray-700">
-                  {row.name}
+                {/* Owner Name - Clickable */}
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  <button
+                    onClick={() => onPlayerClick && onPlayerClick(row.name)}
+                    className="text-left w-full hover:text-purple-600 transition-colors cursor-pointer"
+                  >
+                    {row.name}
+                  </button>
                 </td>
                 
                 {/* Win Percentage - Color coded by performance */}
@@ -316,12 +323,12 @@ export default function SeasonTable({ seasonData, year, searchQuery }) {
                   </span>
                 </td>
                 
-                {/* Win-Loss Record - Color coded */}
+                {/* Win-Loss Record - Color coded - TIES BUG FIXED */}
                 <td className="px-4 py-3 text-center text-gray-700">
                   <span className="text-green-600 font-medium">{row.wins}</span>-
                   <span className="text-red-600 font-medium">{row.losses}</span>
                   {row.ties > 0 && (
-                    <span>-<span className="text-gray-500">-{row.ties}</span></span>
+                    <span>-<span className="text-gray-500">{row.ties}</span></span>
                   )}
                 </td>
                 

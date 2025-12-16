@@ -13,13 +13,15 @@ import React, { useState, useMemo } from 'react';
  *  - Calculates career win percentage and per-game averages
  *  - Tracks championship counts (regular season and playoff)
  *  - Sortable columns
- *   - Search filtering by player name
+ *  - Search filtering by player name
+ *  - Clickable player names to view detailed stats
  * 
  *  @param {Object} props - Component props
  *  @param {Object} props.allData - Object containing all season data, keyed by year
  *  @param {string} props.searchQuery - Search query to filter players by name
+ *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
  */
-export default function AllTimeTable({ allData, searchQuery }) {
+export default function AllTimeTable({ allData, searchQuery, onPlayerClick }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -27,7 +29,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
 
     /**
      * Sorting configuration
-     * Defaults to sorting by win percentage (decending)
+     * Defaults to sorting by win percentage (descending)
      */
     const [sortConfig, setSortConfig] = useState({
         key: "winPct",
@@ -186,8 +188,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
             let bValue = b[sortConfig.key];
 
             // Convert strings to lower case for case-insensitive comparison
-            if (typeof aValue == "string") aValue = aValue.toLowerCase();
-            if (typeof bValue == "string") bValue = bValue.toLowerCase();
+            if (typeof aValue === "string") aValue = aValue.toLowerCase();
+            if (typeof bValue === "string") bValue = bValue.toLowerCase();
 
             // Primary sort by selected column
             if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
@@ -212,7 +214,7 @@ export default function AllTimeTable({ allData, searchQuery }) {
     };
 
     /**
-     * Returns the appropiate sort indicator for a column
+     * Returns the appropriate sort indicator for a column
      * 
      * @param {string} key - the column key
      * @returns {string} Unicode arrow character or empty string
@@ -260,7 +262,8 @@ export default function AllTimeTable({ allData, searchQuery }) {
                     <th
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors"
                         onClick={() => requestSort("ties")}
-                    >   T {getSortIcon("ties")}
+                    >   
+                        T {getSortIcon("ties")}
                     </th>
                     <th 
                         className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-500 transition-colors" 
@@ -311,9 +314,14 @@ export default function AllTimeTable({ allData, searchQuery }) {
                         idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                     }`}
                     >
-                    {/* Player Name */}
+                    {/* Player Name - Clickable */}
                     <td className="px-4 py-3 font-medium text-gray-900">
-                        {player.name}
+                        <button
+                            onClick={() => onPlayerClick && onPlayerClick(player.name)}
+                            className="text-left w-full hover:text-indigo-600 transition-colors cursor-pointer"
+                        >
+                            {player.name}
+                        </button>
                     </td>
                     
                     {/* Win Percentage - Color coded by performance */}
