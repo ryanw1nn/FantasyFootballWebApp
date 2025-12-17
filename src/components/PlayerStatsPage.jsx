@@ -3,16 +3,11 @@
 // ==================================
 
 import React, { useState, useMemo } from 'react';
-import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Award, Target } from 'lucide-react';
+import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Award, Target, ChevronDown } from 'lucide-react';
 
 /**
  * PlayerStatsPage Component
- * Displays comprehensive statistics for an individual player across all seasons.
-
- * @param {Object} props - Component props
- * @param {string} props.playerName - Name of the player to display stats for
- * @param {Object} props.allData - Object containing all season data, keyed by year
- * @param {Function} props.onBack - Callback function to return to previous view
+ * Displays statistics for an individual player across all seasons.
  */
 
 export default function PlayerStatsPage({ playerName, allData, onBack }) {
@@ -20,25 +15,11 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
     // STATE MANAGEMENT
     // ==================================
 
-    /**
-     * Game type filters
-     * Controls which types of games are included in statistics
-     * Note: 'out' games are excluded by default
-     */
-    const [gameTypeFilters, setGameTypeFilters] = useState({
-        regular: true,
-        playoff: true,
-        toilet: true,
-        out: false
-    });
-
-    /**
-     * Sorting configuration for head-to-head table
-     */
-    const [h2hSortConfig, setH2hSortConfig] = useState({
-        key: 'wins',
-        direction: 'desc'
-    });
+    const [selectedGameTypes, setSelecetedGameTypes] = useState(['regular', 'playoff', 'toilet']);
+    const [showGameTypeDropdown, setShowGameTypeDropdown] = useState(false);
+    const [opponentFilters, setOpponentFilters] = useState({});
+    const [showOpponentFilters, setShowOpponentFilters] = useState(false);
+    const [h2hSortConfig, setH2hSortConfig] = useState({ key: 'winPct', direction: 'desc' });
 
     // ==================================
     // DATA CALCULATION - ALL GAMES
@@ -56,7 +37,6 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         .filter(([year]) => !isNaN(Number(year)))
         .forEach(([year, seasonData]) => {
             // Handle both old array format and new object format with teams
-            const teams = Array.isArray(seasonData) ? seasonData : seasonData?.teams || [];
             const weeks = seasonData?.weeks || {};
 
             // Process each teams matchups
@@ -109,6 +89,18 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         return games;
     }, [allData, playerName]);
 
+    // Initialize opponent filters
+    useEffect(() => {
+        if (playerGames.length > 0 && Object.keys(opponentFilters).length === 0) {
+            const opponents = [...new Set(playerGames.map(g => g.opponent))];
+            const initialFilters = {};
+            opponents.forEach(opp => {
+                initialFilters[opp] = !opp.toLowerCase().includes('botted');
+            });
+            setOpponentFilters(initialFilters);
+        }       
+    }, [playerGames]);
+
     // ==================================
     // DATA CALCULATION - FILTERED GAMES
     // ==================================
@@ -117,8 +109,11 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
      * Filters games based on selected game type filters
      */
     const filteredGames = useMemo(() => {
-        return playerGames.filter(game => gameTypeFilters[game.gameType]);
-    }, [playerGames, gameTypeFilters]);
+        return playerGames.filter(game => 
+        selectedGameTypes.includes(game.gameType) &&
+        opponentFilters[game.opponent] !== false
+        );
+    }, [playerGames, selectedGameTypes, opponentFilters]);
 
     // ==================================
     // DATA CALCULATION - OVERALL STATS
@@ -227,39 +222,46 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
             regularSeasonChampionships: [],
             playoffChampionships: [],
             playoffRounds: 0,
-            regularSeasonPFTitles: [],
+            pfTitles: [],
         };
+
+        const pfLeadersByYear = {};
+        Object.entries(allData)
+        .filter(([year]) => !isNaN(Number(year)))
+        .forEach(([year, seasonData]) => {
+            const teams = Array.isArray(seasonData) ? seasonData : seasonData?.teams || [];
+            let maxPF = -1;
+            let pfLeader = null;
+            
+            teams.forEach(team => {
+                if((team.pf || 0) > maxPF) {
+                    maxPF = team.pf || 0;
+                    pfLeader = team.name;
+                }
+            });
+        });
 
         Object.entries(allData)
         .filter(([year]) => !isNaN(Number(year)))
         .forEach(([year, seasonData]) => {
             const teams = Array.isArray(seasonData) ? seasonData : seasonData?.teams || [];
             const playerSeasonData = teams.find(t => t.name === playerName);
+            if (!playerSeasonData) return;
 
-            if(!playerSeasonData) return;
-
-            // Regular Season PF Titles
-            if (playerSeasonData.regularSeasonPFTitles) {
-                playerAwards.regularSeasonPFTitles.push(Number(year));
+            if(pfLeadersByYear[year] === playerName) {
+                playerAwards.pfTitles.push(Number(year));
             }
 
-            // Regular Season Championships
-            if (playerSeasonData.wins || playerSeasonData.losses || playerSeasonData.ties)  {
-                playerAwards.reuglarSeasonChampionships.push({
-                    wins: playerSeasonData.wins || 0,
-                    losses: playerSeasonData.losses || 0,
-                    ties: playerSeasonData.ties || 0,
-                });
+            if (playerSeasonData.regularSeasonChampion) {
+                playerAwards.regularSeasonChampionships.push(Number(year));
             }
-
-            // Playoff Awards
-            if (playerSeasonData.playoff) {
-                if (playerSeasonData.playoff.made) {
+            
+            if(playerSeasonData.playoff) {
+                if(playerSeasonData.playoff.made) {
                     let rounds = playerSeasonData.playoff.rounds || 0;
-                    if (playerSeasonData.playoff.pChampion) rounds += 1;
+                    if (playerSeasonData.playoff.pChampion)
                     playerAwards.playoffRounds += rounds;
                 }
-
                 if (playerSeasonData.playoff.pChampion) {
                     playerAwards.playoffChampionships.push(Number(year));
                 }
@@ -287,18 +289,13 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         const sortedByMargin = [...filteredGames].sort((a, b) => a.margin - b.margin);
         const closestGames = sortedByMargin.slice(0, 5);
 
-        // Biggest wins and losses
-        const wins = filteredGames.filter(g => g.result === 'win')
-        const losses = filteredGames.filter(g => g.result === 'loss');
-
-        const biggestWins = [...wins].sort((a, b) => b.margin - a.margin).slice(0, 3);
-        const biggestLosses = [...losses].sort((a, b) => b.margin - a.margin).slice(0, 3);
-        const biggestBlowouts = [...biggestWins, ...biggestLosses].sort((a, b) => b.margin - a.margin)
+        const sortedByMarginDesc = [...filteredGames].sort((a, b) => b.margin - a.margin);
+        const biggestBlowouts = sortedByMarginDesc.slice(0, 5);
 
         // Best performances and worst performances by score
         const sortedByScore = [...filteredGames].sort((a, b) => b.playerScore - a.playerScore);
         const bestPerformances = sortedByScore.slice(0, 5);
-        const worstPerformances = sortedByScore.slice(-5).reverse();
+        const worstPerformances = [...filteredGames].sort((a, b) => a.playerScore - b.playerScore).slice(0, 5);  
 
         return {
             closestGames,
@@ -317,11 +314,33 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
      * Toggles a game type filter on/off
      */
     const toggleGameTypeFilter = (type) => {
-        setGameTypeFilters(prev => ({
-            ...prev,
-            [type]: !prev[type]
-        }));
+        setGameTypeFilters(prev => 
+            prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+        );
     };
+
+    const toggleOpponentFilter = (opponent) => {
+        setOpponentFilters(prev => ({
+            ...prev,
+            [opponent]: !(prev[opponent] !== false)
+        }));
+    }
+
+    const selectAllOpponents = () => {
+        const newFilters = {};
+        Object.keys(opponentFilters).forEach(opp => {
+            newFilters[opp] = true;
+        });
+        setOpponentFilters(newFilters);
+    }
+
+    const deselectAllOpponents = () => {
+        const newFilters = {};
+        Object.keys(opponentFilters).forEach(opp => {
+            newFilters[opp] = false;
+        });
+        setOpponentFilters(newFilters);
+    }
 
     /**
      * Handles column header click for head-to-head sorting
@@ -341,6 +360,7 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         return h2hSortConfig.direction === 'asc' ? ' ▲' : ' ▼';
     }
 
+    const gameTypeFilters = { regular: 'Regular', playoff: 'Playoff', toilet: 'Toilet Bowl', out: 'Out' }
 
     // ==================================
     // RENDER SECTION ONLY - PlayerStatsPage.jsx
