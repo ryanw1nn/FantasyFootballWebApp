@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trophy, TrendingUp, Medal, Edit } from 'lucide-react';
+import { Trophy, TrendingUp, Medal, Edit, SlidersHorizontal } from 'lucide-react';
 
 // Import custom components
 import StatsCard from './components/StatsCard';
@@ -8,6 +8,10 @@ import SeasonTable from './components/SeasonTable';
 import EditSeasonPage from './components/EditSeasonPage';
 import PlayoffBracket from './components/PlayoffBracket';
 import PlayerStatsPage from './components/PlayerStatsPage';
+import Button from './components/ui/Button';
+import ColumnMenu from './components/ui/ColumnMenu';
+import useColumnVisibility from './hooks/useColumnVisibility';
+import { SEASON_COLUMNS, ALLTIME_COLUMNS } from './components/tableColumns';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -30,6 +34,8 @@ export default function App() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  const [seasonCols, toggleSeasonCol] = useColumnVisibility('ff_season_table_columns', SEASON_COLUMNS);
+  const [alltimeCols, toggleAlltimeCol] = useColumnVisibility('ff_alltime_table_columns', ALLTIME_COLUMNS);
   
   const years = Object.keys(data).map(Number).sort((a, b) => b - a);
   const [selectedYear, setSelectedYear] = useState(years[0] || 2025);
@@ -171,55 +177,34 @@ export default function App() {
 
   if (viewMode === "bracket") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="min-h-screen bg-slate-100">
         <div className="max-w-7xl mx-auto p-6">
           {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
-              <Trophy className="text-yellow-500" size={40}/>
-              Fantasy Football League
-            </h1>
-            <p className="text-gray-600">Track your league's performance across all seasons</p>
+          <div className="mb-6 flex items-center gap-3">
+            <Trophy className="text-accent-600" size={28}/>
+            <h1 className="text-2xl font-bold text-slate-900">The Fan Club</h1>
           </div>
 
-          {/* Controls Section */}       
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex flex-wrap gap-4 items-center justify-between">
+          {/* Controls Section */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6">
+            <div className="flex flex-wrap gap-3 items-center justify-between">
 
               {/* View Mode Toggle */}
               <div className="flex gap-2">
-                <button
-                  onClick={() => setViewMode("season")}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
-                >
-                  Season
-                </button>
-                <button
-                  onClick={() => setViewMode("alltime")}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
-                >
-                  All-Time
-                </button>
-                <button
-                  onClick={() => setViewMode("bracket")}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors bg-indigo-600 text-white"
-                >
-                  Playoff Bracket
-                </button>
-                <button
-                  onClick={() => setViewMode("edit")}
-                  className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
-                >
-                  <Edit size={18} />
+                <Button variant="outline" onClick={() => setViewMode("season")}>Season</Button>
+                <Button variant="outline" onClick={() => setViewMode("alltime")}>All-Time</Button>
+                <Button variant="solid" onClick={() => setViewMode("bracket")}>Playoff Bracket</Button>
+                <Button variant="ghost" onClick={() => setViewMode("edit")}>
+                  <Edit size={16} />
                   Edit Season Data
-                </button>
+                </Button>
               </div>
 
               {/* Year Selector */}
-              <select 
+              <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
               >
                 {years.map((year) => (
                   <option key={year} value={year}>
@@ -231,7 +216,7 @@ export default function App() {
           </div>
 
           {/* Bracket Content */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
             <PlayoffBracket year={selectedYear} />
           </div>
         </div>
@@ -245,10 +230,10 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading season data...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading season data...</p>
         </div>
       </div>
     );
@@ -259,17 +244,15 @@ export default function App() {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-slate-100">
       <div className="max-w-7xl mx-auto p-6">
-      
+
       {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
-          <Trophy className="text-yellow-500" size={40}/>
-          The Fan Club
-        </h1>
+      <div className="mb-6 flex items-center gap-3">
+        <Trophy className="text-accent-600" size={28}/>
+        <h1 className="text-2xl font-bold text-slate-900">The Fan Club</h1>
       </div>
-        
+
       {/* Stats Cards - Only in season view */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <StatsCard
@@ -284,7 +267,7 @@ export default function App() {
           icon={Medal}
           subtitle="League average"
         />
-        <StatsCard 
+        <StatsCard
           title="Active Teams"
           value={currentSeasonStats.activeTeams}
           icon={Trophy}
@@ -292,53 +275,39 @@ export default function App() {
         />
       </div>
 
-      {/* Controls Section */}       
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-wrap gap-4 items-center justify-between">
+      {/* Controls Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4 mb-6">
+        <div className="flex flex-wrap gap-3 items-center justify-between">
 
           {/* View Mode Toggle  */}
           <div className="flex gap-2">
-            <button
+            <Button
+              variant={viewMode === "season" ? "solid" : "outline"}
               onClick={() => setViewMode("season")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                viewMode === "season"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
             >
               Season
-            </button>
-            <button
+            </Button>
+            <Button
+              variant={viewMode === "alltime" ? "solid" : "outline"}
               onClick={() => setViewMode("alltime")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                viewMode === "alltime"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
             >
               All-Time
-            </button>
-            <button
-              onClick={() => setViewMode("bracket")}
-              className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
-            >
+            </Button>
+            <Button variant="outline" onClick={() => setViewMode("bracket")}>
               Playoff Bracket
-            </button>
-            <button
-              onClick={() => setViewMode("edit")}
-              className="px-4 py-2 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              <Edit size={18} />
+            </Button>
+            <Button variant="ghost" onClick={() => setViewMode("edit")}>
+              <Edit size={16} />
               Edit Season Data
-            </button>
+            </Button>
           </div>
 
           {/* Year Selector (Season view only) */}
           {viewMode === "season" && (
-            <select 
+            <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-accent-500 focus:border-transparent"
             >
               {years.map((year) => (
                 <option key={year} value={year}>
@@ -352,26 +321,24 @@ export default function App() {
           <div className="relative">
             <button
               onClick={() =>setShowFilterMenu(!showFilterMenu)}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+              className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 text-sm font-medium text-slate-700"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-              </svg>
+              <SlidersHorizontal size={16} />
               Filters
             </button>
 
             {showFilterMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-50">
-                <h3 className="font-semibold text-gray-900 mb-2">Team States</h3>
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 p-3 z-50">
+                <h3 className="font-semibold text-slate-900 mb-2 text-sm">Team States</h3>
                 {Object.entries(filters).map(([key, value]) => (
                   <label key={key} className="flex items-center gap-2 py-1 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={value}
                       onChange={() => toggleFilter(key)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      className="rounded border-slate-300 text-accent-600 focus:ring-accent-500"
                     />
-                      <span className="text-sm text-gray-700 capitalize">{key}</span>
+                      <span className="text-sm text-slate-700 capitalize">{key}</span>
                   </label>
                 ))}
               </div>
@@ -379,31 +346,40 @@ export default function App() {
           </div>
         </div>
       </div>
-      
-      {/* Table Section */}  
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-900">
-            {viewMode === "season"
-              ? `${selectedYear} Season Rankings`
-              : "All-Time Player Rankings"}
-          </h2>
-          <p className="text-gray-600 mt-1">
-            {viewMode === "season"
-              ? "Current season standings and statistics"
-              : "Career statistics across all seasons"}
-          </p>
+
+      {/* Table Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+        <div className="flex items-start justify-between mb-4 gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">
+              {viewMode === "season"
+                ? `${selectedYear} Season Rankings`
+                : "All-Time Player Rankings"}
+            </h2>
+            <p className="text-slate-500 text-sm mt-0.5">
+              {viewMode === "season"
+                ? "Current season standings and statistics"
+                : "Career statistics across all seasons"}
+            </p>
+          </div>
+
+          {viewMode === "season" ? (
+            <ColumnMenu columns={SEASON_COLUMNS} visible={seasonCols} onToggle={toggleSeasonCol} />
+          ) : (
+            <ColumnMenu columns={ALLTIME_COLUMNS} visible={alltimeCols} onToggle={toggleAlltimeCol} />
+          )}
         </div>
 
         <div className="overflow-auto max-h-[800px]">
           {viewMode === "season" ? (
-            <SeasonTable 
+            <SeasonTable
               seasonData={filterTeams(getSeasonArray(selectedYear))}
               year={selectedYear}
               onPlayerClick={handlePlayerClick}
+              visibleColumns={seasonCols}
             />
           ) : (
-            <AllTimeTable 
+            <AllTimeTable
               allData={Object.fromEntries(
                 Object.entries(data).map(([year, seasonData]) => [
                   year,
@@ -411,21 +387,22 @@ export default function App() {
                 ])
               )}
               onPlayerClick={handlePlayerClick}
+              visibleColumns={alltimeCols}
             />
           )}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="mt-6 bg-white rounded-lg shadow-md p-4">
-        <h3 className="font-semibold text-gray-900 mb-2">Legend</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-gray-700">
-          <div><strong>PFPG:</strong> Points For Per Game</div>
-          <div><strong>PAPG:</strong> Points Against Per Game</div>
-          <div><strong>🏆:</strong> Playoff Champion</div>
-          <div><strong>👑:</strong> Regular Season Champion</div>
-          <div><strong>GP:</strong> Games Played</div>
-          <div><strong>Δ:</strong> Rank Change</div>
+      <div className="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+        <h3 className="font-semibold text-slate-900 mb-2 text-sm">Legend</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
+          <div><strong className="text-slate-900">PFPG:</strong> Points For Per Game</div>
+          <div><strong className="text-slate-900">PAPG:</strong> Points Against Per Game</div>
+          <div><strong className="text-slate-900">PO:</strong> Playoff Champion</div>
+          <div><strong className="text-slate-900">RS:</strong> Regular Season Champion</div>
+          <div><strong className="text-slate-900">GP:</strong> Games Played</div>
+          <div><strong className="text-slate-900">Δ:</strong> Rank Change</div>
         </div>
       </div>
     </div>
