@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2 } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 /**
  * EditSeasonPage Component
@@ -398,7 +398,7 @@ export default function EditSeasonPage({ onBack }) {
               placeholder="0.0"
               value={matchup.team1Score ?? ''}
               onChange={(e) => updateMatchupScore(weekNum, index, 'team1Score', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:rind-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               disabled={!matchup.team1 || matchup.team1 === 'BYE'}
             />
           </div>
@@ -417,7 +417,7 @@ export default function EditSeasonPage({ onBack }) {
               placeholder="0.0"
               value={matchup.team2Score ?? ''}
               onChange={(e) => updateMatchupScore(weekNum, index, 'team2Score', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:rind-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               disabled={!matchup.team2 || matchup.team2 === 'BYE'}
             />
           </div>

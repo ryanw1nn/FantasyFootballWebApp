@@ -47,13 +47,14 @@ fantasy-football-web/
 │   │   ├── AllTimeTable.jsx         # All-time statistics table
 │   │   ├── EditSeasonPage.jsx       # Season editing interface
 │   │   ├── PlayoffBracket.jsx       # Playoff bracket visualization
+│   │   ├── PlayerStatsPage.jsx      # Individual player statistics view
 │   │   ├── SeasonTable.jsx          # Season standings table
 │   │   └── StatsCard.jsx            # Reusable statistics card
+│   ├── data/
+│   │   └── seasons.json             # League data storage
 │   ├── index.css                    # Global styles and Tailwind imports
 │   └── main.jsx                     # Application entry point
 ├── server.js                        # Express server configuration
-├── data/
-│   └── season_data.json             # League data storage
 ├── public/                          # Static assets
 ├── package.json                     # Project dependencies
 ├── vite.config.js                   # Vite configuration
@@ -87,7 +88,7 @@ fantasy-football-web/
    ```
 
 4. **Prepare data file**:
-   Ensure `data/season_data.json` exists with valid league data structure
+   Ensure `src/data/seasons.json` exists with valid league data structure
 
 ## Usage
 
@@ -265,7 +266,7 @@ const PORT = process.env.PORT || 5001;
 ```
 
 ### Data Not Loading
-1. Verify `data/season_data.json` exists and contains valid JSON
+1. Verify `src/data/seasons.json` exists and contains valid JSON
 2. Check console for API errors
 3. Ensure backend server is running (`npm start`)
 

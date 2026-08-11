@@ -151,7 +151,7 @@ function recalculateStandings(year) {
       const name2 = matchup.team2;
 
       // skip if either team doesn't exist in roster or is BYE
-      if (!stats[name1] || !stats[name2] || name1 === 'BYE' || 'name2' === 'BYE') return;
+      if (!stats[name1] || !stats[name2] || name1 === 'BYE' || name2 === 'BYE') return;
       
       let statBucket1, statBucket2;
 

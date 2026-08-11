@@ -197,12 +197,12 @@ export default function PlayoffBracket({ year }) {
                     </div>
 
                     {/* Week 16 Playoff - 2 games (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '440px' }}">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '440px' }}>
                         {week16Data.playoff.map((matchup, idx) => renderMatchup(matchup, idx))}
                     </div>
 
                     {/* Week 17 Playoff - 1 game (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '440px' }}">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '440px' }}>
                         {week17Data.playoff.map((matchup, idx) => renderMatchup(matchup, idx))}
                     </div>
                 </div>
@@ -222,7 +222,7 @@ export default function PlayoffBracket({ year }) {
                     </div>
 
                     {/* Week 16 Toilet Bowl - 1 game (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '220px' }}">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '220px' }}>
                         {week16Data.toiletBowl.map((matchup, idx) => renderMatchup(matchup, idx))}
                     </div>
 
@@ -242,7 +242,7 @@ export default function PlayoffBracket({ year }) {
                 
                 <div className="grid grid-cols-3 gap-8">
                     {/* Week 15 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '150px' }}>">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
                         {week15Data.out.length === 0 ? (
                             <div className="text-gray-400 text-sm text-center">No games</div>
                         ) : (
@@ -251,7 +251,7 @@ export default function PlayoffBracket({ year }) {
                     </div>
 
                     {/* Week 16 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '150px' }}>">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
                         {week16Data.out.length === 0 ? (
                             <div className="text-gray-400 text-sm text-center">No games</div>
                         ) : (
@@ -260,7 +260,7 @@ export default function PlayoffBracket({ year }) {
                     </div>
 
                     {/* Week 17 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5 style={{ minHeight: '150px' }}>">
+                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
                         {week17Data.out.length === 0 ? (
                             <div className="text-gray-400 text-sm text-center">No games</div>
                         ) : (

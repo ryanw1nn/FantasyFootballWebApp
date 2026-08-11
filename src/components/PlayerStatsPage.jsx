@@ -2,7 +2,7 @@
 // PlayerStatsPage.jsx
 // ==================================
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Award, Target, ChevronDown } from 'lucide-react';
 
 /**
@@ -18,7 +18,7 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
     const [selectedGameTypes, setSelecetedGameTypes] = useState(['regular', 'playoff', 'toilet']);
     const [showGameTypeDropdown, setShowGameTypeDropdown] = useState(false);
     const [opponentFilters, setOpponentFilters] = useState({});
-    const [showOpponentFilters, setShowOpponentFilters] = useState(false);
+    const [showOpponentDropdown, setShowOpponentDropdown] = useState(false);
     const [h2hSortConfig, setH2hSortConfig] = useState({ key: 'winPct', direction: 'desc' });
 
     // ==================================
@@ -184,12 +184,14 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
             const totalGames = record.wins + record.losses + record.ties;
             const winPct = totalGames > 0 ? (record.wins + 0.5 * record.ties) / totalGames : 0;
             const pfpg = totalGames > 0 ? record.pf / totalGames : 0;
+            const papg = totalGames > 0 ? record.pa / totalGames : 0;
 
             return {
                 ...record,
                 totalGames,
                 winPct,
-                pfpg
+                pfpg,
+                papg
             };
         });
 
@@ -229,16 +231,18 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         Object.entries(allData)
         .filter(([year]) => !isNaN(Number(year)))
         .forEach(([year, seasonData]) => {
-            const teams = Array.isArray(seasonData) ? seasonData : seasonData?.teams || [];
+            const standings = Array.isArray(seasonData) ? seasonData : seasonData?.standings || [];
             let maxPF = -1;
             let pfLeader = null;
-            
-            teams.forEach(team => {
+
+            standings.forEach(team => {
                 if((team.pf || 0) > maxPF) {
                     maxPF = team.pf || 0;
                     pfLeader = team.name;
                 }
             });
+
+            pfLeadersByYear[year] = pfLeader;
         });
 
         Object.entries(allData)
@@ -252,14 +256,13 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
                 playerAwards.pfTitles.push(Number(year));
             }
 
-            if (playerSeasonData.regularSeasonChampion) {
+            if (playerSeasonData.rChampion) {
                 playerAwards.regularSeasonChampionships.push(Number(year));
             }
-            
+
             if(playerSeasonData.playoff) {
                 if(playerSeasonData.playoff.made) {
                     let rounds = playerSeasonData.playoff.rounds || 0;
-                    if (playerSeasonData.playoff.pChampion)
                     playerAwards.playoffRounds += rounds;
                 }
                 if (playerSeasonData.playoff.pChampion) {
@@ -314,7 +317,7 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
      * Toggles a game type filter on/off
      */
     const toggleGameTypeFilter = (type) => {
-        setGameTypeFilters(prev => 
+        setSelecetedGameTypes(prev =>
             prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
         );
     };
@@ -362,406 +365,257 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
 
     const gameTypeFilters = { regular: 'Regular', playoff: 'Playoff', toilet: 'Toilet Bowl', out: 'Out' }
 
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+    const handleClickOutside = (e) => {
+        if (!e.target.closest('.dropdown-container')) {
+        setShowGameTypeDropdown(false);
+        setShowOpponentDropdown(false);
+        }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
+
     // ==================================
-    // RENDER SECTION ONLY - PlayerStatsPage.jsx
+    // RENDER
     // ==================================
 
-    return (
+
+  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-3">
         
-        {/* Header with Back Button */}
-        <div className="mb-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={onBack} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm">
+            <ArrowLeft size={16} /> Back
+          </button>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Trophy className="text-yellow-500" size={24}/> {playerName}
+          </h1>
+          <div className="w-16"></div>
+        </div>
+
+        {/* Filters Row */}
+        <div className="bg-white rounded-lg shadow p-2 mb-3 flex flex-wrap gap-2 items-center">
+          {/* Game Type Dropdown */}
+          <div className="relative dropdown-container" onClick={e => e.stopPropagation()}>
             <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium mb-4 transition-colors"
+              onClick={() => { setShowGameTypeDropdown(!showGameTypeDropdown); setShowOpponentDropdown(false); }}
+              className="px-2 py-1.5 border border-gray-300 rounded flex items-center gap-1 hover:bg-gray-50 text-xs"
             >
-            <ArrowLeft size={20} />
-            Back to Tables
+              Games ({selectedGameTypes.length}) <ChevronDown size={14} />
             </button>
-            
-            <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
-                <Trophy className="text-yellow-500" size={40}/>
-                {playerName}
-            </h1>
-            <p className="text-gray-600">Career Statistics & Achievements</p>
-            </div>
-        </div>
-
-        {/* Game Type Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-            <h3 className="font-semibold text-gray-900">Filter by Game Type:</h3>
-            <div className="flex gap-4">
-                {Object.entries(gameTypeFilters).map(([type, enabled]) => (
-                <label key={type} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                    type="checkbox"
-                    checked={enabled}
-                    onChange={() => toggleGameTypeFilter(type)}
-                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700 capitalize">
-                    {type === 'regular' ? 'Regular Season' : 
-                    type === 'playoff' ? 'Playoffs' :
-                    type === 'toilet' ? 'Toilet Bowl' : 
-                    'Out Games'}
-                    </span>
-                </label>
+            {showGameTypeDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 min-w-[140px]">
+                {Object.entries(gameTypeFilters).map(([type, label]) => (
+                  <label key={type} className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 cursor-pointer text-xs">
+                    <input type="checkbox" checked={selectedGameTypes.includes(type)} onChange={() => toggleGameTypeFilter(type)} className="rounded border-gray-300 text-indigo-600" />
+                    {label}
+                  </label>
                 ))}
-            </div>
-            </div>
+              </div>
+            )}
+          </div>
+
+          {/* Opponent Filter Dropdown */}
+          <div className="relative dropdown-container" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => { setShowOpponentDropdown(!showOpponentDropdown); setShowGameTypeDropdown(false); }}
+              className="px-2 py-1.5 border border-gray-300 rounded flex items-center gap-1 hover:bg-gray-50 text-xs"
+            >
+              Opponents ({Object.values(opponentFilters).filter(Boolean).length}) <ChevronDown size={14} />
+            </button>
+            {showOpponentDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg z-50 min-w-[180px] max-h-[250px] overflow-y-auto">
+                <div className="flex gap-2 p-1.5 border-b bg-gray-50">
+                  <button onClick={selectAllOpponents} className="text-xs text-indigo-600 hover:underline">All</button>
+                  <button onClick={deselectAllOpponents} className="text-xs text-indigo-600 hover:underline">None</button>
+                </div>
+                {Object.keys(opponentFilters).sort().map(opponent => (
+                  <label key={opponent} className="flex items-center gap-2 px-2 py-1 hover:bg-gray-50 cursor-pointer text-xs">
+                    <input type="checkbox" checked={opponentFilters[opponent]} onChange={() => toggleOpponentFilter(opponent)} className="rounded border-gray-300 text-indigo-600" />
+                    {opponent}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Overall Statistics */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Overall Record</h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                <div className="text-3xl font-bold text-blue-600">
-                {overallStats.wins}-{overallStats.losses}-{overallStats.ties}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">Record</div>
-            </div>
-            
-            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                <div className="text-3xl font-bold text-green-600">
-                {(overallStats.winPct * 100).toFixed(1)}%
-                </div>
-                <div className="text-sm text-gray-600 mt-1">Win Percentage</div>
-            </div>
-            
-            <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-                <div className="text-3xl font-bold text-purple-600">
-                {overallStats.pfpg.toFixed(1)}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">PFPG</div>
-            </div>
-            
-            <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
-                <div className="text-3xl font-bold text-orange-600">
-                {overallStats.totalGames}
-                </div>
-                <div className="text-sm text-gray-600 mt-1">Games Played</div>
-            </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-center text-sm text-gray-600">
-            <div>
-                <span className="font-semibold">Total Points For:</span> {overallStats.totalPF.toFixed(1)}
-            </div>
-            <div>
-                <span className="font-semibold">Total Points Against:</span> {overallStats.totalPA.toFixed(1)}
-            </div>
-            </div>
+        {/* Stats + Awards Row */}
+        <div className="grid grid-cols-4 md:grid-cols-8 gap-2 mb-3">
+          <div className="bg-white rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-blue-600">{overallStats.wins}-{overallStats.losses}-{overallStats.ties}</div>
+            <div className="text-[10px] text-gray-500">Record</div>
+          </div>
+          <div className="bg-white rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-green-600">{(overallStats.winPct * 100).toFixed(1)}%</div>
+            <div className="text-[10px] text-gray-500">Win%</div>
+          </div>
+          <div className="bg-white rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-purple-600">{overallStats.pfpg.toFixed(1)}</div>
+            <div className="text-[10px] text-gray-500">PFPG</div>
+          </div>
+          <div className="bg-white rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-orange-600">{overallStats.totalGames}</div>
+            <div className="text-[10px] text-gray-500">Games</div>
+          </div>
+          <div className="bg-green-50 rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-green-700">{awards.pfTitles.length > 0 ? awards.pfTitles.join(', ') : '-'}</div>
+            <div className="text-[10px] text-gray-500">PF Titles</div>
+          </div>
+          <div className="bg-blue-50 rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-blue-700">{awards.regularSeasonChampionships.length > 0 ? awards.regularSeasonChampionships.join(', ') : '-'}</div>
+            <div className="text-[10px] text-gray-500">RS Champ</div>
+          </div>
+          <div className="bg-yellow-50 rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-yellow-700">{awards.playoffChampionships.length > 0 ? awards.playoffChampionships.join(', ') : '-'}</div>
+            <div className="text-[10px] text-gray-500">PO Champ</div>
+          </div>
+          <div className="bg-purple-50 rounded shadow p-2 text-center">
+            <div className="text-lg font-bold text-purple-700">{awards.playoffRounds}</div>
+            <div className="text-[10px] text-gray-500">PO Rounds</div>
+          </div>
         </div>
 
-        {/* Awards Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Award className="text-yellow-500" size={28} />
-            Awards & Achievements
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Regular Season Championships */}
-            <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                <Trophy className="text-blue-600" size={20} />
-                <h3 className="font-semibold text-gray-900">Regular Season Championships</h3>
-                </div>
-                {awards.regularSeasonChampionships.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {awards.regularSeasonChampionships.map(year => (
-                    <span key={year} className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        {year}
-                    </span>
-                    ))}
-                </div>
-                ) : (
-                <p className="text-gray-500 text-sm">No championships yet</p>
-                )}
-            </div>
-
-            {/* Playoff Championships */}
-            <div className="p-4 bg-yellow-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                <Trophy className="text-yellow-600" size={20} />
-                <h3 className="font-semibold text-gray-900">Playoff Championships</h3>
-                </div>
-                {awards.playoffChampionships.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {awards.playoffChampionships.map(year => (
-                    <span key={year} className="bg-yellow-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        {year}
-                    </span>
-                    ))}
-                </div>
-                ) : (
-                <p className="text-gray-500 text-sm">No championships yet</p>
-                )}
-            </div>
-
-            {/* Playoff Rounds Won */}
-            <div className="p-4 bg-green-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                <Target className="text-green-600" size={20} />
-                <h3 className="font-semibold text-gray-900">Total Playoff Rounds Won</h3>
-                </div>
-                <div className="text-3xl font-bold text-green-600">{awards.playoffRounds}</div>
-            </div>
-            </div>
-        </div>
-
-        {/* Head-to-Head Records */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Head-to-Head Records</h2>
-            
-            <div className="overflow-x-auto">
-            <table className="w-full">
-                <thead className="bg-gray-50 border-b-2 border-gray-200">
+        {/* Head-to-Head */}
+        <div className="bg-white rounded-lg shadow p-3 mb-3">
+          <h2 className="text-sm font-bold text-gray-900 mb-2">Head-to-Head Records</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                    <th 
-                    className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('opponent')}
-                    >
-                    Opponent{renderSortIcon('opponent')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('winPct')}
-                    >
-                    Win %{renderSortIcon('winPct')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('wins')}
-                    >
-                    Wins{renderSortIcon('wins')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('losses')}
-                    >
-                    Losses{renderSortIcon('losses')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('ties')}
-                    >
-                    Ties{renderSortIcon('ties')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('totalGames')}
-                    >
-                    Games{renderSortIcon('totalGames')}
-                    </th>
-                    <th 
-                    className="px-4 py-3 text-center text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
-                    onClick={() => handleH2HSort('pfpg')}
-                    >
-                    PFPG{renderSortIcon('pfpg')}
-                    </th>
+                  <th className="px-2 py-1.5 text-left cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('opponent')}>Opp{renderSortIcon('opponent')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('winPct')}>Win%{renderSortIcon('winPct')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('wins')}>W{renderSortIcon('wins')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('losses')}>L{renderSortIcon('losses')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('ties')}>T{renderSortIcon('ties')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('totalGames')}>GP{renderSortIcon('totalGames')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('pfpg')}>PFPG{renderSortIcon('pfpg')}</th>
+                  <th className="px-2 py-1.5 text-center cursor-pointer hover:bg-gray-100" onClick={() => handleH2HSort('papg')}>PAPG{renderSortIcon('papg')}</th>
                 </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
+              </thead>
+              <tbody className="divide-y">
                 {headToHeadStats.map((record, idx) => (
-                    <tr key={record.opponent} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-3 font-medium text-gray-900">{record.opponent}</td>
-                    <td className="px-4 py-3 text-center">
-                        <span className={`font-semibold ${
-                        record.winPct >= 0.6 ? 'text-green-600' :
-                        record.winPct >= 0.5 ? 'text-blue-600' :
-                        'text-gray-600'
-                        }`}>
-                        {(record.winPct * 100).toFixed(1)}%
-                        </span>
+                  <tr key={record.opponent} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <td className="px-2 py-1.5 font-medium">{record.opponent}</td>
+                    <td className="px-2 py-1.5 text-center">
+                      <span className={`font-semibold ${record.winPct >= 0.6 ? 'text-green-600' : record.winPct >= 0.5 ? 'text-blue-600' : 'text-gray-600'}`}>
+                        {(record.winPct * 100).toFixed(0)}%
+                      </span>
                     </td>
-                    <td className="px-4 py-3 text-center text-green-600 font-medium">{record.wins}</td>
-                    <td className="px-4 py-3 text-center text-red-600 font-medium">{record.losses}</td>
-                    <td className="px-4 py-3 text-center text-gray-600 font-medium">{record.ties}</td>
-                    <td className="px-4 py-3 text-center text-gray-700">{record.totalGames}</td>
-                    <td className="px-4 py-3 text-center text-gray-700">{record.pfpg.toFixed(1)}</td>
-                    </tr>
+                    <td className="px-2 py-1.5 text-center text-green-600">{record.wins}</td>
+                    <td className="px-2 py-1.5 text-center text-red-600">{record.losses}</td>
+                    <td className="px-2 py-1.5 text-center text-gray-500">{record.ties}</td>
+                    <td className="px-2 py-1.5 text-center">{record.totalGames}</td>
+                    <td className="px-2 py-1.5 text-center">{record.pfpg.toFixed(1)}</td>
+                    <td className="px-2 py-1.5 text-center">{record.papg.toFixed(1)}</td>
+                  </tr>
                 ))}
-                </tbody>
+              </tbody>
             </table>
-            </div>
+          </div>
         </div>
 
-        {/* Notable Games */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            
-            {/* Closest Games */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Target className="text-blue-500" size={24} />
-                Closest Games
-            </h2>
-            
-            {notableGames.closestGames.length > 0 ? (
-                <div className="space-y-3">
-                {notableGames.closestGames.map((game, idx) => (
-                    <div key={idx} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold text-gray-900">
-                        vs {game.opponent}
-                        </span>
-                        <span className={`text-sm font-medium px-2 py-1 rounded ${
-                        game.result === 'win' ? 'bg-green-100 text-green-700' :
-                        game.result === 'loss' ? 'bg-red-100 text-red-700' :
-                        'bg-gray-100 text-gray-700'
-                        }`}>
-                        {game.result.toUpperCase()}
-                        </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                        {game.playerScore.toFixed(2)} - {game.opponentScore.toFixed(2)} 
-                        <span className="ml-2 font-semibold text-blue-600">
-                        (Margin: {game.margin.toFixed(2)})
-                        </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                        Week {game.week}, {game.year} • {game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1)}
-                        {game.label && ` • ${game.label}`}
-                    </div>
-                    </div>
-                ))}
+        {/* Notable Games - 2x2 Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Closest Games */}
+          <div className="bg-white rounded-lg shadow p-3">
+            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+              <Target className="text-blue-500" size={16} /> Closest Games
+            </h3>
+            <div className="space-y-1.5">
+              {notableGames.closestGames.map((game, idx) => (
+                <div key={idx} className="p-2 bg-blue-50 rounded text-xs">
+                  <div className="flex justify-between">
+                    <span className="font-medium">vs {game.opponent}</span>
+                    <span className={`font-semibold ${game.result === 'win' ? 'text-green-600' : game.result === 'loss' ? 'text-red-600' : 'text-gray-600'}`}>
+                      {game.result.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-gray-600">
+                    {game.playerScore.toFixed(1)} - {game.opponentScore.toFixed(1)} 
+                    <span className="ml-1 text-blue-600 font-medium">({game.margin.toFixed(1)})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">Wk {game.week}, {game.year}</div>
                 </div>
-            ) : (
-                <p className="text-gray-500 text-sm">No games recorded</p>
-            )}
+              ))}
             </div>
+          </div>
 
-            {/* Biggest Blowouts */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="text-purple-500" size={24} />
-                Biggest Blowouts
-            </h2>
-            
-            {notableGames.biggestBlowouts.length > 0 ? (
-                <div className="space-y-3">
-                {notableGames.biggestBlowouts.map((game, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg border ${
-                    game.result === 'win' 
-                        ? 'bg-green-50 border-green-200' 
-                        : 'bg-red-50 border-red-200'
-                    }`}>
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold text-gray-900">
-                        vs {game.opponent}
-                        </span>
-                        <span className={`text-sm font-medium px-2 py-1 rounded ${
-                        game.result === 'win' ? 'bg-green-100 text-green-700' :
-                        'bg-red-100 text-red-700'
-                        }`}>
-                        {game.result.toUpperCase()}
-                        </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                        {game.playerScore.toFixed(2)} - {game.opponentScore.toFixed(2)} 
-                        <span className={`ml-2 font-semibold ${
-                        game.result === 'win' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        (Margin: {game.margin.toFixed(2)})
-                        </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                        Week {game.week}, {game.year} • {game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1)}
-                        {game.label && ` • ${game.label}`}
-                    </div>
-                    </div>
-                ))}
+          {/* Biggest Blowouts */}
+          <div className="bg-white rounded-lg shadow p-3">
+            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+              <TrendingUp className="text-purple-500" size={16} /> Biggest Blowouts
+            </h3>
+            <div className="space-y-1.5">
+              {notableGames.biggestBlowouts.map((game, idx) => (
+                <div key={idx} className={`p-2 rounded text-xs ${game.result === 'win' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className="flex justify-between">
+                    <span className="font-medium">vs {game.opponent}</span>
+                    <span className={`font-semibold ${game.result === 'win' ? 'text-green-600' : 'text-red-600'}`}>
+                      {game.result.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-gray-600">
+                    {game.playerScore.toFixed(1)} - {game.opponentScore.toFixed(1)} 
+                    <span className={`ml-1 font-medium ${game.result === 'win' ? 'text-green-600' : 'text-red-600'}`}>({game.margin.toFixed(1)})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">Wk {game.week}, {game.year}</div>
                 </div>
-            ) : (
-                <p className="text-gray-500 text-sm">No games recorded</p>
-            )}
+              ))}
             </div>
+          </div>
 
-            {/* Best Performances */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="text-green-500" size={24} />
-                Best Performances
-            </h2>
-            
-            {notableGames.bestPerformances.length > 0 ? (
-                <div className="space-y-3">
-                {notableGames.bestPerformances.map((game, idx) => (
-                    <div key={idx} className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold text-gray-900">
-                        vs {game.opponent}
-                        </span>
-                        <span className="text-2xl font-bold text-green-600">
-                        {game.playerScore.toFixed(2)}
-                        </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                        Opponent: {game.opponentScore.toFixed(2)} 
-                        <span className={`ml-2 font-medium ${
-                        game.result === 'win' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        ({game.result.toUpperCase()})
-                        </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                        Week {game.week}, {game.year} • {game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1)}
-                        {game.label && ` • ${game.label}`}
-                    </div>
-                    </div>
-                ))}
+          {/* Best Performances */}
+          <div className="bg-white rounded-lg shadow p-3">
+            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+              <TrendingUp className="text-green-500" size={16} /> Best Performances
+            </h3>
+            <div className="space-y-1.5">
+              {notableGames.bestPerformances.map((game, idx) => (
+                <div key={idx} className="p-2 bg-green-50 rounded text-xs">
+                  <div className="flex justify-between">
+                    <span className="font-medium">vs {game.opponent}</span>
+                    <span className="text-xl font-bold text-green-600">{game.playerScore.toFixed(1)}</span>
+                  </div>
+                  <div className="text-gray-600">
+                    Opp: {game.opponentScore.toFixed(1)}
+                    <span className={`ml-1 ${game.result === 'win' ? 'text-green-600' : 'text-red-600'}`}>({game.result.toUpperCase()})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">Wk {game.week}, {game.year}</div>
                 </div>
-            ) : (
-                <p className="text-gray-500 text-sm">No games recorded</p>
-            )}
+              ))}
             </div>
+          </div>
 
-            {/* Worst Performances */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingDown className="text-red-500" size={24} />
-                Worst Performances
-            </h2>
-            
-            {notableGames.worstPerformances.length > 0 ? (
-                <div className="space-y-3">
-                {notableGames.worstPerformances.map((game, idx) => (
-                    <div key={idx} className="p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="font-semibold text-gray-900">
-                        vs {game.opponent}
-                        </span>
-                        <span className="text-2xl font-bold text-red-600">
-                        {game.playerScore.toFixed(2)}
-                        </span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                        Opponent: {game.opponentScore.toFixed(2)} 
-                        <span className={`ml-2 font-medium ${
-                        game.result === 'win' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                        ({game.result.toUpperCase()})
-                        </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                        Week {game.week}, {game.year} • {game.gameType.charAt(0).toUpperCase() + game.gameType.slice(1)}
-                        {game.label && ` • ${game.label}`}
-                    </div>
-                    </div>
-                ))}
+          {/* Worst Performances */}
+          <div className="bg-white rounded-lg shadow p-3">
+            <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-1">
+              <TrendingDown className="text-red-500" size={16} /> Worst Performances
+            </h3>
+            <div className="space-y-1.5">
+              {notableGames.worstPerformances.map((game, idx) => (
+                <div key={idx} className="p-2 bg-red-50 rounded text-xs">
+                  <div className="flex justify-between">
+                    <span className="font-medium">vs {game.opponent}</span>
+                    <span className="text-xl font-bold text-red-600">{game.playerScore.toFixed(1)}</span>
+                  </div>
+                  <div className="text-gray-600">
+                    Opp: {game.opponentScore.toFixed(1)}
+                    <span className={`ml-1 ${game.result === 'win' ? 'text-green-600' : 'text-red-600'}`}>({game.result.toUpperCase()})</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400">Wk {game.week}, {game.year}</div>
                 </div>
-            ) : (
-                <p className="text-gray-500 text-sm">No games recorded</p>
-            )}
+              ))}
             </div>
+          </div>
         </div>
 
-        </div>
+      </div>
     </div>
-    );
+  );
 }
