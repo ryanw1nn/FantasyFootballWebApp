@@ -1,7 +1,11 @@
 # db/
 
-Phase 1 of the multi-league migration. Nothing here is wired into `server.js` —
-the app still reads `src/data/seasons.json`. The cutover is Phase 2.
+The database behind the app. The server reads these tables and nothing else, so
+`npm start` needs the container running (`npm run db:up`) and exits non-zero
+when it cannot reach it.
+
+`src/data/seasons.json` stays in the repo as the import's input and the answer
+key the API is diffed against. It is no longer written to.
 
 ## Environment
 
@@ -30,6 +34,11 @@ npm run db:import    truncate every table and reload src/data/seasons.json
 npm run db:recompute recompute stored standings from the matchup rows
 npm run db:verify    diff the whole database against src/data/seasons.json
 ```
+
+Standings are stored, computed by the write that changes them, and never
+recalculated on a read. A row edited outside the app — in `psql`, or by a re-run
+of `db:import` — therefore does not refresh them on the next page load:
+`npm run db:recompute` is the repair tool after any manual edit.
 
 The local container's credentials are `fanclub:fanclub` on localhost only. They
 are development throwaways and intentionally in `docker-compose.yml`; the Neon
