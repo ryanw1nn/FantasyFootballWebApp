@@ -7,7 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "start": "node server.js"
+    "start": "node server.js",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && npm run db:up && npm run db:migrate",
+    "db:migrate": "node db/migrate.mjs",
+    "db:status": "node db/migrate.mjs status",
+    "db:check": "node db/check-env.mjs",
+    "db:import": "node db/import.mjs",
+    "db:recompute": "node db/recompute.mjs",
+    "db:verify": "node db/verify.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.3",
@@ -18,10 +27,11 @@
     "vite": "^7.1.2"
   },
   "dependencies": {
-    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "lucide-react": "^0.552.0",
+    "pg": "^8.23.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

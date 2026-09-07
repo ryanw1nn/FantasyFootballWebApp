@@ -1,0 +1,33 @@
+# Local Postgres for development. Never used in production — Phase 7 points
+# DATABASE_URL at Neon instead.
+#
+# The image tag must match the Postgres major version Neon gave you. Override it
+# by setting POSTGRES_MAJOR in the env file, which Compose reads automatically.
+services:
+  db:
+    image: postgres:${POSTGRES_MAJOR:-18}-alpine
+    container_name: fanclub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fanclub
+      POSTGRES_PASSWORD: fanclub
+      POSTGRES_DB: fanclub
+    ports:
+      # 5433 on the host, so a Postgres already installed locally can keep 5432.
+      - "5433:5432"
+    volumes:
+      # Postgres 18 moved its data dir to a major-version-specific subdirectory,
+      # so the mount goes one level up at /var/lib/postgresql. That path works
+      # for 17 and earlier too — don't mount .../data.
+      - fanclub-pgdata:/var/lib/postgresql
+    healthcheck:
+      # -h 127.0.0.1 matters: during first-run initdb Postgres listens on the
+      # unix socket only, so a socket check reports healthy before the real
+      # server is accepting connections.
+      test: ["CMD-SHELL", "pg_isready -U fanclub -d fanclub -h 127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  fanclub-pgdata:
