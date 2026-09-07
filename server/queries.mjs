@@ -203,6 +203,15 @@ export async function replaceWeek(slug, year, week, matchups, toRow) {
       [league, seasonYear]
     );
     if (rows.length === 0) throw new RequestError(404, "Not found");
+    if (rows[0].standings_are_imported) {
+      // writeStandings returns null here rather than recomputing, so accepting
+      // the matchups would store games the standings do not describe. Refusing
+      // the write is the only outcome that keeps the two in step.
+      throw new RequestError(
+        409,
+        "This season's standings are imported and cannot be recomputed"
+      );
+    }
     const seasonId = rows[0].id;
 
     const teams = await teamsForSeasons(client, [seasonId]);
@@ -302,10 +311,19 @@ export function matchupFromIds(matchup, position, teams) {
   };
 }
 
+/** The range numeric(8,2) and a football week agree on: 0 to 999.99. */
+const MAX_SCORE = 999.99;
+
 function score(value) {
   if (value === null || value === undefined || value === "") return null;
 
   const number = Number(value);
   if (!Number.isFinite(number)) throw new RequestError(400, "Invalid score");
+
+  // Out of range is the caller's mistake, so it is a 400 here rather than a
+  // constraint violation surfacing as a 500 from the INSERT.
+  if (number < 0 || number > MAX_SCORE) {
+    throw new RequestError(400, `Score out of range: ${number}`);
+  }
   return number.toFixed(2);
 }

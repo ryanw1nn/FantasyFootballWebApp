@@ -20,8 +20,8 @@
 //     many: a translation that stops being needed is a data change, and a
 //     divergence that quietly grows is the thing this exists to catch.
 //
-// The counts below were measured against the imported database on 2026-09-07,
-// not estimated.
+// The counts below were measured against a freshly built database — db:migrate,
+// db:import, db:recompute — on 2026-09-07, not estimated.
 
 /**
  * Which parts of a payload each recorded route carries. A kind that lives in
@@ -182,9 +182,14 @@ export const DIVERGENCES = [
       "Stored PF/PA values in the file carry JavaScript accumulation artifacts — " +
       "1808.2600000000002 against the database's exact 1808.26. Compared " +
       "numerically at two decimals with only the file's side rounded. 61 sit " +
-      "directly on a standings row and 9 more inside playoffStats' buckets, which " +
-      "db:verify's count of 61 does not reach.",
-    counts: { standings: { 2021: 24, 2022: 14, 2023: 10, 2024: 10, 2025: 12 } },
+      "directly on a standings row and 35 more inside playoffStats' buckets, which " +
+      "db:verify's count of 61 does not reach — it skips jsonb on purpose. " +
+      "The buckets are artifact-free until db:recompute runs: db:import stores " +
+      "playoff_stats as the file's raw floats, and only the recompute replaces " +
+      "them with the exact two-decimal numbers. So these counts describe a " +
+      "database built the documented way — migrate, import, recompute — and a " +
+      "half-recomputed one fails the gate, which is the point.",
+    counts: { standings: { 2021: 24, 2022: 23, 2023: 13, 2024: 17, 2025: 19 } },
     matches: (diff) =>
       (field(diff.path) === "pf" || field(diff.path) === "pa") &&
       samePoints(diff.expected, diff.actual),

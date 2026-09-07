@@ -17,7 +17,8 @@
     "db:import": "node db/import.mjs",
     "db:recompute": "node db/recompute.mjs",
     "db:verify": "node db/verify.mjs",
-    "baseline:capture": "node scripts/capture-baseline.mjs"
+    "baseline:capture": "node scripts/capture-baseline.mjs",
+    "api:parity": "node scripts/parity.mjs"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.3",
