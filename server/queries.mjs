@@ -11,21 +11,20 @@
 //
 // numeric columns come back from pg as fixed-scale strings ("1832.70"). They
 // are left that way here and converted once, at the serializer boundary.
+//
+// The slug, year and week a caller supplies are parsed here rather than in a
+// route, so both dialects of route get the same 400 and no unchecked value can
+// reach the pool.
 import { pool } from "../db/pool.mjs";
 import { writeStandings } from "../db/standings.mjs";
+import { RequestError } from "./errors.mjs";
 import { nameOf } from "./serialize.mjs";
+import { parseSlug, parseWeek, parseYear } from "./validate.mjs";
 
 export { pool };
 
 /** The one league that exists, and the only one the compat routes serve. */
 export const DEFAULT_LEAGUE = "fan-club";
-
-export class RequestError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Seasons
@@ -40,7 +39,7 @@ export async function seasonsOfLeague(client, slug) {
        JOIN leagues l ON l.id = s.league_id
       WHERE l.slug = $1
       ORDER BY s.year`,
-    [slug]
+    [parseSlug(slug)]
   );
   return rows;
 }
@@ -52,7 +51,7 @@ export async function seasonOfLeague(client, slug, year) {
        FROM seasons s
        JOIN leagues l ON l.id = s.league_id
       WHERE l.slug = $1 AND s.year = $2`,
-    [slug, year]
+    [parseSlug(slug), parseYear(year)]
   );
   return rows[0] ?? null;
 }
@@ -145,6 +144,12 @@ export async function loadSeason(client, slug, year) {
  * can read the first's uncommitted absence and store a stale table.
  */
 export async function replaceWeek(slug, year, week, matchups) {
+  // Parsed before a connection is taken: a bad week should not cost a client
+  // out of the pool, let alone an open transaction.
+  const league = parseSlug(slug);
+  const seasonYear = parseYear(year);
+  const weekNumber = parseWeek(week);
+
   const client = await pool.connect();
 
   try {
@@ -156,7 +161,7 @@ export async function replaceWeek(slug, year, week, matchups) {
          JOIN leagues l ON l.id = s.league_id
         WHERE l.slug = $1 AND s.year = $2
         FOR UPDATE OF s`,
-      [slug, year]
+      [league, seasonYear]
     );
     if (rows.length === 0) throw new RequestError(404, "Not found");
     const seasonId = rows[0].id;
@@ -168,7 +173,7 @@ export async function replaceWeek(slug, year, week, matchups) {
 
     await client.query(`DELETE FROM matchups WHERE season_id = $1 AND week = $2`, [
       seasonId,
-      week,
+      weekNumber,
     ]);
 
     for (const row of rowsToInsert) {
@@ -179,7 +184,7 @@ export async function replaceWeek(slug, year, week, matchups) {
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           seasonId,
-          week,
+          weekNumber,
           row.position,
           row.status,
           row.label,
@@ -194,7 +199,7 @@ export async function replaceWeek(slug, year, week, matchups) {
     await writeStandings(client, seasonId);
     await client.query("COMMIT");
 
-    return await loadSeason(client, slug, year);
+    return await loadSeason(client, league, seasonYear);
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
