@@ -8,6 +8,7 @@ import {
   DEFAULT_LEAGUE,
   loadSeason,
   loadSeasons,
+  matchupFromNames,
   pool,
   replaceWeek,
   seasonsOfLeague,
@@ -48,13 +49,12 @@ router.get("/api/seasons/:year/weeks", async (req, res) => {
 router.put("/api/seasons/:year/weeks/:weekNum", async (req, res) => {
   const { matchups } = req.body ?? {};
 
-  if (!Array.isArray(matchups)) return res.status(400).json({ error: "Invalid data" });
-
   const bundle = await replaceWeek(
     DEFAULT_LEAGUE,
     req.params.year,
     req.params.weekNum,
-    matchups
+    matchups,
+    matchupFromNames
   );
   res.json({ success: true, standings: legacyStandings(bundle) });
 });

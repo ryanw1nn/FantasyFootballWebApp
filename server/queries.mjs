@@ -27,6 +27,38 @@ export { pool };
 export const DEFAULT_LEAGUE = "fan-club";
 
 // ---------------------------------------------------------------------------
+// Leagues
+// ---------------------------------------------------------------------------
+// Columns are named one by one rather than selected with *. leagues carries
+// write_secret_hash from Phase 3 onward, and a SELECT * anywhere here would put
+// it in a response the day the column lands.
+
+/** Every league with the years it has seasons for, oldest year first. */
+export async function allLeagues(client) {
+  const { rows } = await client.query(
+    `SELECT l.id, l.slug, l.name,
+            COALESCE(
+              array_agg(s.year ORDER BY s.year) FILTER (WHERE s.id IS NOT NULL),
+              '{}'
+            ) AS season_years
+       FROM leagues l
+       LEFT JOIN seasons s ON s.league_id = l.id
+      GROUP BY l.id, l.slug, l.name
+      ORDER BY l.slug`
+  );
+  return rows;
+}
+
+/** One league, or null when the slug is unknown. */
+export async function leagueBySlug(client, slug) {
+  const { rows } = await client.query(
+    `SELECT id, slug, name FROM leagues WHERE slug = $1`,
+    [parseSlug(slug)]
+  );
+  return rows[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Seasons
 // ---------------------------------------------------------------------------
 
@@ -139,16 +171,23 @@ export async function loadSeason(client, slug, year) {
  * Replaces one week's matchups and recomputes the standings they changed, in a
  * single transaction. Returns the season's bundle as it stands after the write.
  *
+ * `toRow` reads one matchup out of the request body. It is the only thing the
+ * two dialects differ by: the aliases send display names and "BYE", the league
+ * routes send team ids and null, and both end in the same transaction rather
+ * than in two implementations of it.
+ *
  * The season row is locked first: two editors saving different weeks both
  * recompute the same standings table, and without the lock the second recompute
  * can read the first's uncommitted absence and store a stale table.
  */
-export async function replaceWeek(slug, year, week, matchups) {
+export async function replaceWeek(slug, year, week, matchups, toRow) {
   // Parsed before a connection is taken: a bad week should not cost a client
-  // out of the pool, let alone an open transaction.
+  // out of the pool, let alone an open transaction. The body is checked here
+  // rather than in a route so both dialects reject the same payloads.
   const league = parseSlug(slug);
   const seasonYear = parseYear(year);
   const weekNumber = parseWeek(week);
+  if (!Array.isArray(matchups)) throw new RequestError(400, "Invalid data");
 
   const client = await pool.connect();
 
@@ -168,7 +207,7 @@ export async function replaceWeek(slug, year, week, matchups) {
 
     const teams = await teamsForSeasons(client, [seasonId]);
     const rowsToInsert = matchups.map((matchup, position) =>
-      matchupRow(matchup, position, teams)
+      toRow(matchup, position, teams)
     );
 
     await client.query(`DELETE FROM matchups WHERE season_id = $1 AND week = $2`, [
@@ -217,10 +256,25 @@ function resolveTeam(name, teams) {
   return team.id;
 }
 
-function matchupRow(matchup, position, teams) {
-  if (matchup === null || typeof matchup !== "object") {
+/** A team id must belong to this season — the foreign key is not an error page. */
+function resolveTeamId(id, teams) {
+  if (id === null || id === undefined) return null;
+
+  if (!teams.some((row) => row.id === id)) {
+    throw new RequestError(400, `Unknown team ${JSON.stringify(id)}`);
+  }
+  return id;
+}
+
+function requireObject(matchup) {
+  if (matchup === null || typeof matchup !== "object" || Array.isArray(matchup)) {
     throw new RequestError(400, "Invalid data");
   }
+}
+
+/** The aliases' body: a side is a display name, "BYE", or an absent key. */
+export function matchupFromNames(matchup, position, teams) {
+  requireObject(matchup);
 
   return {
     position,
@@ -230,6 +284,21 @@ function matchupRow(matchup, position, teams) {
     team1_score: score(matchup.team1Score),
     team2_id: resolveTeam(matchup.team2, teams),
     team2_score: score(matchup.team2Score),
+  };
+}
+
+/** The league routes' body: a side is a team id, and no opponent is null. */
+export function matchupFromIds(matchup, position, teams) {
+  requireObject(matchup);
+
+  return {
+    position,
+    status: matchup.status ?? null,
+    label: matchup.label ?? null,
+    team1_id: resolveTeamId(matchup.team1_id, teams),
+    team1_score: score(matchup.team1_score),
+    team2_id: resolveTeamId(matchup.team2_id, teams),
+    team2_score: score(matchup.team2_score),
   };
 }
 
