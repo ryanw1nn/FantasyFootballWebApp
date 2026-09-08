@@ -19,7 +19,15 @@ import { pool } from "../db/pool.mjs";
 import { writeStandings } from "../db/standings.mjs";
 import { RequestError } from "./errors.mjs";
 import { nameOf } from "./serialize.mjs";
-import { parseSlug, parseWeek, parseYear } from "./validate.mjs";
+import {
+  parseLabel,
+  parseMatchups,
+  parseSlug,
+  parseStatus,
+  parseWeek,
+  parseYear,
+  requireKnownKeys,
+} from "./validate.mjs";
 
 export { pool };
 
@@ -187,7 +195,7 @@ export async function replaceWeek(slug, year, week, matchups, toRow) {
   const league = parseSlug(slug);
   const seasonYear = parseYear(year);
   const weekNumber = parseWeek(week);
-  if (!Array.isArray(matchups)) throw new RequestError(400, "Invalid data");
+  const entries = parseMatchups(matchups);
 
   const client = await pool.connect();
 
@@ -215,7 +223,7 @@ export async function replaceWeek(slug, year, week, matchups, toRow) {
     const seasonId = rows[0].id;
 
     const teams = await teamsForSeasons(client, [seasonId]);
-    const rowsToInsert = matchups.map((matchup, position) =>
+    const rowsToInsert = entries.map((matchup, position) =>
       toRow(matchup, position, teams)
     );
 
@@ -275,40 +283,49 @@ function resolveTeamId(id, teams) {
   return id;
 }
 
-function requireObject(matchup) {
-  if (matchup === null || typeof matchup !== "object" || Array.isArray(matchup)) {
-    throw new RequestError(400, "Invalid data");
+/**
+ * Two teams in one game, or the same team twice. The constraint catches the
+ * second, but only after the DELETE has run — and a body's mistake is a 400.
+ */
+function requireDistinct(row) {
+  if (row.team1_id !== null && row.team1_id === row.team2_id) {
+    throw new RequestError(400, "A team cannot play itself");
   }
+  return row;
 }
+
+/** Everything the serializer emits for a matchup, and nothing else. */
+const NAME_KEYS = ["team1", "team1Score", "team2", "team2Score", "status", "label"];
+const ID_KEYS = ["team1_id", "team1_score", "team2_id", "team2_score", "status", "label"];
 
 /** The aliases' body: a side is a display name, "BYE", or an absent key. */
 export function matchupFromNames(matchup, position, teams) {
-  requireObject(matchup);
+  requireKnownKeys(matchup, NAME_KEYS);
 
-  return {
+  return requireDistinct({
     position,
-    status: matchup.status || null,
-    label: matchup.label || null,
+    status: parseStatus(matchup.status),
+    label: parseLabel(matchup.label),
     team1_id: resolveTeam(matchup.team1, teams),
     team1_score: score(matchup.team1Score),
     team2_id: resolveTeam(matchup.team2, teams),
     team2_score: score(matchup.team2Score),
-  };
+  });
 }
 
 /** The league routes' body: a side is a team id, and no opponent is null. */
 export function matchupFromIds(matchup, position, teams) {
-  requireObject(matchup);
+  requireKnownKeys(matchup, ID_KEYS);
 
-  return {
+  return requireDistinct({
     position,
-    status: matchup.status ?? null,
-    label: matchup.label ?? null,
+    status: parseStatus(matchup.status),
+    label: parseLabel(matchup.label),
     team1_id: resolveTeamId(matchup.team1_id, teams),
     team1_score: score(matchup.team1_score),
     team2_id: resolveTeamId(matchup.team2_id, teams),
     team2_score: score(matchup.team2_score),
-  };
+  });
 }
 
 /** The range numeric(8,2) and a football week agree on: 0 to 999.99. */

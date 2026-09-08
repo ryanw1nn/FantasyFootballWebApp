@@ -19,7 +19,8 @@
 // Then the write, which the baseline cannot cover because capturing it would
 // have rewritten the file it was freezing. That half runs against a scratch
 // database built from scratch — migrate, import, recompute — so a PUT that
-// moves standings, a 409 and a 400 all leave the working database alone.
+// moves standings, every body the server refuses, a 409, and a transaction
+// forced to fail mid-flight all leave the working database alone.
 //
 // Deleted with the aliases in Phase 7. Until then it is what says the client
 // can be repointed without reading it.
@@ -321,6 +322,64 @@ async function putWeek(port, year, week, matchups) {
   return { status: res.status, body: await res.json() };
 }
 
+/**
+ * The bodies 2.6 says must never reach the DELETE, each with the reason it is
+ * refused. Every one is a valid week with one thing wrong, so a 200 here means
+ * the check is missing rather than the body being wrong twice over.
+ */
+function invalidBodies(matchups, index) {
+  const at = (patch) => matchups.map((m, i) => (i === index ? { ...m, ...patch } : m));
+
+  return [
+    ["a 4000-point score", at({ team1Score: 4000 })],
+    ["an unknown key", at({ team1_score: 12 })],
+    ["a status the column does not hold", at({ status: "consolation" })],
+    ["a 200-character label", at({ label: "x".repeat(200) })],
+    ["a team playing itself", at({ team2: matchups[index].team1 })],
+    ["33 matchups", [...matchups, ...Array(33 - matchups.length).fill(matchups[index])]],
+  ];
+}
+
+/** A connection to the scratch database, for the one check that needs SQL. */
+async function scratchClient(scratchUrl) {
+  const client = new pg.Client({ connectionString: pinTlsVerification(scratchUrl) });
+  await client.connect();
+  return client;
+}
+
+/**
+ * The rollback. Every body the server refuses is refused before the DELETE, so
+ * the only way to fail *between* the INSERTs and the COMMIT is to make the
+ * INSERT itself fail — a constraint the scratch database wears for one request.
+ * If the transaction is not a transaction, the week comes back empty.
+ */
+async function checkRollback(server, scratchUrl, before, matchups) {
+  const client = await scratchClient(scratchUrl);
+  try {
+    await client.query(
+      `ALTER TABLE matchups ADD CONSTRAINT parity_rollback_probe
+         CHECK (week <> ${WRITE_WEEK}) NOT VALID`
+    );
+
+    const broken = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, matchups);
+    if (broken.status !== 500) {
+      fail(`the forced INSERT failure answered ${broken.status}, not 500`);
+      return;
+    }
+  } finally {
+    await client.query(`ALTER TABLE matchups DROP CONSTRAINT IF EXISTS parity_rollback_probe`);
+    await client.end();
+  }
+
+  const { body: after } = await getJson(server.port, `/seasons/${WRITE_YEAR}`);
+  const moved = [...differences(before, after)];
+  if (moved.length === 0) {
+    pass(`a failed INSERT rolled the DELETE back: ${WRITE_YEAR} week ${WRITE_WEEK} intact`);
+  } else {
+    fail(`the failed write left ${moved.length} differences behind — the DELETE stood`);
+  }
+}
+
 const byName = (standings) => new Map(standings.map((row) => [row.name, row]));
 const cents = (value) => Math.round(value * 100);
 
@@ -399,23 +458,24 @@ async function runWriteChecks(scratchName, scratchUrl) {
     const index = pickMatchup(week);
     const original = week.matchups[index];
 
-    // A score numeric(8,2) would hold and a football week never sees.
-    const tooLarge = week.matchups.map((m, i) =>
-      i === index ? { ...m, team1Score: 4000 } : m
-    );
-    const rejected = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, tooLarge);
-    if (rejected.status === 400) {
-      pass(`PUT ${WRITE_YEAR} week ${WRITE_WEEK} with a 4000-point score  400 ${rejected.body.error}`);
-    } else {
-      fail(`a 4000-point score answered ${rejected.status}, not 400`);
+    // Every way a body can be wrong, one at a time.
+    for (const [what, body] of invalidBodies(week.matchups, index)) {
+      const rejected = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, body);
+      if (rejected.status === 400) {
+        pass(`PUT with ${what}`.padEnd(46) + `400 ${rejected.body.error}`);
+      } else {
+        fail(`${what} answered ${rejected.status}, not 400`);
+      }
     }
 
     const { body: unchanged } = await getJson(server.port, `/seasons/${WRITE_YEAR}`);
     if ([...differences(before, unchanged)].length === 0) {
-      pass("the rejected write left the season untouched");
+      pass("the rejected writes left the season untouched");
     } else {
-      fail("the rejected write changed the season");
+      fail("a rejected write changed the season");
     }
+
+    await checkRollback(server, scratchUrl, before, week.matchups);
 
     const locked = await putWeek(server.port, LOCKED_YEAR, 1, []);
     if (locked.status === 409) {
