@@ -9,8 +9,14 @@ import { pool } from "./queries.mjs";
 import { describeTarget } from "../db/pool.mjs";
 import { router as legacyRoutes } from "./routes/legacy.js";
 import { router as leagueRoutes } from "./routes/leagues.js";
+import { isProduction, sessionMiddleware, sessionSecretProblem } from "./session.mjs";
 
 const app = express();
+
+// Render terminates TLS and forwards plain HTTP. Trusting X-Forwarded-* there
+// lets Express see https and issue the secure cookie; trusting it locally would
+// let any client pick its own IP for the unlock rate limiter.
+if (isProduction) app.set("trust proxy", 1);
 
 app.use(
   cors({
@@ -20,6 +26,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+app.use(sessionMiddleware());
 app.use(express.json({ limit: "100kb" }));
 
 app.use(leagueRoutes);
@@ -43,6 +50,12 @@ pool.on("error", (err) => {
 const PORT = process.env.PORT || 5001;
 
 export async function start() {
+  const secretProblem = sessionSecretProblem(process.env.SESSION_SECRET);
+  if (secretProblem) {
+    console.error(`Refusing to start: ${secretProblem}.`);
+    process.exit(1);
+  }
+
   try {
     await pool.query("SELECT 1");
   } catch (err) {

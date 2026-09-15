@@ -33,9 +33,11 @@
     "vite": "^7.1.2"
   },
   "dependencies": {
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
+    "express-session": "^1.19.0",
     "lucide-react": "^0.552.0",
     "pg": "^8.23.0",
     "react": "^19.1.1",

@@ -19,7 +19,7 @@ These go in the gitignored env file at the repo root. It already holds
 | `DATABASE_URL` | `postgres://fanclub:fanclub@localhost:5433/fanclub` — the local container. Everything in `db/` reads this. |
 | `POSTGRES_MAJOR` | The Postgres major version Neon gave you. Defaults to `18`; set it only if Neon differs. Compose reads it directly to pick the image tag. |
 | `DATABASE_URL_PROD` | The Neon connection string. Deliberately **not** `DATABASE_URL`, so no script can reach production by accident before Phase 7. |
-| `SESSION_SECRET` | Signs session cookies. 48 random bytes: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. Production gets its own, never a copy of this one. |
+| `SESSION_SECRET` | Signs session cookies. 48 random bytes: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. Production gets its own, never a copy of this one. `npm start` refuses to boot without it, and with `NODE_ENV=production` also refuses one under 32 characters. |
 
 Never prefix a connection string with `VITE_` — Vite inlines those into the
 public client bundle.
