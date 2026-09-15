@@ -14,6 +14,16 @@ const MIN_PRODUCTION_SECRET_LENGTH = 32;
 
 export const isProduction = process.env.NODE_ENV === "production";
 
+export const SESSION_COOKIE = "ffc.sid";
+
+/** What the cookie is set with, and so what clearing it has to match. */
+export const sessionCookieOptions = {
+  path: "/",
+  httpOnly: true,
+  sameSite: "lax",
+  secure: isProduction,
+};
+
 /**
  * Why the server must not boot with this secret, or null if it may. There is
  * no fallback: a default would sign every cookie with a string in a public repo.
@@ -32,18 +42,13 @@ export function sessionMiddleware(secret = process.env.SESSION_SECRET) {
   if (!secret) return (req, res, next) => next(new Error("SESSION_SECRET is not set"));
 
   return session({
-    name: "ffc.sid",
+    name: SESSION_COOKIE,
     // The shared pool, never a connection string — that would open a second
     // pool with its own TLS settings. The table is migration 004's.
     store: new PgStore({ pool, createTableIfMissing: false }),
     secret,
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProduction,
-      maxAge: THIRTY_DAYS_MS,
-    },
+    cookie: { ...sessionCookieOptions, maxAge: THIRTY_DAYS_MS },
   });
 }

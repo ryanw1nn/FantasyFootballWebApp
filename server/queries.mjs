@@ -66,6 +66,18 @@ export async function leagueBySlug(client, slug) {
   return rows[0] ?? null;
 }
 
+/**
+ * One league with its write_secret_hash, or null when the slug is unknown. The
+ * only query that selects the hash; nothing it returns belongs in a response.
+ */
+export async function leagueSecretBySlug(client, slug) {
+  const { rows } = await client.query(
+    `SELECT id, slug, write_secret_hash FROM leagues WHERE slug = $1`,
+    [parseSlug(slug)]
+  );
+  return rows[0] ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Seasons
 // ---------------------------------------------------------------------------

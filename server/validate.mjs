@@ -105,3 +105,35 @@ export function parseLabel(value) {
   }
   return value;
 }
+
+// ---------------------------------------------------------------------------
+// The unlock body
+// ---------------------------------------------------------------------------
+
+/**
+ * Wide enough for any passphrase db:passphrase would have accepted, which is at
+ * least 12 characters. The minimum here is 1: a short guess is a wrong
+ * passphrase, answered with the same 401 as any other.
+ */
+const MAX_PASSPHRASE = 200;
+
+/** `{ passphrase }` and nothing else, the passphrase a string of 1–200 characters. */
+export function parseUnlockBody(body) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    throw new RequestError(400, "Invalid data");
+  }
+
+  const unknown = Object.keys(body).filter((key) => key !== "passphrase");
+  if (unknown.length > 0) {
+    throw new RequestError(400, `Unknown key: ${unknown.join(", ")}`);
+  }
+
+  const { passphrase } = body;
+  if (typeof passphrase !== "string") throw new RequestError(400, "Invalid passphrase");
+
+  const length = [...passphrase].length;
+  if (length < 1 || length > MAX_PASSPHRASE) {
+    throw new RequestError(400, `Passphrase must be 1–${MAX_PASSPHRASE} characters`);
+  }
+  return passphrase;
+}

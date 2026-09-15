@@ -37,6 +37,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
     "lucide-react": "^0.552.0",
     "pg": "^8.23.0",

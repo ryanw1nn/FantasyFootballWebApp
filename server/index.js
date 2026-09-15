@@ -9,6 +9,7 @@ import { pool } from "./queries.mjs";
 import { describeTarget } from "../db/pool.mjs";
 import { router as legacyRoutes } from "./routes/legacy.js";
 import { router as leagueRoutes } from "./routes/leagues.js";
+import { router as sessionRoutes } from "./routes/session.js";
 import { isProduction, sessionMiddleware, sessionSecretProblem } from "./session.mjs";
 
 const app = express();
@@ -29,6 +30,7 @@ app.use(
 app.use(sessionMiddleware());
 app.use(express.json({ limit: "100kb" }));
 
+app.use(sessionRoutes);
 app.use(leagueRoutes);
 app.use(legacyRoutes);
 
