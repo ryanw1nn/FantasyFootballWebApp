@@ -77,6 +77,7 @@ its own transaction. `schema_migrations` records what has run.
 | `001_initial_schema.sql` | The six tables from `docs/schema.md`. No data. |
 | `002_season_level_config.sql` | Moves `regular_season_weeks` / `playoff_start_week` onto `seasons`; adds the `standings_are_imported` lock. |
 | `003_derive_made_playoffs.sql` | `teams.made_playoffs` becomes `GENERATED ALWAYS AS (playoff_rounds >= 1)`. |
+| `004_session.sql` | The `session` table for `connect-pg-simple`, copied from its `table.sql`. The store never creates it at runtime. |
 
 `001` was amended once, before it had ever been applied anywhere but a throwaway
 local container — an audit against `seasons.json` found five defects. That
