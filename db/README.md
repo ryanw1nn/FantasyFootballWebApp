@@ -19,6 +19,7 @@ These go in the gitignored env file at the repo root. It already holds
 | `DATABASE_URL` | `postgres://fanclub:fanclub@localhost:5433/fanclub` — the local container. Everything in `db/` reads this. |
 | `POSTGRES_MAJOR` | The Postgres major version Neon gave you. Defaults to `18`; set it only if Neon differs. Compose reads it directly to pick the image tag. |
 | `DATABASE_URL_PROD` | The Neon connection string. Deliberately **not** `DATABASE_URL`, so no script can reach production by accident before Phase 7. |
+| `SESSION_SECRET` | Signs session cookies. 48 random bytes: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. Production gets its own, never a copy of this one. |
 
 Never prefix a connection string with `VITE_` — Vite inlines those into the
 public client bundle.
@@ -38,6 +39,7 @@ npm run db:verify    diff the whole database against src/data/seasons.json
 npm run db:season    create a season — roster, every week, empty pairings
 npm run db:player    set a player's status across the seasons they played
 npm run db:team      rename a player's team within one season
+npm run db:passphrase set a league's write passphrase (prompted, never an argument)
 ```
 
 Standings are stored, computed by the write that changes them, and never
@@ -48,6 +50,15 @@ of `db:import` — therefore does not refresh them on the next page load:
 The local container's credentials are `fanclub:fanclub` on localhost only. They
 are development throwaways and intentionally in `docker-compose.yml`; the Neon
 password lives only in the env file.
+
+### Passphrases
+
+Writing to a league takes that league's passphrase. `npm run db:passphrase -- --league fan-club`
+prompts for it twice without echoing, refuses anything under 12 characters, and
+stores only an scrypt hash in `leagues.write_secret_hash`. Against any host but
+localhost it also needs `--yes`. A league with no hash cannot be unlocked at all.
+`db:import` and `db:reset` both recreate the league row, which clears the hash, so
+set the passphrase again after either.
 
 ## Migrations
 
