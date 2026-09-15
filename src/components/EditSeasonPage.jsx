@@ -14,7 +14,10 @@ export default function EditSeasonPage({ onBack }) {
   // STATE MANAGEMENT
   // ============================================
   
-  const [selectedYear, setSelectedYear] = useState('2025');
+  // Empty until loadAvailableYears picks the newest season. Hardcoding 2025 here
+  // made the "default to the latest" branch below unreachable, so a new season
+  // was never the one the page opened on.
+  const [selectedYear, setSelectedYear] = useState('');
   const [availableYears, setAvailableYears] = useState([]);
   const [weeks, setWeeks] = useState({});
   const [teams, setTeams] = useState([]);

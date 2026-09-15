@@ -3,9 +3,13 @@
 //
 //   npm run api:parity
 //
-// It starts the server against DATABASE_URL, replays the thirteen requests
+// It builds a scratch database from src/data/seasons.json — migrate, import,
+// recompute — starts the server against it, replays the thirteen requests
 // baseline/ recorded from the JSON-backed server, and compares the two payloads
-// field by field. Not JSON.stringify — key order is not a difference, and a
+// field by field. The scratch database is the whole point of the read half as
+// much as the write half: the baseline froze the file's six seasons, and the
+// working database is allowed to grow past the file. It does, from the first
+// season created after it. Not JSON.stringify — key order is not a difference, and a
 // stringified comparison reports one difference for a whole season anyway,
 // which is exactly the resolution this needs to not have.
 //
@@ -17,10 +21,10 @@
 // the thing the whitelist exists to catch.
 //
 // Then the write, which the baseline cannot cover because capturing it would
-// have rewritten the file it was freezing. That half runs against a scratch
-// database built from scratch — migrate, import, recompute — so a PUT that
-// moves standings, every body the server refuses, a 409, and a transaction
-// forced to fail mid-flight all leave the working database alone.
+// have rewritten the file it was freezing. It runs against the same scratch
+// database, so a PUT that moves standings, every body the server refuses, a
+// 409, and a transaction forced to fail mid-flight all leave the working
+// database alone.
 //
 // Deleted with the aliases in Phase 7. Until then it is what says the client
 // can be repointed without reading it.
@@ -448,11 +452,9 @@ function checkFlip(before, after, edited) {
   return null;
 }
 
-async function runWriteChecks(scratchName, scratchUrl) {
-  await buildScratch(scratchName, scratchUrl);
-  const server = await startServer(scratchUrl);
-
-  try {
+/** The caller owns the scratch database and the server; this only exercises them. */
+async function runWriteChecks(server, scratchUrl) {
+  {
     const { body: before } = await getJson(server.port, `/seasons/${WRITE_YEAR}`);
     const week = before.weeks[WRITE_WEEK];
     const index = pickMatchup(week);
@@ -517,9 +519,6 @@ async function runWriteChecks(scratchName, scratchUrl) {
     } else {
       fail(`re-import left ${remaining.length} differences in ${WRITE_YEAR}`);
     }
-  } finally {
-    server.stop();
-    await dropScratch(scratchName);
   }
 }
 
@@ -548,19 +547,36 @@ async function main() {
     throw new Error("DATABASE_URL is not local — the write checks build a scratch database");
   }
 
-  console.log(`\nReads — ${manifest.routes.length} recorded payloads\n`);
-  const server = await startServer(process.env.DATABASE_URL);
+  // Both halves run against the scratch database, and neither touches the one
+  // the app is using.
+  //
+  // The baseline recorded what the JSON-backed server returned for 2020-2025, so
+  // the only database those payloads can be compared against is one built from
+  // that same file the documented way — migrate, import, recompute. The working
+  // database has moved past it: seasons created after the file froze
+  // (db/new-season.mjs) and corrections it cannot express (db/player-status.mjs)
+  // are real data, and every one of them would read here as an unclassified
+  // difference — a gate that fails for entering this year's scores is a gate
+  // nobody keeps. Reading the file's own database is what parity always meant.
+  const scratchName = `${new URL(process.env.DATABASE_URL).pathname.slice(1)}_parity`;
+  const scratchUrl = withDatabase(process.env.DATABASE_URL, scratchName);
+
+  console.log(`\nScratch database ${scratchName} — migrate, import, recompute\n`);
+  await buildScratch(scratchName, scratchUrl);
+
+  const server = await startServer(scratchUrl);
   try {
+    console.log(`Reads — ${manifest.routes.length} recorded payloads\n`);
     for (const entry of recordedRoutes(manifest)) {
       await compareRoute(server.port, entry, entry.year === null ? years : [entry.year]);
     }
+
+    console.log("\nWrites\n");
+    await runWriteChecks(server, scratchUrl);
   } finally {
     server.stop();
+    await dropScratch(scratchName);
   }
-
-  const scratchName = `${new URL(process.env.DATABASE_URL).pathname.slice(1)}_parity`;
-  console.log(`\nWrites — scratch database ${scratchName}\n`);
-  await runWriteChecks(scratchName, withDatabase(process.env.DATABASE_URL, scratchName));
 
   // Phase 2's most valuable negative result: the file did not change.
   console.log("\nThe file\n");

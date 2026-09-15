@@ -38,7 +38,10 @@ export default function App() {
   const [alltimeCols, toggleAlltimeCol] = useColumnVisibility('ff_alltime_table_columns', ALLTIME_COLUMNS);
   
   const years = Object.keys(data).map(Number).sort((a, b) => b - a);
-  const [selectedYear, setSelectedYear] = useState(years[0] || 2025);
+  // Null until the seasons arrive, then the newest one. Seeding it with a
+  // literal year made the "pick the latest" branch below dead code, so the app
+  // kept opening on 2025 the season 2026 started.
+  const [selectedYear, setSelectedYear] = useState(null);
   
   // ============================================
   // DATA FETCHING

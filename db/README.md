@@ -5,7 +5,9 @@ The database behind the app. The server reads these tables and nothing else, so
 when it cannot reach it.
 
 `src/data/seasons.json` stays in the repo as the import's input and the answer
-key the API is diffed against. It is no longer written to.
+key the API is diffed against. It is no longer written to, and it stops at 2025 —
+seasons after that are created with `npm run db:season` and exist only in the
+database. See [Seasons after the file](#seasons-after-the-file).
 
 ## Environment
 
@@ -33,6 +35,9 @@ npm run db:reset     destroy the volume, recreate, re-migrate
 npm run db:import    truncate every table and reload src/data/seasons.json
 npm run db:recompute recompute stored standings from the matchup rows
 npm run db:verify    diff the whole database against src/data/seasons.json
+npm run db:season    create a season — roster, every week, empty pairings
+npm run db:player    set a player's status across the seasons they played
+npm run db:team      rename a player's team within one season
 ```
 
 Standings are stored, computed by the write that changes them, and never
@@ -156,6 +161,112 @@ The script is destructive and Phase 7 points `DATABASE_URL` at Neon, so it runs
 as one word only against localhost. Any other host needs
 `npm run db:import -- --yes`.
 
+## Seasons after the file
+
+`src/data/seasons.json` froze at 2025. Every season after it is created by
+`db/new-season.mjs`, because nothing else can make one: the four routes read and
+write matchups inside a season that already exists, and `EditSeasonPage` renders
+the weeks it is handed and offers no way to add one.
+
+```
+npm run db:season -- --year 2026 \
+      --drop "Max Strater" \
+      --add "Patrick O'Donald:Patrick's Perfect Team"
+```
+
+It copies the previous season and writes four things:
+
+| Table | What it gets |
+| --- | --- |
+| `seasons` | One row. Weeks come from the **league** template — the one thing `002` left those columns for. |
+| `teams` | Last season's roster, minus `--drop`, plus `--add`, with `--rename`. Everyone `active`, no playoff rounds, no champion flags. A botted slot is never inherited. |
+| `matchups` | Every week of the season with every pairing empty — `regular_season_weeks` × half the roster, then the previous season's playoff rows. |
+| `standings` | A zero row per team, so the season renders a 0-0-0 table instead of an empty one until the first week is scored. |
+
+The matchups are the point. A week exists in a payload only because some row
+carries its number, so a season with no matchup rows has no weeks at all and
+none of them can be opened in the editor. Laying all 17 out at creation is what
+makes the season enterable from the app on day one.
+
+Three things worth knowing:
+
+- **Both sides of a seeded row are `NULL`, and that is not a BYE.** The file only
+  ever had "no opponent", which `server/serialize.mjs` spells `"BYE"` and
+  `EditSeasonPage` renders as uneditable text — a whole season of those would be
+  impossible to fill in. A row that is null on *both* sides now serializes as
+  `null`, which the editor renders as a team dropdown. One side null still says
+  `"BYE"`, which is the real thing: the #1 and #2 seeds in week 15. Nothing
+  imported from the file is null on both sides, so the parity gate never sees
+  this branch.
+- **The playoff weeks are copied, not invented.** Their `status` and `label`
+  values are the bracket's wiring, and `position` has to come with them because
+  `PlayoffBracket.jsx` splits a week by slicing the array rather than by reading
+  `status`. Teams and scores do not come across — nobody has seeded yet.
+- **`--replace` rebuilds a season, but never a played one.** It refuses if any
+  matchup carries a score. Players are resolved *before* the delete, so replacing
+  the season somebody was added in reuses their row instead of making a second
+  one.
+
+`--dry-run` does the whole thing and rolls back, so a roster can be checked
+before it lands.
+
+### Renaming a team mid-season
+
+`db:season` takes `--rename` while it is building a season, but it refuses to
+rebuild one that has been played. Once a score is in, the rename happens in
+place:
+
+```
+npm run db:team -- --year 2026 --rename "Keith John:EPA THI"
+```
+
+It updates one column and nothing else, which is worth stating because it looks
+like it should be more. Matchups and standings both reference teams by **id**,
+and a matchup side in the legacy payload is the player's `display_name` rather
+than the team name — so no game moves, no score is touched, and **no
+`db:recompute` is needed**: the standings row serializes its name by reading the
+team row, so the change shows up on the next request. The team name appears in
+`teams[]` and `standings[]` and nowhere else.
+
+It names the **player**, not the old team, because that is the part that does
+not change. Renaming the person is a different thing with a different blast
+radius — `display_name` lives on `players` and is shared across every season
+they played — and this script will not do it.
+
+### Corrections the import cannot make
+
+`db:import` reproduces `seasons.json` exactly and that file is frozen — the
+parity gate checks its checksum. A correction decided after it stopped being
+written therefore cannot go in it, and lives as a script instead.
+
+```
+npm run db:player -- --player "Max Strater" --status inactive
+```
+
+`teams.status` is stored per team-season, but the league has always used it to
+say something about the person: Michael Cassidy carries `inactive` on all five
+of his rows and Aaron Griffith on all three, in every season they played, because
+they left. `App.jsx:96` filters on it and `inactive` is off by default, so this
+is how somebody stops crowding the season and all-time tables once they are gone.
+It is scoped to one league, because `display_name` is not globally unique, and
+refuses a name that means two people.
+
+### Applied to the live database
+
+In order, after `db:migrate` + `db:import` + `db:recompute`. Phase 7 replays them
+against Neon.
+
+| When | Command |
+| --- | --- |
+| 2026 preseason | `npm run db:season -- --year 2026 --drop "Max Strater" --add "Patrick O'Donald:Patrick's Perfect Team"` |
+| 2026 preseason | `npm run db:player -- --player "Max Strater" --status inactive` |
+| 2026 week 1 | `npm run db:team -- --year 2026 --rename "Josh Whelan:Fat Stafford" --rename "Jake Strater:Bear Force One" --rename "Jimmy Beer:CMC and friends" --rename "TJ Cairney:Tonathan Jaylor"` |
+
+The scores themselves are **not** in this table and cannot be — they are entered
+through the app and exist only in the database. Replaying this ledger after an
+import rebuilds the league's structure, not its results, which is the other half
+of why `db:import` must not be run against a database holding a live season.
+
 ## The standings port
 
 `db/standings.mjs` is `server.js`'s `recalculateStandings`, reading matchup rows
@@ -207,6 +318,11 @@ safe to point at any database, production included.
 It runs straight after `db:migrate` and `db:import`. `db:recompute` is **not** a
 prerequisite: the computed side is produced inside the check rather than read
 back out of the table.
+
+A season the file does not hold is **skipped and named**, not a failure: 2026
+onward postdate `seasons.json` and were never imported, so "the imported history
+matches the file" does not reach them. The output says so per year and in the
+total, which is why a year that goes *missing* from the file still shows up.
 
 The six seasons are not compared the same way, because they are not the same
 kind of data:

@@ -83,7 +83,21 @@ function standingsEntry(row, team) {
 }
 
 function matchupEntry(matchup, teamsById) {
-  const side = (id) => (id === null ? NO_OPPONENT : nameOf(teamsById.get(id)));
+  // A row with neither side filled in is a slot nobody has been put in yet, not
+  // a BYE. A season is created with its weeks laid out and its pairings still
+  // empty (db/new-season.mjs), and EditSeasonPage renders the literal "BYE" as
+  // uneditable text — emitting it here would make a fresh season impossible to
+  // fill in from the app.
+  //
+  // One side null is the real thing and keeps saying "BYE": the #1 and #2 seeds
+  // in week 15. Nothing imported from the file is null on both sides, so this
+  // branch is invisible to the parity gate and reachable only by a season the
+  // file never held.
+  const unassigned = matchup.team1_id === null && matchup.team2_id === null;
+  const side = (id) => {
+    if (id !== null) return nameOf(teamsById.get(id));
+    return unassigned ? null : NO_OPPONENT;
+  };
 
   const entry = {
     team1: side(matchup.team1_id),

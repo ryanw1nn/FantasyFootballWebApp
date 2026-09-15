@@ -17,6 +17,9 @@
     "db:import": "node db/import.mjs",
     "db:recompute": "node db/recompute.mjs",
     "db:verify": "node db/verify.mjs",
+    "db:season": "node db/new-season.mjs",
+    "db:player": "node db/player-status.mjs",
+    "db:team": "node db/rename-team.mjs",
     "baseline:capture": "node scripts/capture-baseline.mjs",
     "api:parity": "node scripts/parity.mjs"
   },

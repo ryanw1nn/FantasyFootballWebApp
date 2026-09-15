@@ -246,11 +246,23 @@ try {
 
   const differences = [];
   const expectedDifferences = [];
+  const beyondTheFile = [];
   let compared = 0;
 
   for (const season of seasons) {
     const fromFile = data[season.year];
-    if (!fromFile) throw new Error(`${season.year} is in the database and not in seasons.json`);
+
+    // A season the file does not hold postdates it. seasons.json froze at 2025
+    // and the database keeps going — db/new-season.mjs creates the years after
+    // it, and the import can never reproduce them. This check is Phase 1's:
+    // "the imported history matches the file", and a season that was never
+    // imported is outside it. Named in the output rather than passed over
+    // silently, so a year that goes missing from the file still shows up.
+    if (!fromFile) {
+      beyondTheFile.push(season.year);
+      console.log(`  ${season.year}      -       skipped  created after seasons.json`);
+      continue;
+    }
 
     const expectedRows = jsonRows(fromFile);
 
@@ -288,6 +300,9 @@ try {
   }
 
   console.log(`\n${compared} team-seasons compared.`);
+  if (beyondTheFile.length > 0) {
+    console.log(`${beyondTheFile.length} season(s) not in the file, so not compared: ${beyondTheFile.join(", ")}`);
+  }
 
   const failures = [];
 
