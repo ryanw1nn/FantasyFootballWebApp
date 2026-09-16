@@ -60,7 +60,7 @@ router.get("/api/leagues/:slug/seasons/:year/weeks", async (req, res) => {
   res.json({ weeks: apiWeeks(bundle) });
 });
 
-// UPDATE one week. Still unauthenticated — see Phase 3.
+// UPDATE one week. server/guard.mjs has already checked for the unlock.
 router.put("/api/leagues/:slug/seasons/:year/weeks/:week", async (req, res) => {
   const { matchups } = req.body ?? {};
 

@@ -10,6 +10,7 @@ import { describeTarget } from "../db/pool.mjs";
 import { router as legacyRoutes } from "./routes/legacy.js";
 import { router as leagueRoutes } from "./routes/leagues.js";
 import { router as sessionRoutes } from "./routes/session.js";
+import { requireWrite } from "./guard.mjs";
 import { isProduction, sessionMiddleware, sessionSecretProblem } from "./session.mjs";
 
 const app = express();
@@ -28,6 +29,8 @@ app.use(
   })
 );
 app.use(sessionMiddleware());
+// Ahead of the body parser, so a locked-out write never has its body read.
+app.use(requireWrite);
 app.use(express.json({ limit: "100kb" }));
 
 app.use(sessionRoutes);
