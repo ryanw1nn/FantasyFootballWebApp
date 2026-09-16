@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trophy, TrendingUp, Medal, Edit, SlidersHorizontal, Lock } from 'lucide-react';
+import { Trophy, TrendingUp, Medal, Edit, SlidersHorizontal, Unlock } from 'lucide-react';
 
 // Import custom components
 import StatsCard from './components/StatsCard';
@@ -199,9 +199,11 @@ export default function App() {
       Edit Season Data
     </Button>
   ) : (
+    // An opening padlock, not a closed one: this is the way in, and a closed
+    // padlock beside the word "Unlock" reads as a button that locks something.
     <Button variant="ghost" onClick={() => setViewMode("edit")}>
-      <Lock size={16} />
-      Unlock
+      <Unlock size={16} />
+      Unlock editing
     </Button>
   );
 

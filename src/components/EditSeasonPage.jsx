@@ -139,9 +139,9 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
   }
 
   /**
-   * Give up the session. The button goes back to locked either way: if the
-   * request failed, the safe thing to show is the form, and the next save
-   * will find out what the server actually thinks.
+   * Give up the session and leave the editor. The page goes back to the
+   * dashboard either way: if the request failed, showing the reader's view is
+   * the safe reading, and the next save will find out what the server thinks.
    */
   async function lock() {
     try {
@@ -154,6 +154,7 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
     } finally {
       setMessage('');
       onCanWriteChange(false);
+      onBack();
     }
   }
 
@@ -601,13 +602,16 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
               Back to Dashboard
             </button>
 
-            {/* One lock for the page, rather than one beside each week's save */}
+            {/* One lock for the page, rather than one beside each week's save.
+                It ends the session and returns to the dashboard, so "done
+                editing" and "still editing but blocked" can't be confused. */}
             <button
               onClick={lock}
+              title="End this editing session and return to the dashboard"
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
             >
               <Lock size={18} />
-              Lock
+              Lock editing
             </button>
           </div>
 
