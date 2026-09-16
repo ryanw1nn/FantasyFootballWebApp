@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trophy, TrendingUp, Medal, Edit, SlidersHorizontal } from 'lucide-react';
+import { Trophy, TrendingUp, Medal, Edit, SlidersHorizontal, Lock } from 'lucide-react';
 
 // Import custom components
 import StatsCard from './components/StatsCard';
@@ -14,6 +14,10 @@ import useColumnVisibility from './hooks/useColumnVisibility';
 import { SEASON_COLUMNS, ALLTIME_COLUMNS } from './components/tableColumns';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+
+// The only league this client can reach. It becomes a choice when the league
+// switcher and routing land; until then every write goes to this one.
+const LEAGUE_SLUG = 'fan-club';
 
 /**
  * Root component for Fantasy Football League dashboard.
@@ -34,6 +38,9 @@ export default function App() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
+  // Whether this browser may write to the league. The server's answer, asked
+  // once on load — it decides what the buttons look like, never what is allowed.
+  const [canWrite, setCanWrite] = useState(false);
   const [seasonCols, toggleSeasonCol] = useColumnVisibility('ff_season_table_columns', SEASON_COLUMNS);
   const [alltimeCols, toggleAlltimeCol] = useColumnVisibility('ff_alltime_table_columns', ALLTIME_COLUMNS);
   
@@ -52,7 +59,25 @@ export default function App() {
    */
   useEffect(() => {
     fetchAllSeasons();
+    fetchCanWrite();
   }, []);
+
+  /**
+   * Ask the server whether this browser may edit. A reader has no cookie and
+   * gets false, which is also what a failed request has to mean.
+   */
+  async function fetchCanWrite() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/session`, {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      setCanWrite(response.ok && data.canWrite === true);
+    } catch (err) {
+      console.error('Failed to check session:', err);
+      setCanWrite(false);
+    }
+  }
 
   /**
    * Refetch data when returning from edit mode
@@ -157,8 +182,28 @@ export default function App() {
   // ============================================
   
   if (viewMode === "edit") {
-    return <EditSeasonPage onBack={() => setViewMode("season")} />;
+    return (
+      <EditSeasonPage
+        onBack={() => setViewMode("season")}
+        canWrite={canWrite}
+        onCanWriteChange={setCanWrite}
+      />
+    );
   }
+
+  // Locked, the editor is replaced by the way into it. Hiding the edit button
+  // is tidiness, not protection — the server refuses the write either way.
+  const editButton = canWrite ? (
+    <Button variant="ghost" onClick={() => setViewMode("edit")}>
+      <Edit size={16} />
+      Edit Season Data
+    </Button>
+  ) : (
+    <Button variant="ghost" onClick={() => setViewMode("edit")}>
+      <Lock size={16} />
+      Unlock
+    </Button>
+  );
 
   // ============================================
   // RENDER: PLAYER STATS MODE
@@ -197,10 +242,7 @@ export default function App() {
                 <Button variant="outline" onClick={() => setViewMode("season")}>Season</Button>
                 <Button variant="outline" onClick={() => setViewMode("alltime")}>All-Time</Button>
                 <Button variant="solid" onClick={() => setViewMode("bracket")}>Playoff Bracket</Button>
-                <Button variant="ghost" onClick={() => setViewMode("edit")}>
-                  <Edit size={16} />
-                  Edit Season Data
-                </Button>
+                {editButton}
               </div>
 
               {/* Year Selector */}
@@ -299,10 +341,7 @@ export default function App() {
             <Button variant="outline" onClick={() => setViewMode("bracket")}>
               Playoff Bracket
             </Button>
-            <Button variant="ghost" onClick={() => setViewMode("edit")}>
-              <Edit size={16} />
-              Edit Season Data
-            </Button>
+            {editButton}
           </div>
 
           {/* Year Selector (Season view only) */}

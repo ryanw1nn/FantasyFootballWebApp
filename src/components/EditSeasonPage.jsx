@@ -1,15 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2 } from 'lucide-react';
+import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2, Lock } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
+// The only league this client can reach. It becomes a choice when the league
+// switcher and routing land; until then every write goes to this one.
+const LEAGUE_SLUG = 'fan-club';
+
 /**
  * EditSeasonPage Component
- * 
+ *
  * Main interface for editing season data week-by-week
  * Allows updating matchup scores and automatically recalculates standings
+ *
+ * Writing needs the league unlocked. canWrite comes from the server rather than
+ * from this component remembering that it unlocked once: the cookie can expire,
+ * or be locked in another tab, and only the server knows.
  */
-export default function EditSeasonPage({ onBack }) {
+export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -25,7 +33,14 @@ export default function EditSeasonPage({ onBack }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  
+
+  // Unlock form. What the commissioner types lives here only while the form is
+  // on screen, and is never written to storage — that would outlive the session
+  // it buys, in a place any script on the page can read.
+  const [entered, setEntered] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState('');
+
   // ============================================
   // DATA FETCHING
   // ============================================
@@ -87,9 +102,65 @@ export default function EditSeasonPage({ onBack }) {
   }
   
   // ============================================
+  // UNLOCKING
+  // ============================================
+
+  /**
+   * Trade the passphrase for a session cookie that may write to this league
+   */
+  async function unlock(event) {
+    event.preventDefault();
+    setUnlocking(true);
+    setUnlockError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/unlock`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passphrase: entered })
+      });
+
+      if (!response.ok) {
+        // 401 wrong passphrase, 429 too many tries — the server writes both messages.
+        const data = await response.json().catch(() => ({}));
+        setUnlockError(data.error || 'Could not unlock this league');
+        return;
+      }
+
+      setEntered('');
+      onCanWriteChange(true);
+    } catch (err) {
+      console.error('Failed to unlock:', err);
+      setUnlockError('Network error while unlocking');
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  /**
+   * Give up the session. The button goes back to locked either way: if the
+   * request failed, the safe thing to show is the form, and the next save
+   * will find out what the server actually thinks.
+   */
+  async function lock() {
+    try {
+      await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/lock`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.error('Failed to lock:', err);
+    } finally {
+      setMessage('');
+      onCanWriteChange(false);
+    }
+  }
+
+  // ============================================
   // WEEK MANAGEMENT
   // ============================================
-  
+
   /**
    * Toggle week expansion
    */
@@ -224,13 +295,22 @@ export default function EditSeasonPage({ onBack }) {
         `${API_BASE_URL}/api/seasons/${selectedYear}/weeks/${weekNum}`,
         {
           method: 'PUT',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ matchups: weeks[weekNum].matchups })
         }
       );
-      
+
+      // The session ended between opening the page and saving. Show the form
+      // again rather than a failure the commissioner can do nothing about.
+      if (response.status === 401) {
+        onCanWriteChange(false);
+        setUnlockError('That session has ended. Unlock again to save your changes.');
+        return;
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         setMessage(`✅ Week ${weekNum} saved! Standings updated.`);
         
@@ -445,6 +525,56 @@ export default function EditSeasonPage({ onBack }) {
   // RENDER
   // ============================================
   
+  // Locked: the only thing on this page is the way in. Any edits already in
+  // state survive behind it, so an expired session doesn't cost them.
+  if (!canWrite) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={onBack}
+            className="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+          >
+            <ArrowLeft size={18} />
+            Back to Dashboard
+          </button>
+
+          <form onSubmit={unlock} className="bg-white rounded-lg shadow-md p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Lock size={20} className="text-gray-500" />
+              <h1 className="text-xl font-bold text-gray-900">Unlock editing</h1>
+            </div>
+            <p className="text-gray-600 text-sm">
+              Everyone can read this league. Changing it needs the passphrase.
+            </p>
+
+            <input
+              type="password"
+              autoComplete="current-password"
+              autoFocus
+              value={entered}
+              onChange={(e) => setEntered(e.target.value)}
+              placeholder="Passphrase"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+
+            {unlockError && (
+              <div className="p-3 rounded-lg bg-red-100 text-red-800 text-sm">{unlockError}</div>
+            )}
+
+            <button
+              type="submit"
+              disabled={unlocking || entered === ''}
+              className="w-full px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+            >
+              {unlocking ? 'Unlocking...' : 'Unlock'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -462,14 +592,25 @@ export default function EditSeasonPage({ onBack }) {
         
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={onBack}
-            className="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-          >
-            <ArrowLeft size={18} />
-            Back to Dashboard
-          </button>
-          
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <button
+              onClick={onBack}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft size={18} />
+              Back to Dashboard
+            </button>
+
+            {/* One lock for the page, rather than one beside each week's save */}
+            <button
+              onClick={lock}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+            >
+              <Lock size={18} />
+              Lock
+            </button>
+          </div>
+
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Season Data</h1>
           <p className="text-gray-600">Update matchups and scores week by week</p>
         </div>
