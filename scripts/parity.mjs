@@ -26,6 +26,12 @@
 // 409, and a transaction forced to fail mid-flight all leave the working
 // database alone.
 //
+// Writes need an unlock now. The scratch database gets a passphrase of this
+// file's own, known nowhere else and gone with the database, and the write half
+// unlocks once and sends that cookie with every PUT. The reads stay anonymous:
+// if a recorded GET ever needs a session to match, auth has leaked into the
+// read side, and this run is where that shows up.
+//
 // Deleted with the aliases in Phase 7. Until then it is what says the client
 // can be repointed without reading it.
 import { spawn, execFile } from "child_process";
@@ -45,6 +51,7 @@ import {
   expectedCounts,
   titleOf,
 } from "./divergences.mjs";
+import { hashPassphrase } from "../server/passphrase.mjs";
 import { pinTlsVerification } from "../db/url.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -61,6 +68,10 @@ const WRITE_WEEK = 3;
 
 /** The season whose standings are imported, and so refuses every write. */
 const LOCKED_YEAR = 2020;
+
+/** The league the import creates, and the passphrase this run gives it. */
+const LEAGUE = "fan-club";
+const PASSPHRASE = "parity-write-passphrase";
 
 const pass = (line) => console.log(`  ok    ${line}`);
 const fail = (line) => {
@@ -294,6 +305,17 @@ async function buildScratch(scratchName, scratchUrl) {
   for (const script of ["db/migrate.mjs", "db/import.mjs", "db/recompute.mjs"]) {
     await execFileAsync(process.execPath, [script], { cwd: repoRoot, env });
   }
+
+  // db:import truncates leagues, so the passphrase is set after it, never before.
+  const client = await scratchClient(scratchUrl);
+  try {
+    await client.query(`UPDATE leagues SET write_secret_hash = $1 WHERE slug = $2`, [
+      await hashPassphrase(PASSPHRASE),
+      LEAGUE,
+    ]);
+  } finally {
+    await client.end();
+  }
 }
 
 async function dropScratch(scratchName) {
@@ -317,13 +339,38 @@ async function getJson(port, route) {
   return { status: res.status, body: await res.json() };
 }
 
-async function putWeek(port, year, week, matchups) {
+async function putWeek(port, cookie, year, week, matchups) {
   const res = await fetch(`http://127.0.0.1:${port}/api/seasons/${year}/weeks/${week}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: cookie },
     body: JSON.stringify({ matchups }),
   });
   return { status: res.status, body: await res.json() };
+}
+
+/**
+ * Unlocks the scratch league and returns the cookie every later PUT sends. The
+ * write half cannot start without it, so a failure here throws rather than
+ * being recorded: nine checks reporting 401 would say the guard is broken when
+ * what broke is this.
+ */
+async function unlockForWrites(port) {
+  const res = await fetch(`http://127.0.0.1:${port}/api/leagues/${LEAGUE}/unlock`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ passphrase: PASSPHRASE }),
+  });
+
+  if (res.status !== 200) {
+    throw new Error(`unlock answered ${res.status}, so no write check could run`);
+  }
+
+  const header = (res.headers.getSetCookie?.() ?? []).find((value) =>
+    value.startsWith("ffc.sid=")
+  );
+  if (header === undefined) throw new Error("unlock returned 200 but set no session cookie");
+
+  return header.split(";")[0];
 }
 
 /**
@@ -357,7 +404,7 @@ async function scratchClient(scratchUrl) {
  * INSERT itself fail — a constraint the scratch database wears for one request.
  * If the transaction is not a transaction, the week comes back empty.
  */
-async function checkRollback(server, scratchUrl, before, matchups) {
+async function checkRollback(server, cookie, scratchUrl, before, matchups) {
   const client = await scratchClient(scratchUrl);
   try {
     await client.query(
@@ -365,7 +412,7 @@ async function checkRollback(server, scratchUrl, before, matchups) {
          CHECK (week <> ${WRITE_WEEK}) NOT VALID`
     );
 
-    const broken = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, matchups);
+    const broken = await putWeek(server.port, cookie, WRITE_YEAR, WRITE_WEEK, matchups);
     if (broken.status !== 500) {
       fail(`the forced INSERT failure answered ${broken.status}, not 500`);
       return;
@@ -455,6 +502,9 @@ function checkFlip(before, after, edited) {
 /** The caller owns the scratch database and the server; this only exercises them. */
 async function runWriteChecks(server, scratchUrl) {
   {
+    const cookie = await unlockForWrites(server.port);
+    pass(`unlocked ${LEAGUE} once; every write below carries that cookie`);
+
     const { body: before } = await getJson(server.port, `/seasons/${WRITE_YEAR}`);
     const week = before.weeks[WRITE_WEEK];
     const index = pickMatchup(week);
@@ -462,7 +512,7 @@ async function runWriteChecks(server, scratchUrl) {
 
     // Every way a body can be wrong, one at a time.
     for (const [what, body] of invalidBodies(week.matchups, index)) {
-      const rejected = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, body);
+      const rejected = await putWeek(server.port, cookie, WRITE_YEAR, WRITE_WEEK, body);
       if (rejected.status === 400) {
         pass(`PUT with ${what}`.padEnd(46) + `400 ${rejected.body.error}`);
       } else {
@@ -477,9 +527,9 @@ async function runWriteChecks(server, scratchUrl) {
       fail("a rejected write changed the season");
     }
 
-    await checkRollback(server, scratchUrl, before, week.matchups);
+    await checkRollback(server, cookie, scratchUrl, before, week.matchups);
 
-    const locked = await putWeek(server.port, LOCKED_YEAR, 1, []);
+    const locked = await putWeek(server.port, cookie, LOCKED_YEAR, 1, []);
     if (locked.status === 409) {
       pass(`PUT ${LOCKED_YEAR} week 1  409 ${locked.body.error}`);
     } else {
@@ -490,7 +540,7 @@ async function runWriteChecks(server, scratchUrl) {
     const flipped = week.matchups.map((m, i) =>
       i === index ? { ...m, team1Score: m.team2Score, team2Score: m.team1Score } : m
     );
-    const written = await putWeek(server.port, WRITE_YEAR, WRITE_WEEK, flipped);
+    const written = await putWeek(server.port, cookie, WRITE_YEAR, WRITE_WEEK, flipped);
     if (written.status !== 200 || written.body.success !== true) {
       fail(`the write answered ${written.status}`);
     } else {
