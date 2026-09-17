@@ -56,13 +56,19 @@ export function getWeeks(slug, year) {
   return request('GET', `/api/seasons/${encodeURIComponent(year)}/weeks`);
 }
 
-/** Replace one week's matchups, and the standings behind them. */
+/**
+ * Replace one week's matchups, and the standings behind them.
+ *
+ * The only call the server's write guard stands in front of, so the only one
+ * whose 401 means "this session may not write" rather than "the server is
+ * wrong". That is what `guarded` marks, and it is why it appears once.
+ */
 export function saveWeek(slug, year, week, matchups) {
   requireAliasLeague(slug);
   return request(
     'PUT',
     `/api/seasons/${encodeURIComponent(year)}/weeks/${encodeURIComponent(week)}`,
-    { body: { matchups }, withCookie: true }
+    { body: { matchups }, withCookie: true, guarded: true }
   );
 }
 
@@ -99,9 +105,16 @@ export function lock(slug) {
 let unauthorizedHandler = null;
 
 /**
- * Register the one thing that happens when the server answers 401. The module
- * notices; the app decides what that means. The call still throws afterwards,
- * so a caller that wants to say something about the failure still can.
+ * Register the one thing that happens when a guarded write is refused for want
+ * of a session. The module notices; the app decides what that means. The call
+ * still throws afterwards, so a caller that wants to say something about the
+ * failure still can — and so the editor keeps the week that was typed into it.
+ *
+ * Only saveWeek reaches this. A 401 from a read is a defect in the server, not
+ * a prompt: reads are public, so answering one with an unlock form would tell
+ * the reader something untrue about the product. A 401 from unlock is the
+ * passphrase being wrong, which the form the caller is already showing says in
+ * the server's own words. Neither calls the handler; both still throw.
  *
  * Two subscribers is a bug — the last registration would silently win — so a
  * second one throws. Pass null to clear.
@@ -118,7 +131,8 @@ export function onUnauthorized(handler) {
 // ============================================
 
 /**
- * Method, path, optional body, optional cookie — the single `fetch` in the tree.
+ * Method, path, optional body, optional cookie, optional guard — the single
+ * `fetch` in the tree.
  *
  * Content-Type is set only when there is a body. The write guard answers 415 to
  * a typed body that is not JSON and lets a bodyless write through, so declaring
@@ -128,7 +142,7 @@ export function onUnauthorized(handler) {
  * it is reinserted, so a retry racing the original is the one shape the row
  * lock was never meant to fix.
  */
-async function request(method, path, { body, withCookie = false } = {}) {
+async function request(method, path, { body, withCookie = false, guarded = false } = {}) {
   const options = { method };
 
   if (withCookie) options.credentials = 'include';
@@ -140,7 +154,7 @@ async function request(method, path, { body, withCookie = false } = {}) {
 
   const response = await fetch(`${BASE}${path}`, options);
 
-  if (!response.ok) throw await refusal(response);
+  if (!response.ok) throw await refusal(response, guarded);
 
   // 204 from lock, with nothing to parse.
   if (response.status === 204) return null;
@@ -151,12 +165,22 @@ async function request(method, path, { body, withCookie = false } = {}) {
 /**
  * The error a non-2xx becomes. A body that will not parse turns into a generic
  * message rather than a crash inside response.json().
+ *
+ * The handler runs before the error is thrown and cannot replace it: a handler
+ * that throws is reported and the caller still receives the ApiError, because
+ * the alternative is a save failing with a message about the app's own wiring.
  */
-async function refusal(response) {
+async function refusal(response, guarded) {
   const body = await response.json().catch(() => ({}));
   const error = new ApiError(response.status, body.error || `Request failed (${response.status})`);
 
-  if (response.status === 401 && unauthorizedHandler !== null) unauthorizedHandler(error);
+  if (response.status === 401 && guarded && unauthorizedHandler !== null) {
+    try {
+      unauthorizedHandler(error);
+    } catch (handlerFailure) {
+      console.error('onUnauthorized handler threw', handlerFailure);
+    }
+  }
 
   return error;
 }
