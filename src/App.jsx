@@ -12,12 +12,8 @@ import Button from './components/ui/Button';
 import ColumnMenu from './components/ui/ColumnMenu';
 import useColumnVisibility from './hooks/useColumnVisibility';
 import { SEASON_COLUMNS, ALLTIME_COLUMNS } from './components/tableColumns';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
-// The only league this client can reach. It becomes a choice when the league
-// switcher and routing land; until then every write goes to this one.
-const LEAGUE_SLUG = 'fan-club';
+import { getSeasons } from './api/client';
+import { useLeague } from './context/LeagueContext';
 
 /**
  * Root component for Fantasy Football League dashboard.
@@ -27,6 +23,11 @@ export default function App() {
   // STATE MANAGEMENT
   // ============================================
   
+  // Which league, and whether this browser may write to it. Both used to be
+  // this component's business — a constant at the top and a useState drilled
+  // two props deep. The provider owns them now.
+  const { slug, canWrite } = useLeague();
+
   const [viewMode, setViewMode] = useState("season");
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [filters, setFilters] = useState({
@@ -38,9 +39,6 @@ export default function App() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
-  // Whether this browser may write to the league. The server's answer, asked
-  // once on load — it decides what the buttons look like, never what is allowed.
-  const [canWrite, setCanWrite] = useState(false);
   const [seasonCols, toggleSeasonCol] = useColumnVisibility('ff_season_table_columns', SEASON_COLUMNS);
   const [alltimeCols, toggleAlltimeCol] = useColumnVisibility('ff_alltime_table_columns', ALLTIME_COLUMNS);
   
@@ -59,25 +57,7 @@ export default function App() {
    */
   useEffect(() => {
     fetchAllSeasons();
-    fetchCanWrite();
   }, []);
-
-  /**
-   * Ask the server whether this browser may edit. A reader has no cookie and
-   * gets false, which is also what a failed request has to mean.
-   */
-  async function fetchCanWrite() {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/session`, {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setCanWrite(response.ok && data.canWrite === true);
-    } catch (err) {
-      console.error('Failed to check session:', err);
-      setCanWrite(false);
-    }
-  }
 
   /**
    * Refetch data when returning from edit mode
@@ -91,8 +71,7 @@ export default function App() {
   async function fetchAllSeasons() {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/seasons`);
-      const seasonsData = await response.json();
+      const seasonsData = await getSeasons(slug);
       setData(seasonsData);
 
       // Set initial year if not set
@@ -183,11 +162,7 @@ export default function App() {
   
   if (viewMode === "edit") {
     return (
-      <EditSeasonPage
-        onBack={() => setViewMode("season")}
-        canWrite={canWrite}
-        onCanWriteChange={setCanWrite}
-      />
+      <EditSeasonPage onBack={() => setViewMode("season")} />
     );
   }
 

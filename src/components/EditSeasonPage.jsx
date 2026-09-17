@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2, Lock } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
-// The only league this client can reach. It becomes a choice when the league
-// switcher and routing land; until then every write goes to this one.
-const LEAGUE_SLUG = 'fan-club';
+import {
+  ApiError,
+  getSeasons,
+  getWeeks,
+  saveWeek as saveWeekRequest,
+  unlock as unlockLeague,
+  lock as lockLeague,
+} from '../api/client';
+import { useLeague } from '../context/LeagueContext';
 
 /**
  * EditSeasonPage Component
@@ -15,9 +19,13 @@ const LEAGUE_SLUG = 'fan-club';
  *
  * Writing needs the league unlocked. canWrite comes from the server rather than
  * from this component remembering that it unlocked once: the cookie can expire,
- * or be locked in another tab, and only the server knows.
+ * or be locked in another tab, and only the server knows. It arrives through
+ * the context now, and refreshSession is how this page asks again — the page
+ * never asserts the answer it hoped its own request produced.
  */
-export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
+export default function EditSeasonPage({ onBack }) {
+  const { slug, canWrite, refreshSession } = useLeague();
+
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -63,8 +71,7 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
 
   async function loadAvailableYears() {
     try {
-      const response = await fetch(`${API_BASE_URL}/seasons`);
-      const data = await response.json();
+      const data = await getSeasons(slug);
 
       // extract years and sort descending (newest first)
       const years = Object.keys(data).sort((a, b) => Number(b) - Number(a));
@@ -83,9 +90,8 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
   async function loadSeasonData() {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/seasons/${selectedYear}/weeks`);
-      const data = await response.json();
-      
+      const data = await getWeeks(slug, selectedYear);
+
       setWeeks(data.weeks || {});
       setTeams(data.teams || []);
       
@@ -114,25 +120,20 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
     setUnlockError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/unlock`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passphrase: entered })
-      });
-
-      if (!response.ok) {
-        // 401 wrong passphrase, 429 too many tries — the server writes both messages.
-        const data = await response.json().catch(() => ({}));
-        setUnlockError(data.error || 'Could not unlock this league');
-        return;
-      }
-
+      await unlockLeague(slug, entered);
       setEntered('');
-      onCanWriteChange(true);
+      // The server says whether the cookie it just set may write. Asking beats
+      // assuming: a 200 on the unlock is not the same statement as a session.
+      await refreshSession();
     } catch (err) {
-      console.error('Failed to unlock:', err);
-      setUnlockError('Network error while unlocking');
+      // 401 wrong passphrase, 429 too many tries — the server writes both
+      // messages, and the client module hands them over unchanged.
+      if (err instanceof ApiError) {
+        setUnlockError(err.message || 'Could not unlock this league');
+      } else {
+        console.error('Failed to unlock:', err);
+        setUnlockError('Network error while unlocking');
+      }
     } finally {
       setUnlocking(false);
     }
@@ -145,15 +146,12 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
    */
   async function lock() {
     try {
-      await fetch(`${API_BASE_URL}/api/leagues/${LEAGUE_SLUG}/lock`, {
-        method: 'POST',
-        credentials: 'include'
-      });
+      await lockLeague(slug);
     } catch (err) {
       console.error('Failed to lock:', err);
     } finally {
       setMessage('');
-      onCanWriteChange(false);
+      await refreshSession();
       onBack();
     }
   }
@@ -292,37 +290,32 @@ export default function EditSeasonPage({ onBack, canWrite, onCanWriteChange }) {
     setMessage('');
     
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/seasons/${selectedYear}/weeks/${weekNum}`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ matchups: weeks[weekNum].matchups })
-        }
-      );
-
-      // The session ended between opening the page and saving. Show the form
-      // again rather than a failure the commissioner can do nothing about.
-      if (response.status === 401) {
-        onCanWriteChange(false);
-        setUnlockError('That session has ended. Unlock again to save your changes.');
-        return;
-      }
-
-      const data = await response.json();
+      const data = await saveWeekRequest(slug, selectedYear, weekNum, weeks[weekNum].matchups);
 
       if (data.success) {
         setMessage(`✅ Week ${weekNum} saved! Standings updated.`);
-        
+
         // Clear message after 3 seconds
         setTimeout(() => setMessage(''), 3000);
       } else {
         setMessage(`❌ Failed to save: ${data.error}`);
       }
     } catch (err) {
+      // The session ended between opening the page and saving. The provider has
+      // already flipped canWrite — the client module told it — so this page only
+      // has to say why the form came back. Nothing unmounts, so the week that
+      // was typed is still on screen to save once the league is unlocked again.
+      if (err instanceof ApiError && err.status === 401) {
+        setUnlockError('That session has ended. Unlock again to save your changes.');
+        return;
+      }
+
       console.error('Failed to save week:', err);
-      setMessage('❌ Network error while saving');
+      setMessage(
+        err instanceof ApiError
+          ? `❌ Failed to save: ${err.message}`
+          : '❌ Network error while saving'
+      );
     } finally {
       setSaving(false);
     }
