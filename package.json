@@ -43,7 +43,8 @@
     "lucide-react": "^0.552.0",
     "pg": "^8.23.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.18.4"
   },
   "description": "",
   "main": "server.js",
