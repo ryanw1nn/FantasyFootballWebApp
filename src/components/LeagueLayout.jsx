@@ -50,7 +50,14 @@ function LeagueOutlet() {
   // settles on an empty object instead, because a league with no seasons and a
   // league that could not be reached both still need a page: the views read
   // `error` to say which one it was.
-  const [seasons, setSeasons] = useState(null);
+  //
+  // The payload is kept with the slug it was fetched for, and only counts for
+  // that slug. The effect below clears it on a league switch, but an effect
+  // runs after the render — so for one render the new slug would sit beside
+  // the old league's seasons, and a view drawn from them asks the new league
+  // for a year it may not have.
+  const [loaded, setLoaded] = useState({ slug: null, seasons: null });
+  const seasons = loaded.slug === slug ? loaded.seasons : null;
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -76,12 +83,15 @@ function LeagueOutlet() {
     try {
       const data = await getSeasons(slug);
       if (request !== latestRequest.current) return;
-      setSeasons(data);
+      setLoaded({ slug, seasons: data });
       setError(null);
     } catch (err) {
       console.error('Failed to fetch seasons:', err);
       if (request !== latestRequest.current) return;
-      setSeasons((current) => current ?? {});
+      setLoaded((current) => ({
+        slug,
+        seasons: (current.slug === slug ? current.seasons : null) ?? {},
+      }));
       setError(err);
     } finally {
       if (request === latestRequest.current) setLoading(false);
@@ -97,7 +107,7 @@ function LeagueOutlet() {
   // for the league just left from landing under a slug that turned out to be
   // unknown.
   useEffect(() => {
-    setSeasons(null);
+    setLoaded({ slug: null, seasons: null });
     setError(null);
     if (leagueExists !== true) {
       latestRequest.current += 1;
