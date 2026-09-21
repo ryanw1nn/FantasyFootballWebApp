@@ -32,16 +32,18 @@ export default function EditSeasonPage() {
   // The layout holds the payload every other view draws, and a save is the one
   // event that changes it. Leaving this page no longer unmounts anything that
   // would refetch, so the season table would show the old score without this.
-  const { refresh: refreshSeasons } = useOutletContext();
+  const { refresh: refreshSeasons, year: urlSeason, urlYear } = useOutletContext();
 
   // ============================================
   // STATE MANAGEMENT
   // ============================================
   
-  // Empty until loadAvailableYears picks the newest season. Hardcoding 2025 here
-  // made the "default to the latest" branch below unreachable, so a new season
-  // was never the one the page opened on.
-  const [selectedYear, setSelectedYear] = useState('');
+  // Opens on the season the URL names, so editing the season being looked at
+  // is one click rather than two. From here the select is the editor's own and
+  // may move away from the URL; mirroring it into the address bar would be a
+  // bigger change than opening on the right year. Empty only for a league with
+  // no seasons, where loadAvailableYears has nothing to pick either.
+  const [selectedYear, setSelectedYear] = useState(urlSeason === null ? '' : String(urlSeason));
   const [availableYears, setAvailableYears] = useState([]);
   const [weeks, setWeeks] = useState({});
   const [teams, setTeams] = useState([]);
@@ -160,7 +162,7 @@ export default function EditSeasonPage() {
     } finally {
       setMessage('');
       await refreshSession();
-      navigate(seasonPath(slug));
+      navigate(seasonPath(slug, urlYear));
     }
   }
 
@@ -540,7 +542,7 @@ export default function EditSeasonPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
         <div className="max-w-md mx-auto">
           <Link
-            to={seasonPath(slug)}
+            to={seasonPath(slug, urlYear)}
             className="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
           >
             <ArrowLeft size={18} />
@@ -602,7 +604,7 @@ export default function EditSeasonPage() {
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between gap-4">
             <Link
-              to={seasonPath(slug)}
+              to={seasonPath(slug, urlYear)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
             >
               <ArrowLeft size={18} />

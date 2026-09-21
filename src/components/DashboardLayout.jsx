@@ -17,7 +17,7 @@ import { alltimePath, bracketPath, editPath, seasonPath } from '../routes';
 export default function DashboardLayout() {
   const { slug, canWrite } = useLeague();
   const league = useOutletContext();
-  const { years, year, setYear } = league;
+  const { years, year, urlYear, setYear } = league;
 
   // All-time spans every season, so it has no year to choose.
   const onAlltime = useMatch(alltimePath(slug)) !== null;
@@ -37,16 +37,19 @@ export default function DashboardLayout() {
           <div className="flex flex-wrap gap-3 items-center justify-between">
 
             <div className="flex gap-2">
-              <LinkButton to={seasonPath(slug)} activeVariant="solid">Season</LinkButton>
-              <LinkButton to={alltimePath(slug)} activeVariant="solid">All-Time</LinkButton>
-              <LinkButton to={bracketPath(slug)} activeVariant="solid">Playoff Bracket</LinkButton>
+              {/* Each link carries the year the URL names, and none when it
+                  names none, so moving between views never pins "the latest"
+                  to whichever year that happens to be today. */}
+              <LinkButton to={seasonPath(slug, urlYear)} activeVariant="solid">Season</LinkButton>
+              <LinkButton to={alltimePath(slug, urlYear)} activeVariant="solid">All-Time</LinkButton>
+              <LinkButton to={bracketPath(slug, urlYear)} activeVariant="solid">Playoff Bracket</LinkButton>
 
               {/* Locked, the editor is replaced by the way into it. Hiding the
                   edit link is tidiness, not protection — the server refuses the
                   write either way. The padlock is an opening one: this is the
                   way in, and a closed padlock beside "Unlock" reads as a
                   control that locks something. */}
-              <LinkButton to={editPath(slug)} variant="ghost">
+              <LinkButton to={editPath(slug, urlYear)} variant="ghost">
                 {canWrite ? <Edit size={16} /> : <Unlock size={16} />}
                 {canWrite ? 'Edit Season Data' : 'Unlock editing'}
               </LinkButton>

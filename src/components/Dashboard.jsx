@@ -19,7 +19,7 @@ import { playerPath } from '../routes';
  */
 export default function Dashboard({ view }) {
   const { slug } = useLeague();
-  const { seasons: data, year: selectedYear, error } = useOutletContext();
+  const { seasons: data, year: selectedYear, urlYear, error } = useOutletContext();
   const navigate = useNavigate();
   const isSeason = view === 'season';
 
@@ -55,7 +55,7 @@ export default function Dashboard({ view }) {
   };
 
   const handlePlayerClick = (playerName) => {
-    navigate(playerPath(slug, playerName));
+    navigate(playerPath(slug, playerName, urlYear));
   };
 
   // ============================================

@@ -20,7 +20,7 @@ export default function PlayerStatsPage() {
     // clicking.
     const { slug } = useLeague();
     const playerName = decodePlayerName(useParams().name);
-    const { seasons: allData } = useOutletContext();
+    const { seasons: allData, urlYear } = useOutletContext();
 
     // ==================================
     // STATE MANAGEMENT
@@ -400,7 +400,7 @@ export default function PlayerStatsPage() {
         
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <Link to={alltimePath(slug)} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm">
+          <Link to={alltimePath(slug, urlYear)} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm">
             <ArrowLeft size={16} /> Back
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">

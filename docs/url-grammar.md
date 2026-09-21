@@ -16,7 +16,7 @@ made, and two gaps closed that the card did not name.
 | `/` | Redirect to `/l/fan-club/season` | — |
 | `/l/:slug` | Redirect to `/l/:slug/season` | — |
 | `/l/:slug/season?year=2026` | Dashboard, season table | `App.jsx:268–428`, `viewMode === "season"` |
-| `/l/:slug/alltime` | Dashboard, all-time table. No year. | same block, `viewMode === "alltime"` |
+| `/l/:slug/alltime?year=2026` | Dashboard, all-time table. The table ignores the year; see the amendment below. | same block, `viewMode === "alltime"` |
 | `/l/:slug/bracket?year=2026` | Playoff bracket | `App.jsx:203–247` early return |
 | `/l/:slug/edit?year=2026` | Season editor | `App.jsx:163–167` early return → `EditSeasonPage` |
 | `/l/:slug/players/:name?year=2026` | One player's career | `App.jsx:189–197` early return → `PlayerStatsPage` |
@@ -89,7 +89,7 @@ The surface, as decided — the module lands in 5.3:
 | `homePath()` | `/` |
 | `leaguePath(slug)` | `/l/:slug` |
 | `seasonPath(slug, year?)` | `/l/:slug/season`, `?year=` when a year is given |
-| `alltimePath(slug)` | `/l/:slug/alltime` — never takes a year |
+| `alltimePath(slug, year?)` | `/l/:slug/alltime` — carries the year, never reads it |
 | `bracketPath(slug, year?)` | `/l/:slug/bracket` |
 | `editPath(slug, year?)` | `/l/:slug/edit` |
 | `playerPath(slug, name, year?)` | `/l/:slug/players/:name`, name encoded here |
@@ -149,3 +149,19 @@ of them in `App.jsx`.
 - **Anything server-side.** No route in this table changes `server/`, `db/` or
   `scripts/`. Express learning to return `index.html` for an unknown path is
   Phase 7's, and until it does, every deep link here is a link to Vite on 5173.
+
+## Amendment, 2026-09-21: all-time carries the year
+
+The table above first said `/l/:slug/alltime` takes no year. Implementing the
+year param reversed that. The all-time *table* still ignores the year, but the
+stats cards above it are the selected season's, and a year dropped on the way
+through all-time is a year lost on the way back to `season`. So every view
+carries `?year=` when the URL has one and omits it when it doesn't, and the URL
+is the only thing that remembers which season the reader was on.
+
+Two details the implementation settled:
+
+- **A year is matched as a string against the league's seasons.** `?year=2021.0`
+  is not 2021; it resolves to the latest and is rewritten, like `?year=1999`.
+- **The editor opens on the URL's year**, and its own select may then move away
+  from it without touching the address bar.

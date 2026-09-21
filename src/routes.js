@@ -7,8 +7,9 @@
 // and a test can all call it.
 //
 // The grammar these functions implement is /l/:slug/:view with the year as a
-// query param. Two of the five views have no year at all, which is why the year
-// is a param and not a segment: there would be nothing to put in the segment.
+// query param. Two of the five views do not use a year, which is why it is a
+// param and not a segment: there would be nothing to put in the segment. They
+// still carry it, so the year survives a trip through them.
 
 /** The prefix that keeps league slugs from colliding with /about or /healthz. */
 const LEAGUE_PREFIX = '/l';
@@ -39,11 +40,13 @@ export function seasonPath(slug, year) {
 }
 
 /**
- * `/l/:slug/alltime` — the dashboard's all-time table. Takes no year by design:
- * it spans every season, so a year on it would be an address that lies.
+ * `/l/:slug/alltime` — the dashboard's all-time table. The table spans every
+ * season and ignores the year, but the year still rides along: the stats cards
+ * above it are the selected season's, and carrying it means the season view is
+ * still on that year when the reader comes back.
  */
-export function alltimePath(slug) {
-  return `${leaguePath(slug)}/alltime`;
+export function alltimePath(slug, year) {
+  return `${leaguePath(slug)}/alltime${yearQuery(year)}`;
 }
 
 /** `/l/:slug/bracket` — the playoff bracket. */

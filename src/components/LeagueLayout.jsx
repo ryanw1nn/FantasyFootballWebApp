@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useParams } from 'react-router-dom';
 import { LeagueProvider } from '../context/LeagueContext';
 import { getSeasons } from '../api/client';
+import useSeasonYear from '../hooks/useSeasonYear';
 
 export default function LeagueLayout() {
   const { slug } = useParams();
@@ -25,11 +26,6 @@ export default function LeagueLayout() {
   const [seasons, setSeasons] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // The season every view is looking at. It lives here rather than in a view
-  // so it survives a trip to a player page and back, the way it did when one
-  // component drew all five screens. Null until the payload has years in it.
-  const [year, setYear] = useState(null);
 
   // Which request is the current one. A league switch and an editor refresh can
   // both be in flight, and only the newest answer may land — awaiting the reply
@@ -71,7 +67,6 @@ export default function LeagueLayout() {
   useEffect(() => {
     setSeasons(null);
     setError(null);
-    setYear(null);
     load();
   }, [load]);
 
@@ -83,10 +78,10 @@ export default function LeagueLayout() {
     [seasons]
   );
 
-  // Open on the newest season once there is one.
-  useEffect(() => {
-    if (year === null && years.length > 0) setYear(years[0]);
-  }, [years, year]);
+  // The season every view is looking at comes from ?year=, resolved against
+  // this league's seasons. It is resolved here, once, so a bad year is
+  // rewritten once rather than by every view that reads it.
+  const { year, urlYear, setYear } = useSeasonYear(years);
 
   // No key={slug}. A keyed provider is a *new* provider on every league change,
   // and the client allows exactly one 401 subscriber — a second registration
@@ -99,7 +94,7 @@ export default function LeagueLayout() {
       {seasons === null ? (
         <LoadingScreen />
       ) : (
-        <Outlet context={{ seasons, loading, error, refresh: load, years, year, setYear }} />
+        <Outlet context={{ seasons, loading, error, refresh: load, years, year, urlYear, setYear }} />
       )}
     </LeagueProvider>
   );
