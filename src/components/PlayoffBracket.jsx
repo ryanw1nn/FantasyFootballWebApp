@@ -12,9 +12,8 @@ import { useLeague } from '../context/LeagueContext';
  */
 
 export default function PlayoffBracket({ year }) {
-    // The year still arrives as a prop — that is Phase 5's to move into the URL.
-    // The slug is the half of "what am I looking at" that already lives in one
-    // place, so the bracket reads it from the context instead of a constant.
+    // The year arrives as a prop from the bracket's route, which owns where it
+    // comes from. The slug is read from the context, like every other view.
     const { slug } = useLeague();
     const [weeks, setWeeks] = useState({ 15: null, 16: null, 17: null });
     const [loading, setLoading] = useState(true);

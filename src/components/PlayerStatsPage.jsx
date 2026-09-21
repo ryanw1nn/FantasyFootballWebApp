@@ -4,13 +4,24 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { ArrowLeft, Trophy, TrendingUp, TrendingDown, Award, Target, ChevronDown } from 'lucide-react';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
+
+import { useLeague } from '../context/LeagueContext';
+import { alltimePath, decodePlayerName } from '../routes';
 
 /**
  * PlayerStatsPage Component
  * Displays statistics for an individual player across all seasons.
  */
 
-export default function PlayerStatsPage({ playerName, allData, onBack }) {
+export default function PlayerStatsPage() {
+    // Who comes from the URL and the seasons from the league's layout, so a
+    // player page is a link that can be sent rather than a state reached by
+    // clicking.
+    const { slug } = useLeague();
+    const playerName = decodePlayerName(useParams().name);
+    const { seasons: allData } = useOutletContext();
+
     // ==================================
     // STATE MANAGEMENT
     // ==================================
@@ -389,9 +400,9 @@ export default function PlayerStatsPage({ playerName, allData, onBack }) {
         
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <button onClick={onBack} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm">
+          <Link to={alltimePath(slug)} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-sm">
             <ArrowLeft size={16} /> Back
-          </button>
+          </Link>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Trophy className="text-yellow-500" size={24}/> {playerName}
           </h1>

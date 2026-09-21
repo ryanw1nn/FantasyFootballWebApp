@@ -66,7 +66,13 @@ export function playerPath(slug, name, year) {
   return `${leaguePath(slug)}/players/${encodeURIComponent(name)}${yearQuery(year)}`;
 }
 
-/** The one decodeURIComponent call site: :name off the route back to a name. */
+/**
+ * :name off the route back to a name. The router has already decoded it —
+ * useParams hands out `TJ Cairney`, not `TJ%20Cairney` — so decoding again here
+ * would turn a name with a `%` in it into a different name, or throw. This is
+ * still the one place a route param becomes a player, which is what Phase 6's
+ * switch to ids needs.
+ */
 export function decodePlayerName(param) {
-  return decodeURIComponent(param ?? '');
+  return param ?? '';
 }

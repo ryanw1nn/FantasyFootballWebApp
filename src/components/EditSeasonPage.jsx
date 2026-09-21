@@ -9,6 +9,8 @@ import {
   unlock as unlockLeague,
   lock as lockLeague,
 } from '../api/client';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
 
 /**
@@ -23,8 +25,14 @@ import { useLeague } from '../context/LeagueContext';
  * the context now, and refreshSession is how this page asks again — the page
  * never asserts the answer it hoped its own request produced.
  */
-export default function EditSeasonPage({ onBack }) {
+export default function EditSeasonPage() {
   const { slug, canWrite, refreshSession } = useLeague();
+  const navigate = useNavigate();
+
+  // The layout holds the payload every other view draws, and a save is the one
+  // event that changes it. Leaving this page no longer unmounts anything that
+  // would refetch, so the season table would show the old score without this.
+  const { refresh: refreshSeasons } = useOutletContext();
 
   // ============================================
   // STATE MANAGEMENT
@@ -152,7 +160,7 @@ export default function EditSeasonPage({ onBack }) {
     } finally {
       setMessage('');
       await refreshSession();
-      onBack();
+      navigate(seasonPath(slug));
     }
   }
 
@@ -294,6 +302,12 @@ export default function EditSeasonPage({ onBack }) {
 
       if (data.success) {
         setMessage(`✅ Week ${weekNum} saved! Standings updated.`);
+
+        // The server recomputed standings inside the same transaction, so the
+        // payload the other views are holding is now stale. Not awaited: the
+        // message and the typed week belong to this page, and the refresh is
+        // for the page the reader goes back to.
+        refreshSeasons();
 
         // Clear message after 3 seconds
         setTimeout(() => setMessage(''), 3000);
@@ -525,13 +539,13 @@ export default function EditSeasonPage({ onBack }) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
         <div className="max-w-md mx-auto">
-          <button
-            onClick={onBack}
+          <Link
+            to={seasonPath(slug)}
             className="mb-4 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
           >
             <ArrowLeft size={18} />
             Back to Dashboard
-          </button>
+          </Link>
 
           <form onSubmit={unlock} className="bg-white rounded-lg shadow-md p-6 space-y-4">
             <div className="flex items-center gap-2">
@@ -587,13 +601,13 @@ export default function EditSeasonPage({ onBack }) {
         {/* Header */}
         <div className="mb-6">
           <div className="mb-4 flex items-center justify-between gap-4">
-            <button
-              onClick={onBack}
+            <Link
+              to={seasonPath(slug)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
             >
               <ArrowLeft size={18} />
               Back to Dashboard
-            </button>
+            </Link>
 
             {/* One lock for the page, rather than one beside each week's save.
                 It ends the session and returns to the dashboard, so "done
