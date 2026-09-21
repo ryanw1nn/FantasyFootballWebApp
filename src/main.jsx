@@ -7,15 +7,12 @@ import Dashboard from "./components/Dashboard";
 import BracketPage from "./components/BracketPage";
 import EditSeasonPage from "./components/EditSeasonPage";
 import PlayerStatsPage from "./components/PlayerStatsPage";
+import NotFound from "./components/NotFound";
 import { DEFAULT_LEAGUE } from "./context/LeagueContext";
-import { homePath, seasonPath } from "./routes";
+import { seasonPath } from "./routes";
 import './index.css';
 
-/**
- * Sends a league URL with no view, or one this app does not have, to that
- * league's season table. The second half is a stand-in: an unknown path gets a
- * real 404 page once one exists.
- */
+/** Sends a league URL with no view to that league's season table. */
 function ToSeason() {
     const { slug } = useParams();
     return <Navigate to={seasonPath(slug)} replace />;
@@ -42,9 +39,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                     </Route>
                     <Route path="edit" element={<EditSeasonPage />} />
                     <Route path="players/:name" element={<PlayerStatsPage />} />
-                    <Route path="*" element={<ToSeason />} />
+                    <Route path="*" element={<NotFound />} />
                 </Route>
-                <Route path="*" element={<Navigate to={homePath()} replace />} />
+                <Route path="*" element={<NotFound />} />
             </Routes>
         </BrowserRouter>
     </React.StrictMode>

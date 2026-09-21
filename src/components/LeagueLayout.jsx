@@ -9,20 +9,47 @@
 // navigation between those three. Fetching it here means one request per league
 // visit, and it travels down the outlet rather than through a second context:
 // it is route-shaped data that dies with the route.
+//
+// It is also where an unknown league stops. Nothing is fetched for a slug the
+// league list doesn't have; the reader gets the 404 page instead of an empty
+// dashboard.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useParams } from 'react-router-dom';
-import { LeagueProvider } from '../context/LeagueContext';
+import { LeagueProvider, useLeague } from '../context/LeagueContext';
 import { getSeasons } from '../api/client';
 import useSeasonYear from '../hooks/useSeasonYear';
+import NotFound from './NotFound';
 
 export default function LeagueLayout() {
   const { slug } = useParams();
 
+  // No key={slug}. A keyed provider is a *new* provider on every league change,
+  // and the client allows exactly one 401 subscriber — a second registration
+  // throws rather than quietly winning. Unkeyed, the slug arrives as a changing
+  // prop, which is what the provider's session effect was written for: it
+  // depends on [slug] and guards the in-flight answer so the old league's reply
+  // cannot land as the new league's.
+  return (
+    <LeagueProvider slug={slug}>
+      <LeagueOutlet />
+    </LeagueProvider>
+  );
+}
+
+/**
+ * Everything under the provider: whether the league exists, its season
+ * payload, and the year. It sits below the provider rather than beside it
+ * because the first question it asks — is this a league — is the provider's
+ * to answer.
+ */
+function LeagueOutlet() {
+  const { slug, leagueExists } = useLeague();
+
   // Null means "no answer yet" and is the spinner's condition. A failed request
   // settles on an empty object instead, because a league with no seasons and a
-  // league that could not be reached draw the same blank page today — telling
-  // them apart is the 404 page 5.9 owns, which is what `error` is kept for.
+  // league that could not be reached both still need a page: the views read
+  // `error` to say which one it was.
   const [seasons, setSeasons] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,11 +91,20 @@ export default function LeagueLayout() {
   // load changes identity only when the slug does, so this runs once per league
   // visit. Clearing first is what puts the spinner back up for the new league
   // rather than leaving the old one's tables on screen while it loads.
+  //
+  // It waits for the league list: a slug the server doesn't have gets no
+  // request at all. Bumping the counter on the way out is what stops a reply
+  // for the league just left from landing under a slug that turned out to be
+  // unknown.
   useEffect(() => {
     setSeasons(null);
     setError(null);
+    if (leagueExists !== true) {
+      latestRequest.current += 1;
+      return;
+    }
     load();
-  }, [load]);
+  }, [load, leagueExists]);
 
   // Newest first, as numbers: the payload's keys are strings, and a select
   // whose value is a number next to options built from strings shows nothing
@@ -83,29 +119,23 @@ export default function LeagueLayout() {
   // rewritten once rather than by every view that reads it.
   const { year, urlYear, setYear } = useSeasonYear(years);
 
-  // No key={slug}. A keyed provider is a *new* provider on every league change,
-  // and the client allows exactly one 401 subscriber — a second registration
-  // throws rather than quietly winning. Unkeyed, the slug arrives as a changing
-  // prop, which is what the provider's session effect was written for: it
-  // depends on [slug] and guards the in-flight answer so the old league's reply
-  // cannot land as the new league's.
+  // A 404 is an answer, not a pending state. Until the list lands, "is this a
+  // league" has no answer, and drawing the 404 in that window would flash it
+  // on every load of a real league — for as long as a cold server takes.
+  if (leagueExists === false) return <NotFound unknownLeague />;
+  if (leagueExists === null || seasons === null) return <LoadingScreen />;
+
   return (
-    <LeagueProvider slug={slug}>
-      {seasons === null ? (
-        <LoadingScreen />
-      ) : (
-        <Outlet context={{ seasons, loading, error, refresh: load, years, year, urlYear, setYear }} />
-      )}
-    </LeagueProvider>
+    <Outlet context={{ seasons, loading, error, refresh: load, years, year, urlYear, setYear }} />
   );
 }
 
 /**
  * The spinner App used to draw, one level up. It now guards more than a table:
- * until the payload lands there is no year list to validate a pasted ?year=
- * against and no way to know whether the slug names a real league, and showing
- * a 404 or an empty table in that window is what makes a slow load look like a
- * dead link.
+ * until the league list lands there is no way to know whether the slug names a
+ * real league, and until the payload lands there is no year list to validate a
+ * pasted ?year= against. Showing a 404 or an empty table in either window is
+ * what makes a slow load look like a dead link.
  */
 function LoadingScreen() {
   return (

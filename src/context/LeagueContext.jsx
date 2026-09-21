@@ -54,9 +54,10 @@ export function LeagueProvider({ slug = DEFAULT_LEAGUE, children }) {
     };
   }, []);
 
-  // Whether the slug names a league the server has. Unknown until the list
-  // lands; if it never does, assume it might, so a failed list costs a session
-  // check rather than locking the editor.
+  // Whether the slug names a league the server has: null until the list lands,
+  // then true or false. If the list never lands, assume it might, so a failed
+  // list costs a request rather than locking the editor or showing a 404 for a
+  // league that may well exist.
   const leagueExists = leagues === null
     ? (leaguesFailed ? true : null)
     : leagues.some((league) => league.slug === slug);
@@ -119,12 +120,12 @@ export function LeagueProvider({ slug = DEFAULT_LEAGUE, children }) {
     return () => onUnauthorized(null);
   }, []);
 
-  const value = { slug, leagues, canWrite, refreshSession };
+  const value = { slug, leagues, leagueExists, canWrite, refreshSession };
 
   return <LeagueContext.Provider value={value}>{children}</LeagueContext.Provider>;
 }
 
-/** The current league, its siblings, and what this browser may do to it. */
+/** The current league, whether it exists, its siblings, and what this browser may do to it. */
 export function useLeague() {
   const value = useContext(LeagueContext);
   if (value === null) {
