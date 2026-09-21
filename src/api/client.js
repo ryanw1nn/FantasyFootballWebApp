@@ -30,7 +30,7 @@ export class ApiError extends Error {
 // LEAGUE METADATA — already the new dialect
 // ============================================
 
-/** Every league. Nothing calls this until Phase 5's switcher. */
+/** Every league, with the years each has seasons for. The switcher's list. */
 export function getLeagues() {
   return request('GET', '/api/leagues');
 }

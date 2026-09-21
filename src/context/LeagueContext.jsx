@@ -8,7 +8,7 @@
 // standings row or a matchup, so no view's shape depends on them.
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { getSession, onUnauthorized } from '../api/client';
+import { getLeagues, getSession, onUnauthorized } from '../api/client';
 
 /**
  * The league served when nothing says otherwise. Phase 5 replaces this default
@@ -26,10 +26,40 @@ export function LeagueProvider({ slug = DEFAULT_LEAGUE, children }) {
   // is all this value decides — the guard on the server is the control.
   const [canWrite, setCanWrite] = useState(false);
 
-  // Null until Phase 5 switches getLeagues() on. One row comes back today and
-  // no view can show a second league before the switcher exists, so calling it
-  // now is a round trip that renders nothing.
-  const [leagues] = useState(null);
+  // Every league, as GET /api/leagues lists them. Null means "not loaded yet"
+  // rather than "none", so the switcher can tell the two apart without a
+  // second flag. It is fetched once for the life of the app, not per slug: the
+  // list is the same whichever league is showing.
+  const [leagues, setLeagues] = useState(null);
+
+  // Whether the list failed to arrive. Kept out of the context value — it only
+  // decides whether the session check can still wait for a list that isn't
+  // coming.
+  const [leaguesFailed, setLeaguesFailed] = useState(false);
+
+  useEffect(() => {
+    let current = true;
+
+    getLeagues()
+      .then((body) => {
+        if (current) setLeagues(body.leagues);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch leagues:', err);
+        if (current) setLeaguesFailed(true);
+      });
+
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  // Whether the slug names a league the server has. Unknown until the list
+  // lands; if it never does, assume it might, so a failed list costs a session
+  // check rather than locking the editor.
+  const leagueExists = leagues === null
+    ? (leaguesFailed ? true : null)
+    : leagues.some((league) => league.slug === slug);
 
   /**
    * Ask the server where the session stands. Called on mount and by the editor
@@ -53,10 +83,19 @@ export function LeagueProvider({ slug = DEFAULT_LEAGUE, children }) {
   }, [slug]);
 
   useEffect(() => {
+    // Wait for the list, then ask only about a league that exists. A session
+    // request for an unknown slug can only come back refused, and a refused
+    // read is a defect rather than something to log and carry on from.
+    if (leagueExists === null) return undefined;
+    if (!leagueExists) {
+      setCanWrite(false);
+      return undefined;
+    }
+
     let current = true;
 
-    // The slug can change under us in Phase 5, and the answer for the old
-    // league must not land as the answer for the new one.
+    // The slug can change under us, and the answer for the old league must not
+    // land as the answer for the new one.
     getSession(slug)
       .then((session) => {
         if (current) setCanWrite(session?.canWrite === true);
@@ -69,7 +108,7 @@ export function LeagueProvider({ slug = DEFAULT_LEAGUE, children }) {
     return () => {
       current = false;
     };
-  }, [slug]);
+  }, [slug, leagueExists]);
 
   // The one subscriber the client allows. It fires only for the guarded write,
   // so reaching here means the session the page was drawn for is gone: stop

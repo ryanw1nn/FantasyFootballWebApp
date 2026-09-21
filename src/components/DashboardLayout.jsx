@@ -11,6 +11,7 @@ import { Outlet, useMatch, useOutletContext } from 'react-router-dom';
 import { Edit, Trophy, Unlock } from 'lucide-react';
 
 import { LinkButton } from './ui/Button';
+import LeagueSwitcher from './LeagueSwitcher';
 import { useLeague } from '../context/LeagueContext';
 import { alltimePath, bracketPath, editPath, seasonPath } from '../routes';
 
@@ -26,10 +27,13 @@ export default function DashboardLayout() {
     <div className="min-h-screen bg-slate-100">
       <div className="max-w-7xl mx-auto p-6">
 
-        {/* Header */}
+        {/* Header: the league's name, which becomes the switcher once there
+            is a second league to switch to. */}
         <div className="mb-6 flex items-center gap-3">
           <Trophy className="text-accent-600" size={28}/>
-          <h1 className="text-2xl font-bold text-slate-900">The Fan Club</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            <LeagueSwitcher urlYear={urlYear} />
+          </h1>
         </div>
 
         {/* Controls Section */}

@@ -28,7 +28,7 @@ export function resolveYear(requested, years) {
  * - `year`: the resolved year as a Number, or null while the league has none.
  * - `urlYear`: the same year when the URL names one, null when it doesn't —
  *   what links carry, so a URL with no year keeps meaning "the latest" as the
- *   reader moves around.
+ *   reader moves around. While the league has no seasons it is the raw param.
  * - `setYear`: writes `?year=` in place. Replace rather than push, so the back
  *   button leaves the page instead of walking back through every year picked.
  *
@@ -44,7 +44,10 @@ export default function useSeasonYear(years) {
   const requested = searchParams.get('year');
   const year = resolveYear(requested, years);
 
-  const urlYear = requested === null ? null : year;
+  // With no seasons to resolve against there is nothing better than what the
+  // URL asked for, so links carry that rather than dropping it — otherwise a
+  // trip through a league with no data loses the year on the way back.
+  const urlYear = requested === null ? null : year ?? requested;
   const needsRewrite = requested !== null && year !== null && String(year) !== requested;
 
   const setYear = useCallback(
