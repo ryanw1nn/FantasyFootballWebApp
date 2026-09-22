@@ -3,6 +3,7 @@ import { Trophy, Award } from 'lucide-react';
 
 import { getWeeks } from '../api/client';
 import { useLeague } from '../context/LeagueContext';
+import { categorizeMatchups, getWinner } from '../stats/bracket';
 
 /**
  * PlayoffBracket Component
@@ -39,49 +40,6 @@ export default function PlayoffBracket({ year }) {
         } finally {
             setLoading(false);
         }
-    }
-
-    function categorizeMatchups(weekMatchups, weekNum) {
-        if (!weekMatchups || !weekMatchups.matchups) {
-            return { playoff: [], toiletBowl: [], out: [] };
-        }
-
-        const matchups = weekMatchups.matchups;
-
-        if (weekNum === 15) {
-            return {
-                playoff: matchups.slice(0, 4),
-                toiletBowl: matchups.slice(4, 6),
-                out: matchups.slice(6)
-            };
-        } else if (weekNum === 16) {
-            return {
-                playoff: matchups.slice(0, 2),
-                toiletBowl: matchups.slice(2, 3),
-                out: matchups.slice(3)
-            };
-        } else if(weekNum === 17) {
-            return {
-                playoff: matchups.slice(0, 1),
-                toiletBowl: [],
-                out: matchups.slice(1)
-            };
-        }
-
-        return {
-            playoff: matchups.slice(0, 2),
-            toiletBowl: matchups.slice(2, 4),
-            out: matchups.slice(4)
-        };
-    }
-
-    function getWinner(matchup) {
-        if ((!matchup.team2 || matchup.team2 === '') && matchup.team1Score != null) {
-            return 'team1';
-        }
-
-        if (matchup.team1Score == null || matchup.team2Score == null) return null;
-        return matchup.team1Score > matchup.team2Score ? 'team1' : 'team2';
     }
 
     function renderMatchup(matchup, index, weekNum) {

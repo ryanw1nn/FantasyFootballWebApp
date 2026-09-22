@@ -5,6 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trophy, Medal } from 'lucide-react';
 import Badge from './ui/Badge';
+import { allTimePlayers } from '../stats/allTime';
 
 /**
  * AllTimeTable Component
@@ -43,138 +44,10 @@ export default function AllTimeTable({ allData, searchQuery, onPlayerClick, visi
     // DATA AGGREGATION & FILTERING
     // ==================================
 
-    const allTimeStats = useMemo(() => {
-        const stats = {};
-
-        const pfLeadersByYear = {};
-        const paLeadersByYear = {};
-        const lastPlaceByYear = {};
-        Object.entries(allData)
-            .filter(([year]) => !isNaN(Number(year)))
-            .forEach(([seasonYear, season]) => {
-                if (!Array.isArray(season)) return;
-
-                let maxPF = -1;
-                let pfLeader = null;
-                let maxPA = -1;
-                let paLeader = null;
-                let maxPlace = -1;
-                let lastPlace = null;
-                season.forEach((row) => {
-                    if ((row.pf || 0) > maxPF) {
-                        maxPF = row.pf || 0;
-                        pfLeader = row.name;
-                    }
-                    if ((row.pa || 0) > maxPA) {
-                        maxPA = row.pa || 0;
-                        paLeader = row.name;
-                    }
-                    if (row.place != null && row.place > maxPlace) {
-                        maxPlace = row.place;
-                        lastPlace = row.name;
-                    }
-                });
-                if (pfLeader) {
-                    pfLeadersByYear[seasonYear] = pfLeader;
-                }
-                if (paLeader) {
-                    paLeadersByYear[seasonYear] = paLeader;
-                }
-                if (lastPlace) {
-                    lastPlaceByYear[seasonYear] = lastPlace;
-                }
-            });
-
-        Object.entries(allData)
-            .filter(([year]) => !isNaN(Number(year)))
-            .forEach(([seasonYear, season]) => {
-            if (!Array.isArray(season)) return;
-            season.forEach((row) => {
-                const name = row.name;
-
-                if (!stats[name]) {
-                    stats[name] = {
-                        wins: 0,
-                        losses: 0,
-                        ties: 0,
-                        PF: 0,
-                        PA: 0,
-                        rChampionYears: [],
-                        playoffRounds: 0,
-                        pChampionYears: [],
-                        pfLeaderYears: [],
-                        paLeaderYears: [],
-                        regLoserYears: []
-                    };
-                }
-
-                stats[name].wins += row.wins || 0;
-                stats[name].losses += row.losses || 0;
-                stats[name].ties += row.ties || 0;
-                stats[name].PF += row.pf || 0;
-                stats[name].PA += row.pa || 0;
-
-                if (row.rChampion) {
-                    const shortYear = "'" + seasonYear.toString().slice(-2);
-                    stats[name].rChampionYears.push(shortYear);
-                }
-
-                if (pfLeadersByYear[seasonYear] === name) {
-                    const shortYear = "'" + seasonYear.toString().slice(-2);
-                    stats[name].pfLeaderYears.push(shortYear);
-                }
-
-                if (paLeadersByYear[seasonYear] === name) {
-                    const shortYear = "'" + seasonYear.toString().slice(-2);
-                    stats[name].paLeaderYears.push(shortYear);
-                }
-
-                if (lastPlaceByYear[seasonYear] === name) {
-                    const shortYear = "'" + seasonYear.toString().slice(-2);
-                    stats[name].regLoserYears.push(shortYear);
-                }
-
-                if (row.playoff?.made) {
-                    let rounds = row.playoff.rounds || 0;
-                    if (row.playoff.pChampion) rounds += 1;
-                    stats[name].playoffRounds += rounds;
-                }
-
-                if (row.playoff?.pChampion) {
-                    const shortYear = "'" + seasonYear.toString().slice(-2);
-                    stats[name].pChampionYears.push(shortYear);
-                }
-            });
-        });
-
-        let players = Object.entries(stats).map(([name, s]) => {
-            const totalGames = s.wins + s.losses + s.ties;
-
-            const winPct = totalGames ? (s.wins + 0.5 * s.ties) / totalGames : 0;
-
-            return {
-                name,
-                ...s,
-                totalGames,
-                winPct,
-                PFPG: totalGames ? s.PF / totalGames : 0,
-                PAPG: totalGames ? s.PA / totalGames : 0,
-                rChampionCount: s.rChampionYears.length,
-                pChampionCount: s.pChampionYears.length,
-                pfLeaderCount: s.pfLeaderYears.length,
-                paLeaderCount: s.paLeaderYears.length,
-                regLoserCount: s.regLoserYears.length
-            };
-        });
-
-        if (searchQuery) {
-            players = players.filter(p =>
-                p.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
-
-        return players;
-    }, [allData, searchQuery]);
+    const allTimeStats = useMemo(
+        () => allTimePlayers(allData, searchQuery),
+        [allData, searchQuery]
+    );
 
     // ==================================
     // SORTING

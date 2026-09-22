@@ -5,6 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trophy, Medal } from 'lucide-react';
 import Badge from './ui/Badge';
+import { prepareSeasonRows } from '../stats/season';
 
 /**
  * SeasonTable Component
@@ -44,50 +45,10 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
   // DATA PREPARATION & FILTERING
   // ==================================
 
-  const preparedData = useMemo(() => {
-    let data = seasonData.map((row, i) => {
-      const wins = Number(row.wins) || 0;
-      const losses = Number(row.losses) || 0;
-      const ties = Number(row.ties) || 0;
-      const totalGames = wins + losses + ties;
-
-      const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
-
-      const change = row.prevPlace != null && row.place != null
-        ? row.prevPlace - row.place
-        : 0;
-
-      let placeValue = row.place;
-
-      if (typeof placeValue === 'string') {
-        const parsed = parseInt(placeValue);
-        if (!isNaN(parsed)) {
-          placeValue = parsed;
-        }
-      }
-
-      return {
-        ...row,
-        wins,
-        losses,
-        ties,
-        totalGames,
-        winPct,
-        change,
-        placeValue,
-        _idx: i,
-      };
-    });
-
-    if (searchQuery) {
-      data = data.filter(d =>
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (d.team && d.team.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    return data;
-  }, [seasonData, searchQuery]);
+  const preparedData = useMemo(
+    () => prepareSeasonRows(seasonData, searchQuery),
+    [seasonData, searchQuery]
+  );
 
   // ==================================
   // SORTING

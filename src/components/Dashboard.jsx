@@ -10,6 +10,7 @@ import useColumnVisibility from '../hooks/useColumnVisibility';
 import { SEASON_COLUMNS, ALLTIME_COLUMNS } from './tableColumns';
 import { useLeague } from '../context/LeagueContext';
 import { playerPath } from '../routes';
+import { getSeasonArray, seasonStatsCards } from '../stats/season';
 
 /**
  * The season table and the all-time table. Two routes, one component: they
@@ -37,13 +38,7 @@ export default function Dashboard({ view }) {
   // HELPER FUNCTIONS
   // ============================================
 
-  const getSeasonArray = (year) => {
-    const seasonData = data[year];
-    if (Array.isArray(seasonData)) return seasonData;
-    if (seasonData?.standings && Array.isArray(seasonData.standings)) return seasonData.standings;
-    if (seasonData?.teams && Array.isArray(seasonData.teams)) return seasonData.teams;
-    return [];
-  };
+  const teamsFor = (year) => getSeasonArray(data, year);
 
   const filterTeams = (teamsArray) => {
     if (!Array.isArray(teamsArray)) return [];
@@ -62,29 +57,10 @@ export default function Dashboard({ view }) {
   // COMPUTED VALUES
   // ============================================
 
-  const currentSeasonStats = useMemo(() => {
-    const season = getSeasonArray(selectedYear);
-
-    const totalGames = season.reduce(
-      (sum, team) => sum + ((team.wins || 0) + (team.losses || 0) + (team.ties || 0)),
-      0
-    );
-
-    const avgPFPG = season.length > 0
-      ? season.reduce((sum, team) => {
-        const games = (team.wins || 0) + (team.losses || 0) + (team.ties || 0);
-        return sum + (games > 0 ? (team.pf || 0) / games : 0);
-        }, 0) / season.length
-      : 0;
-
-    const activeTeams = season.filter(team => team.state === 'active').length;
-
-    return {
-      totalGames,
-      avgPFPG,
-      activeTeams
-    };
-  }, [selectedYear, data]);
+  const currentSeasonStats = useMemo(
+    () => seasonStatsCards(data, selectedYear),
+    [selectedYear, data]
+  );
 
   // A league with no seasons used to print "null Season Rankings" — the year
   // interpolated before any season had arrived to set it.
@@ -177,7 +153,7 @@ export default function Dashboard({ view }) {
         <div className="overflow-auto max-h-[800px]">
           {isSeason ? (
             <SeasonTable
-              seasonData={filterTeams(getSeasonArray(selectedYear))}
+              seasonData={filterTeams(teamsFor(selectedYear))}
               year={selectedYear}
               onPlayerClick={handlePlayerClick}
               visibleColumns={seasonCols}
@@ -187,7 +163,7 @@ export default function Dashboard({ view }) {
               allData={Object.fromEntries(
                 Object.entries(data).map(([year, seasonData]) => [
                   year,
-                  filterTeams(getSeasonArray(year))
+                  filterTeams(teamsFor(year))
                 ])
               )}
               onPlayerClick={handlePlayerClick}
