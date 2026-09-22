@@ -2,15 +2,15 @@
 // what a failure looks like. No React in here: it is a plain module, so a route
 // loader in Phase 5 can call it without becoming a component.
 //
-// Every function takes a slug, including the three whose URL has no :slug in
-// it. Those reach the compatibility aliases, which have only ever meant the
+// Every function takes a slug, including the two whose URL still has no :slug
+// in it. Those reach the compatibility aliases, which have only ever meant the
 // default league — so any other slug is a bug the module refuses rather than a
-// week written into the wrong league. When Phase 6 swaps those URLs for the
-// league-scoped ones, no call site moves.
+// week written into the wrong league. 6.6 moved getSeasons onto its
+// league-scoped route without moving its call site; 6.7 moves the last two.
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-/** The league the four aliases serve. Mirrors DEFAULT_LEAGUE in server/queries.mjs. */
+/** The league the remaining aliases serve. Mirrors DEFAULT_LEAGUE in server/queries.mjs. */
 const ALIAS_LEAGUE = 'fan-club';
 
 /**
@@ -41,13 +41,23 @@ export function getLeague(slug) {
 }
 
 // ============================================
-// SEASON DATA — the file's dialect, via the aliases
+// SEASON DATA — the editor's two calls are still the file's dialect
 // ============================================
 
-/** Every season of the league: teams, standings and weeks in one payload. */
-export function getSeasons(slug) {
-  requireAliasLeague(slug);
-  return request('GET', '/seasons');
+/**
+ * Every season of the league: teams, standings and weeks in one payload.
+ *
+ * The response is wrapped — `{ seasons: { "2020": … } }` — so it can grow a
+ * field without changing type. The wrapper is unwrapped here rather than in
+ * the layout, so the one place that knows the API's shape stays the one place
+ * that knows it.
+ */
+export async function getSeasons(slug) {
+  const body = await request(
+    'GET',
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}/seasons`
+  );
+  return body.seasons;
 }
 
 /** One season's weeks and teams, which is all the edit page loads. */
@@ -197,8 +207,8 @@ function requireSlug(slug) {
 }
 
 /**
- * The aliases carry no slug, so the module checks what the URL cannot. Phase 6
- * gives these three league-scoped URLs and this check goes away.
+ * The aliases carry no slug, so the module checks what the URL cannot. 6.7
+ * gives the last two league-scoped URLs and this check goes away.
  */
 function requireAliasLeague(slug) {
   if (requireSlug(slug) !== ALIAS_LEAGUE) {

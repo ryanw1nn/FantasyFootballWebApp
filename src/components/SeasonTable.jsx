@@ -115,12 +115,12 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                 <th className="px-2 py-3 text-center font-semibold whitespace-nowrap">Δ</th>
               )}
 
-              <th className={thLeftCompact} onClick={() => requestSort("team")}>
-                Team {getSortIcon("team")}
+              <th className={thLeftCompact} onClick={() => requestSort("team_name")}>
+                Team {getSortIcon("team_name")}
               </th>
 
-              <th className={thLeftCompact} onClick={() => requestSort("name")}>
-                Owner {getSortIcon("name")}
+              <th className={thLeftCompact} onClick={() => requestSort("ownerName")}>
+                Owner {getSortIcon("ownerName")}
               </th>
 
               {showWinPct && (
@@ -181,10 +181,10 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                   <td className="px-2.5 py-3 text-center font-bold text-slate-900">
                     <div className="flex items-center justify-center gap-1">
                       {row.placeValue}
-                      {row.rChampion && (
+                      {row.is_regular_champ && (
                         <Badge icon={Medal} title="Regular Season Champion">RS</Badge>
                       )}
-                      {row.playoff?.pChampion && (
+                      {row.is_playoff_champ && (
                         <Badge variant="gold" icon={Trophy} title="Playoff Champion">PO</Badge>
                       )}
                     </div>
@@ -205,16 +205,23 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                   )}
 
                   <td className="px-2.5 py-3 font-medium text-slate-900 max-w-[160px] truncate">
-                    {row.team}
+                    {row.team_name}
                   </td>
 
                   <td className="px-2.5 py-3 font-medium text-slate-900 max-w-[140px] truncate">
-                    <button
-                      onClick={() => onPlayerClick && onPlayerClick(row.name)}
-                      className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer truncate block"
-                    >
-                      {row.name}
-                    </button>
+                    {/* A botted season belongs to nobody, so there is no player
+                        page to send the reader to: the label is text, not a
+                        button that opens an empty page. */}
+                    {row.display_name == null ? (
+                      <span className="truncate block">{row.ownerName}</span>
+                    ) : (
+                      <button
+                        onClick={() => onPlayerClick && onPlayerClick(row.ownerName)}
+                        className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer truncate block"
+                      >
+                        {row.ownerName}
+                      </button>
+                    )}
                   </td>
 
                   {showWinPct && (

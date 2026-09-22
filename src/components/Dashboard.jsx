@@ -24,10 +24,12 @@ export default function Dashboard({ view }) {
   const navigate = useNavigate();
   const isSeason = view === 'season';
 
+  // The keys are the payload's own status values. The fourth key the file's
+  // dialect had was a one-season state the schema never adopted, and it has
+  // matched no row since 1.3.
   const [filters, setFilters] = useState({
     active: true,
     inactive: false,
-    jake2020: true,
     botted: false,
   });
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -42,7 +44,7 @@ export default function Dashboard({ view }) {
 
   const filterTeams = (teamsArray) => {
     if (!Array.isArray(teamsArray)) return [];
-    return teamsArray.filter((team) => filters[team.state]);
+    return teamsArray.filter((team) => filters[team.status]);
   };
 
   const toggleFilter = (stateKey) => {

@@ -9,10 +9,12 @@
  * nothing else, so no total here can span two leagues.
  */
 
+import { isPlayerTeam, ownerLabel } from './league';
+
 /**
  * Each season's points-for leader, points-against leader and last place.
  *
- * @param {Object} allData - one league's seasons, keyed by year, each an array of rows
+ * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
  * @returns {{pfLeadersByYear: Object, paLeadersByYear: Object, lastPlaceByYear: Object}}
  */
 export function seasonLeaders(allData) {
@@ -32,17 +34,22 @@ export function seasonLeaders(allData) {
       let maxPlace = -1;
       let lastPlace = null;
       season.forEach((row) => {
+        // A botted slot is not a player, so it cannot hold an award. It is
+        // still a row of the season, which is why it is skipped here rather
+        // than filtered out of the season first.
+        if (!isPlayerTeam(row)) return;
+
         if ((row.pf || 0) > maxPF) {
           maxPF = row.pf || 0;
-          pfLeader = row.name;
+          pfLeader = ownerLabel(row);
         }
         if ((row.pa || 0) > maxPA) {
           maxPA = row.pa || 0;
-          paLeader = row.name;
+          paLeader = ownerLabel(row);
         }
         if (row.place != null && row.place > maxPlace) {
           maxPlace = row.place;
-          lastPlace = row.name;
+          lastPlace = ownerLabel(row);
         }
       });
       if (pfLeader) {
@@ -62,7 +69,7 @@ export function seasonLeaders(allData) {
 /**
  * One row per player: career record, points, championships and award years.
  *
- * @param {Object} allData - one league's seasons, keyed by year, each an array of rows
+ * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
  * @param {string} [searchQuery] - matches a player name
  * @returns {Array} a row per player, unsorted
  */
@@ -76,7 +83,11 @@ export function allTimePlayers(allData, searchQuery) {
     .forEach(([seasonYear, season]) => {
     if (!Array.isArray(season)) return;
     season.forEach((row) => {
-      const name = row.name;
+      // The all-time table lists players. A botted season belongs to nobody,
+      // so it has no career to total (6.2(d)).
+      if (!isPlayerTeam(row)) return;
+
+      const name = ownerLabel(row);
 
       if (!stats[name]) {
         stats[name] = {
@@ -100,7 +111,7 @@ export function allTimePlayers(allData, searchQuery) {
       stats[name].PF += row.pf || 0;
       stats[name].PA += row.pa || 0;
 
-      if (row.rChampion) {
+      if (row.is_regular_champ) {
         const shortYear = "'" + seasonYear.toString().slice(-2);
         stats[name].rChampionYears.push(shortYear);
       }
@@ -120,13 +131,14 @@ export function allTimePlayers(allData, searchQuery) {
         stats[name].regLoserYears.push(shortYear);
       }
 
-      if (row.playoff?.made) {
-        let rounds = row.playoff.rounds || 0;
-        if (row.playoff.pChampion) rounds += 1;
-        stats[name].playoffRounds += rounds;
-      }
+      // playoff_rounds is the rung actually reached, so the champion's own
+      // final is already in it: the +1 the file's dialect needed comes out in
+      // the same change that puts this key in. And made_playoffs is generated
+      // from playoff_rounds >= 1, so the gate it used to stand behind adds
+      // nothing to a sum.
+      stats[name].playoffRounds += row.playoff_rounds || 0;
 
-      if (row.playoff?.pChampion) {
+      if (row.is_playoff_champ) {
         const shortYear = "'" + seasonYear.toString().slice(-2);
         stats[name].pChampionYears.push(shortYear);
       }

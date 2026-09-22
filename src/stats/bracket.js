@@ -10,6 +10,8 @@
  * changes it.
  */
 
+import { isBye } from './league';
+
 /**
  * Split a week's matchups into the bracket's three columns.
  *
@@ -60,10 +62,10 @@ export function categorizeMatchups(weekMatchups, weekNum) {
  * @returns {'team1'|'team2'|null}
  */
 export function getWinner(matchup) {
-  if ((!matchup.team2 || matchup.team2 === '') && matchup.team1Score != null) {
+  if (isBye(matchup) && matchup.team2_id == null && matchup.team1_score != null) {
     return 'team1';
   }
 
-  if (matchup.team1Score == null || matchup.team2Score == null) return null;
-  return matchup.team1Score > matchup.team2Score ? 'team1' : 'team2';
+  if (matchup.team1_score == null || matchup.team2_score == null) return null;
+  return matchup.team1_score > matchup.team2_score ? 'team1' : 'team2';
 }

@@ -10,19 +10,18 @@
  * the one place two leagues' numbers could meet.
  */
 
+import { joinStandings, ownerLabel } from './league';
+
 /**
- * The teams of a season, whatever shape the payload keeps them in.
+ * The rows of a season: its standings joined to its teams, since the payload
+ * keeps the record and the team apart and every table wants them together.
  *
  * @param {Object} seasons - one league's seasons, keyed by year
  * @param {string|number} year
  * @returns {Array} the season's rows, or an empty array
  */
 export function getSeasonArray(seasons, year) {
-  const seasonData = seasons[year];
-  if (Array.isArray(seasonData)) return seasonData;
-  if (seasonData?.standings && Array.isArray(seasonData.standings)) return seasonData.standings;
-  if (seasonData?.teams && Array.isArray(seasonData.teams)) return seasonData.teams;
-  return [];
+  return joinStandings(seasons?.[year]);
 }
 
 /**
@@ -47,7 +46,7 @@ export function seasonStatsCards(seasons, year) {
       }, 0) / season.length
     : 0;
 
-  const activeTeams = season.filter(team => team.state === 'active').length;
+  const activeTeams = season.filter(team => team.status === 'active').length;
 
   return {
     totalGames,
@@ -60,8 +59,8 @@ export function seasonStatsCards(seasons, year) {
  * The season table's rows: records totalled, rank change derived, place
  * coerced to a number where it is a numeric string.
  *
- * @param {Array} seasonData - the season's rows, already filtered by the caller
- * @param {string} [searchQuery] - matches an owner name or a team name
+ * @param {Array} seasonData - the season's joined rows, already filtered by the caller
+ * @param {string} [searchQuery] - matches an owner label or a team name
  * @returns {Array} a row per team, in the order it was given
  */
 export function prepareSeasonRows(seasonData, searchQuery) {
@@ -73,8 +72,8 @@ export function prepareSeasonRows(seasonData, searchQuery) {
 
     const winPct = totalGames ? (wins + 0.5 * ties) / totalGames : 0;
 
-    const change = row.prevPlace != null && row.place != null
-      ? row.prevPlace - row.place
+    const change = row.prev_place != null && row.place != null
+      ? row.prev_place - row.place
       : 0;
 
     let placeValue = row.place;
@@ -88,6 +87,9 @@ export function prepareSeasonRows(seasonData, searchQuery) {
 
     return {
       ...row,
+      // A view-model field, like winPct and change: the label the table shows
+      // and sorts on, derived once rather than at every cell.
+      ownerName: ownerLabel(row),
       wins,
       losses,
       ties,
@@ -100,9 +102,10 @@ export function prepareSeasonRows(seasonData, searchQuery) {
   });
 
   if (searchQuery) {
+    const needle = searchQuery.toLowerCase();
     data = data.filter(d =>
-      d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (d.team && d.team.toLowerCase().includes(searchQuery.toLowerCase()))
+      (d.ownerName && d.ownerName.toLowerCase().includes(needle)) ||
+      (d.team_name && d.team_name.toLowerCase().includes(needle))
     );
   }
 

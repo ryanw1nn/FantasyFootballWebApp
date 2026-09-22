@@ -50,10 +50,12 @@ export default function PlayerStatsPage() {
     // Initialize opponent filters
     useEffect(() => {
         if (playerGames.length > 0 && Object.keys(opponentFilters).length === 0) {
-            const opponents = [...new Set(playerGames.map(g => g.opponent))];
             const initialFilters = {};
-            opponents.forEach(opp => {
-                initialFilters[opp] = !opp.toLowerCase().includes('botted');
+            playerGames.forEach(game => {
+                // Keyed on the opponent's status, not on its label reading
+                // "botted": the label is a presentation choice, the status is
+                // what the season actually was.
+                initialFilters[game.opponent] = game.opponentStatus !== 'botted';
             });
             setOpponentFilters(initialFilters);
         }       

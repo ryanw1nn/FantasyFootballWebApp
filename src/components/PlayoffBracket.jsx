@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Trophy, Award } from 'lucide-react';
 
-import { getWeeks } from '../api/client';
-import { useLeague } from '../context/LeagueContext';
 import { categorizeMatchups, getWinner } from '../stats/bracket';
+import { BYE_LABEL, isBye, ownerLabel, teamsById } from '../stats/league';
 
 /**
  * PlayoffBracket Component
@@ -12,41 +11,37 @@ import { categorizeMatchups, getWinner } from '../stats/bracket';
  * Shows three segments: Playoff, Toilet Bowl, and Out games
  */
 
-export default function PlayoffBracket({ year }) {
-    // The year arrives as a prop from the bracket's route, which owns where it
-    // comes from. The slug is read from the context, like every other view.
-    const { slug } = useLeague();
-    const [weeks, setWeeks] = useState({ 15: null, 16: null, 17: null });
-    const [loading, setLoading] = useState(true);
+export default function PlayoffBracket({ year, seasonData }) {
+    // Both props come from the bracket's route, which reads them off the
+    // layout's payload. The bracket used to fetch the week itself, which was
+    // the third request for a season the layout had already loaded — and the
+    // league-scoped weeks route carries no teams, so a side that is now an id
+    // would have had nothing to become a name against.
+    const weeks = useMemo(() => ({
+        15: seasonData?.weeks?.['15'] || null,
+        16: seasonData?.weeks?.['16'] || null,
+        17: seasonData?.weeks?.['17'] || null,
+    }), [seasonData]);
 
-    useEffect(() => {
-        loadBracketData();
-    }, [year, slug]);
+    // A side is a team id, and ids belong to a season.
+    const teams = useMemo(() => teamsById(seasonData), [seasonData]);
 
-    async function loadBracketData() {
-        setLoading(true);
-        try {
-            const data = await getWeeks(slug, year);
-
-            const bracketWeeks = {
-                15: data.weeks?.['15'] || null,
-                16: data.weeks?.['16'] || null,
-                17: data.weeks?.['17'] || null
-            };
-
-            setWeeks(bracketWeeks);
-        } catch (err) {
-            console.error('Failed to load bracket data:', err);
-        } finally {
-            setLoading(false);
-        }
-    }
+    // The file's dialect wrote a BYE as the opponent's *name*, so the word came
+    // through as a team. Here one empty side is a BYE and two empty sides are a
+    // slot nobody has filled (6.2(e)), which is what tells BYE from TBD.
+    const sideName = (matchup, id) => {
+        if (id != null) return ownerLabel(teams.get(id));
+        return isBye(matchup) ? BYE_LABEL : null;
+    };
 
     function renderMatchup(matchup, index, weekNum) {
 
-        const isByeWithScore = (!matchup?.team2 || matchup?.team2 === '') && matchup?.team1Score != null;
-        const hasRegularScores = matchup?.team1Score != null && matchup?.team2Score !== null;
-        const hasTeamNames = matchup?.team1 || matchup?.team2;
+        const team1Name = sideName(matchup, matchup?.team1_id);
+        const team2Name = sideName(matchup, matchup?.team2_id);
+
+        const isByeWithScore = matchup?.team2_id == null && matchup?.team1_score != null;
+        const hasRegularScores = matchup?.team1_score != null && matchup?.team2_score !== null;
+        const hasTeamNames = team1Name || team2Name;
 
         if (!matchup || (!hasTeamNames && !isByeWithScore && !hasRegularScores)) {
             return (
@@ -64,11 +59,11 @@ export default function PlayoffBracket({ year }) {
                     winner === 'team1' ? 'bg-green-50 border-b-2 border-green-500' : 'border-b border-gray-200'
                 }`}>
                     <span className={`font-medium ${winner === 'team1' ? 'text-green-900' : 'text-gray-900'}`}>
-                        {matchup.team1 || 'TBD'}
+                        {team1Name || 'TBD'}
                     </span>
-                    {matchup.team1Score != null && (
+                    {matchup.team1_score != null && (
                         <span className={`font-bold ${winner === 'team1' ? 'text-green-700' : 'text-gray-600'}`}>
-                            {matchup.team1Score?.toFixed(1) || '-'}
+                            {matchup.team1_score?.toFixed(1) || '-'}
                         </span>
                     )}
                 </div>
@@ -77,11 +72,11 @@ export default function PlayoffBracket({ year }) {
                     winner === 'team2' ? 'bg-green-50' : ''
                 }`}>
                     <span className={`font-medium ${winner === 'team2' ? 'text-green-900' : 'text-gray-900'}`}>
-                        {matchup.team2 || 'TBD'}
+                        {team2Name || 'TBD'}
                     </span>
-                    {matchup.team2Score && (
+                    {matchup.team2_score && (
                         <span className={`font-bold ${winner === 'team2' ? 'text-green-700' : 'text-gray-600'}`}>
-                            {matchup.team2Score?.toFixed(1) || '-'}
+                            {matchup.team2_score?.toFixed(1) || '-'}
                         </span>
                     )}
                 </div>
@@ -93,17 +88,6 @@ export default function PlayoffBracket({ year }) {
     const week15Data = categorizeMatchups(weeks[15], 15);
     const week16Data = categorizeMatchups(weeks[16], 16);
     const week17Data = categorizeMatchups(weeks[17], 17);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading playoff bracket...</p>
-                </div>
-            </div>
-        );
-    }
 
     if (year === 2020 || year === '2020') {
         return (
