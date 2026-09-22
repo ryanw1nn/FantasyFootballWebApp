@@ -345,6 +345,7 @@ async function runSuite(run, { server, routes, restart }) {
     ...recordedRoutes(),
     "/api/leagues",
     `/api/leagues/${LEAGUE}`,
+    `/api/leagues/${LEAGUE}/seasons`,
     `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}`,
     `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks`,
     `/api/leagues/${LEAGUE}/session`,

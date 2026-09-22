@@ -114,3 +114,16 @@ export function apiSeason(bundle) {
     weeks: apiWeeks(bundle),
   };
 }
+
+/**
+ * Every season of one league, keyed by year — a loop over apiSeason and
+ * nothing else. A field derived here rather than there is a second
+ * implementation of a season, and the two would drift.
+ */
+export function apiSeasons(bundles) {
+  const seasons = {};
+
+  for (const bundle of bundles) seasons[bundle.season.year] = apiSeason(bundle);
+
+  return seasons;
+}

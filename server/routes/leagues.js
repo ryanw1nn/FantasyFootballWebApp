@@ -12,6 +12,7 @@ import {
   allLeagues,
   leagueBySlug,
   loadSeason,
+  loadSeasons,
   matchupFromIds,
   pool,
   replaceWeek,
@@ -21,6 +22,7 @@ import {
   apiLeague,
   apiLeagues,
   apiSeason,
+  apiSeasons,
   apiStandings,
   apiWeeks,
 } from "../serialize-api.mjs";
@@ -42,6 +44,20 @@ router.get("/api/leagues/:slug", async (req, res) => {
 
   const seasons = await seasonsOfLeague(pool, league.slug);
   res.json(apiLeague(league, seasons));
+});
+
+// GET every season of one league, keyed by year. Three queries whatever the
+// season count, so a whole league costs the same round trips as one season of
+// it — which is what lets a view read a league in a single visit.
+router.get("/api/leagues/:slug/seasons", async (req, res) => {
+  const league = await leagueBySlug(pool, req.params.slug);
+  if (league === null) return res.status(404).json({ error: "League not found" });
+
+  // A league with no seasons is an empty object, not a 404: the league exists.
+  const seasons = await seasonsOfLeague(pool, league.slug);
+  const bundles = await loadSeasons(pool, seasons);
+
+  res.json({ seasons: apiSeasons(seasons.map((season) => bundles.get(season.id))) });
 });
 
 // GET one season — teams, standings and weeks
