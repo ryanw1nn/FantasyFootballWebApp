@@ -1,17 +1,14 @@
-// The only place in src/ that knows the API's address, its two dialects and
-// what a failure looks like. No React in here: it is a plain module, so a route
-// loader in Phase 5 can call it without becoming a component.
+// The only place in src/ that knows the API's address, its dialect and what a
+// failure looks like. No React in here: it is a plain module, so a route loader
+// in Phase 5 can call it without becoming a component.
 //
-// Every function takes a slug, including the two whose URL still has no :slug
-// in it. Those reach the compatibility aliases, which have only ever meant the
-// default league — so any other slug is a bug the module refuses rather than a
-// week written into the wrong league. 6.6 moved getSeasons onto its
-// league-scoped route without moving its call site; 6.7 moves the last two.
+// Every function takes a slug, and every URL now carries it. The read path moved
+// onto the league-scoped routes first and the editor's load and write followed,
+// so nothing here reaches a compatibility alias any more — the aliases still
+// exist and still pass their gate, they just have no caller. A slug other than
+// the default is now something this module can address rather than refuse.
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
-/** The league the remaining aliases serve. Mirrors DEFAULT_LEAGUE in server/queries.mjs. */
-const ALIAS_LEAGUE = 'fan-club';
 
 /**
  * A response the server refused. `status` is its code and `message` is the
@@ -41,7 +38,7 @@ export function getLeague(slug) {
 }
 
 // ============================================
-// SEASON DATA — the editor's two calls are still the file's dialect
+// SEASON DATA
 // ============================================
 
 /**
@@ -60,10 +57,20 @@ export async function getSeasons(slug) {
   return body.seasons;
 }
 
-/** One season's weeks and teams, which is all the edit page loads. */
-export function getWeeks(slug, year) {
-  requireAliasLeague(slug);
-  return request('GET', `/api/seasons/${encodeURIComponent(year)}/weeks`);
+/**
+ * One season on its own: its shape, its teams, its standings and its weeks.
+ *
+ * The editor's load. It reads a fresh copy of the season it is about to write
+ * rather than sharing the layout's payload, because that payload is what every
+ * other view is rendering and the editor holds unsaved edits on top of its own.
+ * `season` is what carries `playoff_start_week`, which is how the editor knows
+ * which weeks are playoff weeks without hardcoding this league's calendar.
+ */
+export function getSeason(slug, year) {
+  return request(
+    'GET',
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}/seasons/${encodeURIComponent(year)}`
+  );
 }
 
 /**
@@ -74,10 +81,10 @@ export function getWeeks(slug, year) {
  * wrong". That is what `guarded` marks, and it is why it appears once.
  */
 export function saveWeek(slug, year, week, matchups) {
-  requireAliasLeague(slug);
   return request(
     'PUT',
-    `/api/seasons/${encodeURIComponent(year)}/weeks/${encodeURIComponent(week)}`,
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}` +
+      `/seasons/${encodeURIComponent(year)}/weeks/${encodeURIComponent(week)}`,
     { body: { matchups }, withCookie: true, guarded: true }
   );
 }
@@ -204,16 +211,4 @@ function requireSlug(slug) {
     throw new Error('A league slug is required');
   }
   return slug;
-}
-
-/**
- * The aliases carry no slug, so the module checks what the URL cannot. 6.7
- * gives the last two league-scoped URLs and this check goes away.
- */
-function requireAliasLeague(slug) {
-  if (requireSlug(slug) !== ALIAS_LEAGUE) {
-    throw new Error(
-      `Season data for "${slug}" has no route yet: the aliases only serve "${ALIAS_LEAGUE}"`
-    );
-  }
 }

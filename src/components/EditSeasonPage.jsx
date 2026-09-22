@@ -3,8 +3,7 @@ import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2, Lock
 
 import {
   ApiError,
-  getSeasons,
-  getWeeks,
+  getSeason,
   saveWeek as saveWeekRequest,
   unlock as unlockLeague,
   lock as lockLeague,
@@ -12,6 +11,7 @@ import {
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
+import { BYE_LABEL, isBye, ownerLabel } from '../stats/league';
 
 /**
  * EditSeasonPage Component
@@ -32,7 +32,16 @@ export default function EditSeasonPage() {
   // The layout holds the payload every other view draws, and a save is the one
   // event that changes it. Leaving this page no longer unmounts anything that
   // would refetch, so the season table would show the old score without this.
-  const { refresh: refreshSeasons, year: urlSeason, urlYear } = useOutletContext();
+  //
+  // `years` comes from the same payload, so the year select and the dashboard's
+  // can never disagree about which seasons a league has — and the editor no
+  // longer fetches a league-wide list of its own to find out.
+  const {
+    refresh: refreshSeasons,
+    year: urlSeason,
+    urlYear,
+    years: availableYears,
+  } = useOutletContext();
 
   // ============================================
   // STATE MANAGEMENT
@@ -42,11 +51,25 @@ export default function EditSeasonPage() {
   // is one click rather than two. From here the select is the editor's own and
   // may move away from the URL; mirroring it into the address bar would be a
   // bigger change than opening on the right year. Empty only for a league with
-  // no seasons, where loadAvailableYears has nothing to pick either.
+  // no seasons, where the layout's year list is empty too.
   const [selectedYear, setSelectedYear] = useState(urlSeason === null ? '' : String(urlSeason));
-  const [availableYears, setAvailableYears] = useState([]);
   const [weeks, setWeeks] = useState({});
   const [teams, setTeams] = useState([]);
+  // What the season is configured as, which is where playoff_start_week lives.
+  // Null until the first load lands: no season loaded means no week can be
+  // called a playoff week, which is what the initial render should say.
+  const [season, setSeason] = useState(null);
+
+  // The matchup whose teams are being changed right now, as "<week>:<index>".
+  //
+  // A BYE is one side empty and the other filled, which is also what a pairing
+  // looks like halfway through being typed in — pick the first team and the
+  // second side would turn into the word BYE before it could be picked, leaving
+  // the matchup impossible to finish. The stored data cannot tell those apart;
+  // only this page knows, because only this page knows someone is mid-edit. So
+  // the matchup being edited is never read as a BYE, and it goes back to being
+  // one as soon as the editor moves on.
+  const [editing, setEditing] = useState(null);
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -64,11 +87,14 @@ export default function EditSeasonPage() {
   // ============================================
   
   /**
-   * Load available years on mount
+   * Fall back to the newest season when the URL named none. The layout has
+   * already loaded the league, so this needs no request of its own.
    */
   useEffect(() => {
-    loadAvailableYears();
-  }, []);
+    if (!selectedYear && availableYears.length > 0) {
+      setSelectedYear(String(availableYears[0]));
+    }
+  }, [availableYears, selectedYear]);
 
   /**
    * Load week data when year changes
@@ -79,34 +105,17 @@ export default function EditSeasonPage() {
     }
   }, [selectedYear]);
 
-  async function loadAvailableYears() {
-    try {
-      const data = await getSeasons(slug);
-
-      // extract years and sort descending (newest first)
-      const years = Object.keys(data).sort((a, b) => Number(b) - Number(a));
-      setAvailableYears(years);
-
-      // set the most recent year as default if not already set
-      if (years.length > 0 && !selectedYear) {
-        setSelectedYear(years[0]);
-      }
-    } catch (err) {
-      console.error('Failed to load available years:', err);
-      setMessage('⚠️ Failed to load available years');
-    }
-  }
-  
   async function loadSeasonData() {
     setLoading(true);
     try {
-      const data = await getWeeks(slug, selectedYear);
+      const data = await getSeason(slug, selectedYear);
 
-      setWeeks(data.weeks || {});
+      setSeason(data.season ?? null);
+      setWeeks(editableWeeks(data.weeks));
       setTeams(data.teams || []);
-      
+
       // Auto-expand week 1 if no weeks are expanded
-      if (!expandedWeek && Object.keys(data.weeks).length > 0) {
+      if (!expandedWeek && Object.keys(data.weeks || {}).length > 0) {
         setExpandedWeek('1');
       }
     } catch (err) {
@@ -174,13 +183,37 @@ export default function EditSeasonPage() {
    * Toggle week expansion
    */
   function toggleWeek(weekNum) {
+    setEditing(null);
     setExpandedWeek(expandedWeek === weekNum ? null : weekNum);
   }
 
+  /** How a matchup is named while it is being edited. Its place in the week. */
+  function matchupKey(weekNum, matchupIndex) {
+    return `${weekNum}:${matchupIndex}`;
+  }
+
   /**
-   * Update a matchup's team assignment
+   * Whether this side should read as a BYE rather than offer a dropdown.
+   *
+   * Empty, its opponent filled, and nobody in the middle of changing it.
+   */
+  function isByeSide(weekNum, matchup, matchupIndex, field) {
+    if (matchup[field] !== null) return false;
+    if (editing === matchupKey(weekNum, matchupIndex)) return false;
+    return isBye(matchup);
+  }
+
+  /**
+   * Update a matchup's team assignment.
+   *
+   * An <option>'s value is always a string, and a team id is a number the
+   * server compares with ===. Converting here, at the one place a select writes
+   * state, is what keeps a save from coming back 400 Unknown team "7".
    */
   function updateMatchupTeam(weekNum, matchupIndex, field, value) {
+    const teamId = value === '' ? null : Number(value);
+
+    setEditing(matchupKey(weekNum, matchupIndex));
     setWeeks(prev => {
       const newWeeks = { ...prev };
       const week = newWeeks[weekNum];
@@ -190,7 +223,7 @@ export default function EditSeasonPage() {
       const matchups = [...week.matchups];
       matchups[matchupIndex] = {
         ...matchups[matchupIndex],
-        [field]: value
+        [field]: teamId
       };
 
       newWeeks[weekNum] = { matchups };
@@ -222,6 +255,10 @@ export default function EditSeasonPage() {
   /**
    * get available teams for a specific week
    * excludes teams already assigned in that week
+   *
+   * Keyed on team ids rather than on the owner's name: two teams in a season can
+   * read alike on screen — a botted slot has no owner at all — and a name was
+   * never what the week is stored by.
    */
   function getAvailableTeams(weekNum, currentMatchupIndex, currentField) {
     const week = weeks[weekNum];
@@ -235,21 +272,21 @@ export default function EditSeasonPage() {
     const assignedTeams = new Set();
     week.matchups.forEach((matchup, idx) => {
       if (idx === currentMatchupIndex) {
-        if (currentField === 'team1' && matchup.team2) {
-          assignedTeams.add(matchup.team2);
-        } else if (currentField === 'team2' && matchup.team1) {
-          assignedTeams.add(matchup.team1);
+        if (currentField === 'team1_id' && matchup.team2_id != null) {
+          assignedTeams.add(matchup.team2_id);
+        } else if (currentField === 'team2_id' && matchup.team1_id != null) {
+          assignedTeams.add(matchup.team1_id);
         }
       } else {
         // for other matchups, add both teams
-        if (matchup.team1) assignedTeams.add(matchup.team1);
-        if (matchup.team2) assignedTeams.add(matchup.team2);
+        if (matchup.team1_id != null) assignedTeams.add(matchup.team1_id);
+        if (matchup.team2_id != null) assignedTeams.add(matchup.team2_id);
       }
     });
 
     // return teams that haven't been assigned yet
     return teams.filter(team =>
-      !assignedTeams.has(team.name) || team.name === currentValue 
+      !assignedTeams.has(team.id) || team.id === currentValue
     );
   }
 
@@ -263,12 +300,17 @@ export default function EditSeasonPage() {
 
       if (!week) return prev;
 
+      // Every key the write knows, explicitly null: a matchup that is missing a
+      // key on the way out is indistinguishable from one that is clearing it,
+      // and the payload the rest of the state came from spells all six out.
       const matchups = [...(week.matchups || [])];
       matchups.push({
-        team1: null,
-        team1Score: null,
-        team2: null,
-        team2Score: null
+        team1_id: null,
+        team1_score: null,
+        team2_id: null,
+        team2_score: null,
+        status: null,
+        label: null
       });
 
       newWeeks[weekNum] = { matchups };
@@ -280,6 +322,9 @@ export default function EditSeasonPage() {
    * Remove a matchup from a week
    */
   function removeMatchup(weekNum, matchupIndex) {
+    // Every matchup after this one shifts up a place, so a key naming a place
+    // no longer names the same matchup.
+    setEditing(null);
     setWeeks(prev => {
       const newWeeks = { ...prev };
       const week = newWeeks[weekNum];
@@ -300,22 +345,25 @@ export default function EditSeasonPage() {
     setMessage('');
     
     try {
-      const data = await saveWeekRequest(slug, selectedYear, weekNum, weeks[weekNum].matchups);
+      // A resolved promise is the success. The league route answers with the
+      // recomputed standings and no `success` key — every failure is a thrown
+      // ApiError, so a truth test on the body would only ever be able to turn a
+      // save that worked into a message that says nothing happened.
+      await saveWeekRequest(slug, selectedYear, weekNum, weeks[weekNum].matchups);
 
-      if (data.success) {
-        setMessage(`✅ Week ${weekNum} saved! Standings updated.`);
+      // Saved is the end of the edit: a side left empty against a filled
+      // opponent is now a BYE the server has accepted, and reads as one.
+      setEditing(null);
+      setMessage(`✅ Week ${weekNum} saved! Standings updated.`);
 
-        // The server recomputed standings inside the same transaction, so the
-        // payload the other views are holding is now stale. Not awaited: the
-        // message and the typed week belong to this page, and the refresh is
-        // for the page the reader goes back to.
-        refreshSeasons();
+      // The server recomputed standings inside the same transaction, so the
+      // payload the other views are holding is now stale. Not awaited: the
+      // message and the typed week belong to this page, and the refresh is
+      // for the page the reader goes back to.
+      refreshSeasons();
 
-        // Clear message after 3 seconds
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage(`❌ Failed to save: ${data.error}`);
-      }
+      // Clear message after 3 seconds
+      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       // The session ended between opening the page and saving. The provider has
       // already flipped canWrite — the client module told it — so this page only
@@ -343,21 +391,35 @@ export default function EditSeasonPage() {
 
   /**
    * Get week title with special teams for playoff weeks
+   *
+   * The round comes from where the week sits relative to the season's own
+   * playoff start, so a league whose playoffs begin somewhere other than week 15
+   * gets its own titles with no code of its own. For this league's seasons the
+   * titles read exactly what they always have.
    */
   function getWeekTitle(weekNum) {
-    const num = parseInt(weekNum);
-    if (num === 15) return 'Week 15 - Playoff/TB Round 1';
-    if (num === 16) return 'Week 16 - Playoff/TB Round 2';
-    if (num === 17) return 'Week 17 - Super Bowl Week';
-    return `Week ${weekNum}`;
+    if (!isPlayoffWeek(weekNum)) return `Week ${weekNum}`;
+
+    const round = parseInt(weekNum) - season.playoff_start_week + 1;
+    if (isFinalRound(weekNum)) return `Week ${weekNum} - Super Bowl Week`;
+    return `Week ${weekNum} - Playoff/TB Round ${round}`;
   }
 
   /**
    * Check if a week is a playoff week
+   *
+   * The season says where its playoffs begin. Until one is loaded nothing is a
+   * playoff week, which is what an empty editor should render.
    */
   function isPlayoffWeek(weekNum) {
-    const num = parseInt(weekNum);
-    return num >= 15 && num <= 17;
+    if (season === null || season.playoff_start_week === null) return false;
+    return parseInt(weekNum) >= season.playoff_start_week;
+  }
+
+  /** The last week the season has matchups laid out for. */
+  function isFinalRound(weekNum) {
+    const numbers = Object.keys(weeks).map(Number);
+    return numbers.length > 0 && parseInt(weekNum) === Math.max(...numbers);
   }
 
   /**
@@ -397,31 +459,53 @@ export default function EditSeasonPage() {
   // ============================================
 
   /**
-   * Render team selector dropdown
+   * What an option in a team dropdown reads.
+   *
+   * The owner, the way every other screen names them. Two teams in one season
+   * can carry the same label — two botted slots both read "Botted Season" — and
+   * a list with the same words twice is unusable, so those and only those also
+   * carry the team's own name.
    */
-  function renderTeamSelector(weekNum, matchupIndex, field, currentValue) {
-    // if the value is BYE, render it as text isntead of dropdowjn
-    if (currentValue === 'BYE') {
+  function teamOptionLabel(team) {
+    const label = ownerLabel(team);
+    const sharesLabel = teams.filter(other => ownerLabel(other) === label).length > 1;
+
+    return sharesLabel ? `${label} (${team.team_name})` : label;
+  }
+
+  /**
+   * Render team selector dropdown
+   *
+   * The empty side of a BYE is text rather than a dropdown: there is nobody to
+   * choose. Emptiness alone is not enough to say so — a matchup with both sides
+   * empty is a slot nobody has filled in yet, and a fresh season is laid out
+   * entirely of those. Which of the two this is, is the matchup's question, not
+   * the side's, so it is asked of the whole matchup — and not at all while that
+   * matchup is the one being edited.
+   */
+  function renderTeamSelector(weekNum, matchup, matchupIndex, field) {
+    const currentValue = matchup[field];
+
+    if (isByeSide(weekNum, matchup, matchupIndex, field)) {
       return (
         <div className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 text-gray-600 font-semibold text-center">
-          BYE
+          {BYE_LABEL}
         </div>
       );
     }
 
-
     const availableTeams = getAvailableTeams(weekNum, matchupIndex, field);
 
     return (
-      <select 
-        value={currentValue || ''}
+      <select
+        value={currentValue ?? ''}
         onChange={(e) => updateMatchupTeam(weekNum, matchupIndex, field, e.target.value)}
         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
       >
         <option value="">Select team...</option>
         {availableTeams.map(team => (
-          <option key={team.name} value={team.name}>
-            {team.name}
+          <option key={team.id} value={team.id}>
+            {teamOptionLabel(team)}
           </option>
         ))}
       </select>
@@ -463,7 +547,7 @@ export default function EditSeasonPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Team 1
             </label>
-            {renderTeamSelector(weekNum, index, 'team1', matchup.team1)}
+            {renderTeamSelector(weekNum, matchup, index, 'team1_id')}
           </div>
 
           {/* VS Divider */}
@@ -474,7 +558,7 @@ export default function EditSeasonPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Team 2
             </label>
-            {renderTeamSelector(weekNum, index, 'team2', matchup.team2)}
+            {renderTeamSelector(weekNum, matchup, index, 'team2_id')}
           </div>
         </div>
         
@@ -489,10 +573,10 @@ export default function EditSeasonPage() {
               type="number"
               step="0.1"
               placeholder="0.0"
-              value={matchup.team1Score ?? ''}
-              onChange={(e) => updateMatchupScore(weekNum, index, 'team1Score', e.target.value)}
+              value={matchup.team1_score ?? ''}
+              onChange={(e) => updateMatchupScore(weekNum, index, 'team1_score', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={!matchup.team1 || matchup.team1 === 'BYE'}
+              disabled={matchup.team1_id === null}
             />
           </div>
 
@@ -508,10 +592,10 @@ export default function EditSeasonPage() {
               type="number"
               step="0.1"
               placeholder="0.0"
-              value={matchup.team2Score ?? ''}
-              onChange={(e) => updateMatchupScore(weekNum, index, 'team2Score', e.target.value)}
+              value={matchup.team2_score ?? ''}
+              onChange={(e) => updateMatchupScore(weekNum, index, 'team2_score', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={!matchup.team2 || matchup.team2 === 'BYE'}
+              disabled={matchup.team2_id === null}
             />
           </div>
         </div>
@@ -638,8 +722,11 @@ export default function EditSeasonPage() {
             onChange={(e) => setSelectedYear(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
           >
+            {/* The layout holds the payload back until it has landed, so an
+                empty list here is a league with no seasons, never one still
+                loading. */}
             {availableYears.length === 0 && (
-              <option value="">Loading years...</option>
+              <option value="">No seasons yet</option>
             )}
             {availableYears.map(year => (
               <option key={year} value={year}>
@@ -731,4 +818,26 @@ export default function EditSeasonPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * The payload's weeks, holding only the keys a save may send back.
+ *
+ * The write refuses a body with any key it does not know, which is what makes a
+ * stale field fail loudly rather than save a blank week. `position` is the one
+ * key the read returns and the write will not take: it is the matchup's place in
+ * the array, and the server assigns it from that array on the way back in. So it
+ * is dropped here, once, at the edge — the alternative is the save filtering the
+ * state it is about to send, which would filter a real mistake out too.
+ */
+function editableWeeks(weeks) {
+  const editable = {};
+
+  for (const [number, week] of Object.entries(weeks ?? {})) {
+    editable[number] = {
+      matchups: (week.matchups ?? []).map(({ position, ...matchup }) => matchup),
+    };
+  }
+
+  return editable;
 }
