@@ -21,13 +21,15 @@ import { allTimePlayers } from '../stats/allTime';
  *  - Clickable player names to view detailed stats
  *
  *  @param {Object} props - Component props
- *  @param {Object} props.allData - Object containing all season data, keyed by year
+ *  @param {Object} props.allData - Object containing all season data, keyed by year, unfiltered
  *  @param {string} props.searchQuery - Search query to filter players by name
+ *  @param {Object} props.statusFilter - Team States: status -> shown. It decides who is
+ *    listed and nothing else — every number here is computed before it is applied (6.2(g)).
  *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
  *  @param {Object} props.visibleColumns - Map of optional column key -> shown/hidden
  */
 
-export default function AllTimeTable({ allData, searchQuery, onPlayerClick, visibleColumns = {} }) {
+export default function AllTimeTable({ allData, searchQuery, statusFilter, onPlayerClick, visibleColumns = {} }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -45,8 +47,8 @@ export default function AllTimeTable({ allData, searchQuery, onPlayerClick, visi
     // ==================================
 
     const allTimeStats = useMemo(
-        () => allTimePlayers(allData, searchQuery),
-        [allData, searchQuery]
+        () => allTimePlayers(allData, searchQuery, statusFilter),
+        [allData, searchQuery, statusFilter]
     );
 
     // ==================================

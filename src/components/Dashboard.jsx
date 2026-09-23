@@ -161,13 +161,16 @@ export default function Dashboard({ view }) {
               visibleColumns={seasonCols}
             />
           ) : (
+            /* The all-time table is handed every row and the filter, not the
+               rows that survived it: an award is a fact of its season, so
+               hiding a player must not hand their award to someone else
+               (6.2(g)). The season table above is a list of rows and filters
+               normally. */
             <AllTimeTable
               allData={Object.fromEntries(
-                Object.entries(data).map(([year, seasonData]) => [
-                  year,
-                  filterTeams(teamsFor(year))
-                ])
+                Object.entries(data).map(([year]) => [year, teamsFor(year)])
               )}
+              statusFilter={filters}
               onPlayerClick={handlePlayerClick}
               visibleColumns={alltimeCols}
             />

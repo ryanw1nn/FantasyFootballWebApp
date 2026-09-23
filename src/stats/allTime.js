@@ -67,15 +67,56 @@ export function seasonLeaders(allData) {
 }
 
 /**
+ * The seasons a status filter leaves standing, year by year.
+ *
+ * Only ever used to decide *which players are listed*. No number on this table
+ * is computed from what it returns.
+ *
+ * @param {Object} allData - one league's seasons, keyed by year
+ * @param {Object} [statusFilter] - status -> shown; absent shows everything
+ * @returns {Object} the same shape, with hidden rows dropped
+ */
+function onlyShown(allData, statusFilter) {
+  if (!statusFilter) return allData;
+
+  return Object.fromEntries(
+    Object.entries(allData).map(([year, season]) => [
+      year,
+      Array.isArray(season) ? season.filter((row) => statusFilter[row.status]) : season,
+    ])
+  );
+}
+
+/** The players named anywhere in these seasons. */
+function playersIn(allData) {
+  const names = new Set();
+  for (const season of Object.values(allData)) {
+    if (!Array.isArray(season)) continue;
+    for (const row of season) {
+      if (isPlayerTeam(row)) names.add(ownerLabel(row));
+    }
+  }
+  return names;
+}
+
+/**
  * One row per player: career record, points, championships and award years.
+ *
+ * The filter chooses rows; it does not change what a row says (6.2(g)). Every
+ * award and every total here is computed over the whole league — each season's
+ * leaders from all of that season's players, each career from every season its
+ * player played, whatever their status was that year — and only then are the
+ * players the filter hides dropped from the list.
  *
  * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
  * @param {string} [searchQuery] - matches a player name
- * @returns {Array} a row per player, unsorted
+ * @param {Object} [statusFilter] - status -> shown, deciding who is listed
+ * @returns {Array} a row per listed player, unsorted
  */
-export function allTimePlayers(allData, searchQuery) {
+export function allTimePlayers(allData, searchQuery, statusFilter) {
   const stats = {};
 
+  const listed = playersIn(onlyShown(allData, statusFilter));
   const { pfLeadersByYear, paLeadersByYear, lastPlaceByYear } = seasonLeaders(allData);
 
   Object.entries(allData)
@@ -145,25 +186,27 @@ export function allTimePlayers(allData, searchQuery) {
     });
   });
 
-  let players = Object.entries(stats).map(([name, s]) => {
-    const totalGames = s.wins + s.losses + s.ties;
+  let players = Object.entries(stats)
+    .filter(([name]) => listed.has(name))
+    .map(([name, s]) => {
+      const totalGames = s.wins + s.losses + s.ties;
 
-    const winPct = totalGames ? (s.wins + 0.5 * s.ties) / totalGames : 0;
+      const winPct = totalGames ? (s.wins + 0.5 * s.ties) / totalGames : 0;
 
-    return {
-      name,
-      ...s,
-      totalGames,
-      winPct,
-      PFPG: totalGames ? s.PF / totalGames : 0,
-      PAPG: totalGames ? s.PA / totalGames : 0,
-      rChampionCount: s.rChampionYears.length,
-      pChampionCount: s.pChampionYears.length,
-      pfLeaderCount: s.pfLeaderYears.length,
-      paLeaderCount: s.paLeaderYears.length,
-      regLoserCount: s.regLoserYears.length
-    };
-  });
+      return {
+        name,
+        ...s,
+        totalGames,
+        winPct,
+        PFPG: totalGames ? s.PF / totalGames : 0,
+        PAPG: totalGames ? s.PA / totalGames : 0,
+        rChampionCount: s.rChampionYears.length,
+        pChampionCount: s.pChampionYears.length,
+        pfLeaderCount: s.pfLeaderYears.length,
+        paLeaderCount: s.paLeaderYears.length,
+        regLoserCount: s.regLoserYears.length
+      };
+    });
 
   if (searchQuery) {
     players = players.filter(p =>
