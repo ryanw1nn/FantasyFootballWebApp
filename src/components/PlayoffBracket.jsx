@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { Trophy, Award } from 'lucide-react';
 
-import { categorizeMatchups, getWinner } from '../stats/bracket';
+import { categorizeMatchups, getWinner, playoffWeeks, roundTitle } from '../stats/bracket';
 import { BYE_LABEL, isBye, ownerLabel, teamsById } from '../stats/league';
 
 /**
  * PlayoffBracket Component
- * 
- * Displays playoff bracket for weeks 15-17
- * Shows three segments: Playoff, Toilet Bowl, and Out games
+ *
+ * Draws one column per playoff week of the season, and three segments:
+ * Playoff, Toilet Bowl and Out games.
  */
 
 export default function PlayoffBracket({ year, seasonData }) {
@@ -17,14 +17,28 @@ export default function PlayoffBracket({ year, seasonData }) {
     // the third request for a season the layout had already loaded — and the
     // league-scoped weeks route carries no teams, so a side that is now an id
     // would have had nothing to become a name against.
-    const weeks = useMemo(() => ({
-        15: seasonData?.weeks?.['15'] || null,
-        16: seasonData?.weeks?.['16'] || null,
-        17: seasonData?.weeks?.['17'] || null,
-    }), [seasonData]);
+    //
+    // The weeks and the columns are the season's own: which weeks are playoff
+    // weeks comes from `playoff_start_week`, and which column a game lands in
+    // from its `status`. Neither is a literal any more, so a league whose
+    // playoffs are two rounds starting in week 13 draws itself.
+    const weeks = useMemo(() => playoffWeeks(seasonData), [seasonData]);
+
+    const columns = useMemo(() => {
+        const start = seasonData?.season?.playoff_start_week;
+
+        return weeks.map((week) => ({
+            week,
+            title: roundTitle(week - start + 1, weeks.length),
+            ...categorizeMatchups(seasonData?.weeks?.[week]),
+        }));
+    }, [seasonData, weeks]);
 
     // A side is a team id, and ids belong to a season.
     const teams = useMemo(() => teamsById(seasonData), [seasonData]);
+
+    // One column per week, however many weeks the season's playoffs run.
+    const gridColumns = { gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` };
 
     // The file's dialect wrote a BYE as the opponent's *name*, so the word came
     // through as a team. Here one empty side is a BYE and two empty sides are a
@@ -34,7 +48,7 @@ export default function PlayoffBracket({ year, seasonData }) {
         return isBye(matchup) ? BYE_LABEL : null;
     };
 
-    function renderMatchup(matchup, index, weekNum) {
+    function renderMatchup(matchup, index) {
 
         const team1Name = sideName(matchup, matchup?.team1_id);
         const team2Name = sideName(matchup, matchup?.team2_id);
@@ -84,11 +98,6 @@ export default function PlayoffBracket({ year, seasonData }) {
         );
     }
 
-    // get categorized data for all weeks
-    const week15Data = categorizeMatchups(weeks[15], 15);
-    const week16Data = categorizeMatchups(weeks[16], 16);
-    const week17Data = categorizeMatchups(weeks[17], 17);
-
     if (year === 2020 || year === '2020') {
         return (
             <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-8 text-center">
@@ -102,6 +111,18 @@ export default function PlayoffBracket({ year, seasonData }) {
         );
     }
 
+    if (columns.length === 0) {
+        return (
+            <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-8 text-center text-gray-500">
+                No playoff games yet for {year}
+            </div>
+        );
+    }
+
+    const weekRange = columns.length === 1
+        ? `Week ${columns[0].week}`
+        : `Weeks ${columns[0].week}-${columns[columns.length - 1].week}`;
+
     return (
         <div className="space-y-6">
             <div className="text-center mb-8">
@@ -109,23 +130,17 @@ export default function PlayoffBracket({ year, seasonData }) {
                     <Trophy className="text-yellow-500" size={32} />
                     {year} Playoff Bracket
                 </h2>
-                <p className="text-gray-600">Weeks 15-17 • Championship Tournament</p>
+                <p className="text-gray-600">{weekRange} • Championship Tournament</p>
             </div>
 
             {/* Week Headers */}
-            <div className="grid grid-cols-3 gap-8 mb-3">
-                <div className="text-center">
-                    <h3 className="text-xl font-bold text-indigo-600">Week 15</h3>
-                    <p className="text-sm text-gray-500">Quarterfinals</p>
-                </div>
-                <div className="text-center">
-                    <h3 className="text-xl font-bold text-indigo-600">Week 16</h3>
-                    <p className="text-sm text-gray-500">Semifinals</p>
-                </div>
-                <div className="text-center">
-                    <h3 className="text-xl font-bold text-indigo-600">Week 17</h3>
-                    <p className="text-sm text-gray-500">Championship</p>
-                </div>
+            <div className="grid gap-8 mb-3" style={gridColumns}>
+                {columns.map((column) => (
+                    <div key={column.week} className="text-center">
+                        <h3 className="text-xl font-bold text-indigo-600">Week {column.week}</h3>
+                        <p className="text-sm text-gray-500">{column.title}</p>
+                    </div>
+                ))}
             </div>
 
             {/* PLAYOFF BRACKET SECTION */}
@@ -135,21 +150,17 @@ export default function PlayoffBracket({ year, seasonData }) {
                     <h3 className="text-xl font-bold text-gray-800">Playoff Bracket</h3>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-8">
-                    {/* Week 15 Playoff - 4 games */}
-                    <div className="flex flex-col justify-center space-y-2.5">
-                        {week15Data.playoff.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
-
-                    {/* Week 16 Playoff - 2 games (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '440px' }}>
-                        {week16Data.playoff.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
-
-                    {/* Week 17 Playoff - 1 game (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '440px' }}>
-                        {week17Data.playoff.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
+                <div className="grid gap-8" style={gridColumns}>
+                    {/* Each later round has fewer games, and centres against the first */}
+                    {columns.map((column, index) => (
+                        <div
+                            key={column.week}
+                            className="flex flex-col justify-center space-y-2.5"
+                            style={index === 0 ? undefined : { minHeight: '440px' }}
+                        >
+                            {column.bracket.map((matchup, idx) => renderMatchup(matchup, idx))}
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -160,21 +171,16 @@ export default function PlayoffBracket({ year, seasonData }) {
                     <h3 className="text-xl font-bold text-gray-800">Toilet Bowl</h3>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-8">
-                    {/* Week 15 Toilet Bowl - 2 games */}
-                    <div className="flex flex-col justify-center space-y-2.5">
-                        {week15Data.toiletBowl.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
-
-                    {/* Week 16 Toilet Bowl - 1 game (centered) */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '220px' }}>
-                        {week16Data.toiletBowl.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
-
-                    {/* Week 17 Toilet Bowl - 0 games */}
-                    <div className="flex flex-col justify-center items-center space-y-2.5" style={{ minHeight: '220px' }}>
-                        {week17Data.toiletBowl.map((matchup, idx) => renderMatchup(matchup, idx))}
-                    </div>
+                <div className="grid gap-8" style={gridColumns}>
+                    {columns.map((column, index) => (
+                        <div
+                            key={column.week}
+                            className="flex flex-col justify-center space-y-2.5"
+                            style={index === 0 ? undefined : { minHeight: '220px' }}
+                        >
+                            {column.toiletBowl.map((matchup, idx) => renderMatchup(matchup, idx))}
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -185,33 +191,20 @@ export default function PlayoffBracket({ year, seasonData }) {
                     <h3 className="text-xl font-bold text-gray-800">Out Games</h3>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-8">
-                    {/* Week 15 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
-                        {week15Data.out.length === 0 ? (
-                            <div className="text-gray-400 text-sm text-center">No games</div>
-                        ) : (
-                            week15Data.out.map((matchup, idx) => renderMatchup(matchup, idx))
-                        )}
-                    </div>
-
-                    {/* Week 16 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
-                        {week16Data.out.length === 0 ? (
-                            <div className="text-gray-400 text-sm text-center">No games</div>
-                        ) : (
-                            week16Data.out.map((matchup, idx) => renderMatchup(matchup, idx))
-                        )}
-                    </div>
-
-                    {/* Week 17 Out Games */}
-                    <div className="flex flex-col justify-center space-y-2.5" style={{ minHeight: '150px' }}>
-                        {week17Data.out.length === 0 ? (
-                            <div className="text-gray-400 text-sm text-center">No games</div>
-                        ) : (
-                            week17Data.out.map((matchup, idx) => renderMatchup(matchup, idx))
-                        )}
-                    </div>
+                <div className="grid gap-8" style={gridColumns}>
+                    {columns.map((column) => (
+                        <div
+                            key={column.week}
+                            className="flex flex-col justify-center space-y-2.5"
+                            style={{ minHeight: '150px' }}
+                        >
+                            {column.out.length === 0 ? (
+                                <div className="text-gray-400 text-sm text-center">No games</div>
+                            ) : (
+                                column.out.map((matchup, idx) => renderMatchup(matchup, idx))
+                            )}
+                        </div>
+                    ))}
                 </div>
             </div>
                     
