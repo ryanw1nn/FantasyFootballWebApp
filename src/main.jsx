@@ -12,6 +12,21 @@ import { DEFAULT_LEAGUE } from "./context/LeagueContext";
 import { seasonPath } from "./routes";
 import './index.css';
 
+/**
+ * One player's career, remounted whenever the URL names a different player.
+ *
+ * The page's opponent filters and head-to-head sort are initialised from the
+ * player they were first rendered for, and React reuses the component when only
+ * a route param changes — so walking from one player to another carried the
+ * first player's filter map onto the second, and left the second player's
+ * botted opponent switched on. A key on this element is the whole fix; the
+ * league provider above must never be keyed, which is why the key sits here.
+ */
+function PlayerStats() {
+    const { slug, name } = useParams();
+    return <PlayerStatsPage key={`${slug}/${name}`} />;
+}
+
 /** Sends a league URL with no view to that league's season table. */
 function ToSeason() {
     const { slug } = useParams();
@@ -38,7 +53,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                         <Route path="bracket" element={<BracketPage />} />
                     </Route>
                     <Route path="edit" element={<EditSeasonPage />} />
-                    <Route path="players/:name" element={<PlayerStatsPage />} />
+                    <Route path="players/:name" element={<PlayerStats />} />
                     <Route path="*" element={<NotFound />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Trophy, Award } from 'lucide-react';
 
-import { categorizeMatchups, getWinner, playoffWeeks, roundTitle } from '../stats/bracket';
+import { categorizeMatchups, getWinner, hasBracketGames, playoffWeeks, roundTitle } from '../stats/bracket';
 import { BYE_LABEL, isBye, ownerLabel, teamsById } from '../stats/league';
 
 /**
@@ -98,20 +98,12 @@ export default function PlayoffBracket({ year, seasonData }) {
         );
     }
 
-    if (year === 2020 || year === '2020') {
-        return (
-            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-lg p-8 text-center">
-                <p className="text-yellow-800 font-semibold text-lg">
-                    ⚠️ Playoff bracket not available for 2020 season
-                </p>
-                <p className="text-yellow-700 text-sm mt-2">
-                    The 2020 season had an irregular playoff format
-                </p>
-            </div>
-        );
-    }
-
-    if (columns.length === 0) {
+    // A season with no playoff weeks, and a season whose playoff weeks are empty
+    // placeholders, are the same page: there is no bracket to draw. This used to
+    // read `year === 2020`, which is one league's own year in a component that
+    // knows nothing else about that league — a second league running a 2020
+    // season would have been told its bracket was unavailable.
+    if (columns.length === 0 || !hasBracketGames(seasonData, weeks)) {
         return (
             <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-8 text-center text-gray-500">
                 No playoff games yet for {year}

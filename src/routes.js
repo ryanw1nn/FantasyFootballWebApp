@@ -60,10 +60,14 @@ export function editPath(slug, year) {
 }
 
 /**
- * `/l/:slug/players/:name` — one player's career. A player is still a display
- * name, and the names have spaces in them, so this is the one place the segment
- * is encoded. When Phase 6 puts a player id in the URL instead, this function
- * and decodePlayerName below are the whole change.
+ * `/l/:slug/players/:name` — one player's career. A player is a display name,
+ * and the names have spaces in them, so this is the one place the segment is
+ * encoded.
+ *
+ * It stays a name. The league-scoped payload exposes no player id at all, so an
+ * id in the URL would mean a server change, a grammar change and a break of
+ * every player link already sent; names are unique within a league and every
+ * player URL carries its league, so a name is an unambiguous key here.
  */
 export function playerPath(slug, name, year) {
   return `${leaguePath(slug)}/players/${encodeURIComponent(name)}${yearQuery(year)}`;
@@ -72,9 +76,9 @@ export function playerPath(slug, name, year) {
 /**
  * :name off the route back to a name. The router has already decoded it —
  * useParams hands out `TJ Cairney`, not `TJ%20Cairney` — so decoding again here
- * would turn a name with a `%` in it into a different name, or throw. This is
- * still the one place a route param becomes a player, which is what Phase 6's
- * switch to ids needs.
+ * would turn a name with a `%` in it into a different name, or throw. It is the
+ * one place a route param becomes a player, and it stays that way whatever a
+ * player is keyed on later.
  */
 export function decodePlayerName(param) {
   return param ?? '';

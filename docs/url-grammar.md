@@ -67,7 +67,7 @@ keeps this phase to routing.
 
 It does mean the encoding matters — the names have spaces in them. Read and
 write that segment through `encodeURIComponent` / `decodeURIComponent` in **one
-place**, so Phase 6 replacing the name with a player id is a one-line change.
+place**, in `src/routes.js`.
 
 ### 4. `/l/`, and not `/fan-club/`
 
@@ -165,3 +165,17 @@ Two details the implementation settled:
   is not 2021; it resolves to the latest and is rewritten, like `?year=1999`.
 - **The editor opens on the URL's year**, and its own select may then move away
   from it without touching the address bar.
+
+## Amendment, 2026-09-23: the name stays, and it is not provisional
+
+Judgement call 3 above left the door open for a player id in the URL. It is
+shut. The league-scoped payload exposes no player id at all — `teamsForSeasons`
+selects `p.display_name` and not `t.player_id` — so an id in the URL would mean
+a server change before it meant a grammar change, and it would break every
+player link sent since the views went live. Names are unique *within* a league,
+the import enforces that, and every player URL carries its league, so a name is
+an unambiguous key wherever this grammar uses one.
+
+`playerPath` and `decodePlayerName` remain the one place the segment is spelled,
+for the reason encoding gave them rather than as a hedge against a switch that
+is no longer planned.

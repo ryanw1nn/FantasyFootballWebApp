@@ -390,22 +390,6 @@ export default function EditSeasonPage() {
   // ============================================
 
   /**
-   * Get week title with special teams for playoff weeks
-   *
-   * The round comes from where the week sits relative to the season's own
-   * playoff start, so a league whose playoffs begin somewhere other than week 15
-   * gets its own titles with no code of its own. For this league's seasons the
-   * titles read exactly what they always have.
-   */
-  function getWeekTitle(weekNum) {
-    if (!isPlayoffWeek(weekNum)) return `Week ${weekNum}`;
-
-    const round = parseInt(weekNum) - season.playoff_start_week + 1;
-    if (isFinalRound(weekNum)) return `Week ${weekNum} - Super Bowl Week`;
-    return `Week ${weekNum} - Playoff/TB Round ${round}`;
-  }
-
-  /**
    * Check if a week is a playoff week
    *
    * The season says where its playoffs begin. Until one is loaded nothing is a
@@ -414,12 +398,6 @@ export default function EditSeasonPage() {
   function isPlayoffWeek(weekNum) {
     if (season === null || season.playoff_start_week === null) return false;
     return parseInt(weekNum) >= season.playoff_start_week;
-  }
-
-  /** The last week the season has matchups laid out for. */
-  function isFinalRound(weekNum) {
-    const numbers = Object.keys(weeks).map(Number);
-    return numbers.length > 0 && parseInt(weekNum) === Math.max(...numbers);
   }
 
   /**

@@ -11,9 +11,10 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { getLeagues, getSession, onUnauthorized } from '../api/client';
 
 /**
- * The league served when nothing says otherwise. Phase 5 replaces this default
- * with the slug out of the URL; every call site already takes it from here, so
- * that change reaches one file.
+ * The league served when nothing says otherwise. The slug now comes out of the
+ * URL — the provider lives under /l/:slug — so this default is down to two call
+ * sites: the redirect at the root, and the home link a 404 offers when the URL
+ * names no league of its own.
  */
 export const DEFAULT_LEAGUE = 'fan-club';
 

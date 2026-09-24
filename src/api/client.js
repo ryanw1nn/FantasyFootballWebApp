@@ -1,6 +1,6 @@
 // The only place in src/ that knows the API's address, its dialect and what a
 // failure looks like. No React in here: it is a plain module, so a route loader
-// in Phase 5 can call it without becoming a component.
+// or a node harness can call it without becoming a component.
 //
 // Every function takes a slug, and every URL now carries it. The read path moved
 // onto the league-scoped routes first and the editor's load and write followed,

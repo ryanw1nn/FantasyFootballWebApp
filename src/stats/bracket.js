@@ -60,6 +60,31 @@ export function playoffWeeks(seasonData) {
 }
 
 /**
+ * Whether any of a season's playoff weeks has a game to draw.
+ *
+ * A season can have playoff weeks laid out and nothing in them: 2020's
+ * standings were imported rather than played out here, so its weeks carry
+ * labelled placeholders with neither side filled and no score. That is a
+ * bracket with nothing in it, and it is a fact about the data rather than about
+ * the year — which is what lets the bracket say so without naming 2020.
+ *
+ * @param {Object} seasonData - one season of the league payload
+ * @param {number[]} weeks - the weeks the bracket covers
+ * @returns {boolean}
+ */
+export function hasBracketGames(seasonData, weeks) {
+  return weeks.some((week) =>
+    (seasonData?.weeks?.[week]?.matchups ?? []).some(
+      (matchup) =>
+        matchup.team1_id != null ||
+        matchup.team2_id != null ||
+        matchup.team1_score != null ||
+        matchup.team2_score != null,
+    ),
+  );
+}
+
+/**
  * What to call a round. The last one is the final, whatever number it is.
  *
  * @param {number} round - 1 for the first playoff week
