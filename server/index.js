@@ -11,7 +11,6 @@ import helmet from "helmet";
 import compression from "compression";
 import { pool } from "./queries.mjs";
 import { describeTarget } from "../db/pool.mjs";
-import { router as legacyRoutes } from "./routes/legacy.js";
 import { router as leagueRoutes } from "./routes/leagues.js";
 import { router as sessionRoutes } from "./routes/session.js";
 import { requireWrite } from "./guard.mjs";
@@ -95,7 +94,6 @@ app.use(express.json({ limit: "100kb" }));
 
 app.use(sessionRoutes);
 app.use(leagueRoutes);
-app.use(legacyRoutes);
 
 // Client-side routes: anything the static files and the API did not claim gets
 // the SPA shell, so a typed-in deep link works the same as a click. No path

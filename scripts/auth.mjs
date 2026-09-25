@@ -17,10 +17,11 @@
 // league with no passphrase cannot be unlocked at all.
 //
 // --prove is the half that matters most. A gate nobody has watched fail proves
-// nothing, so it removes the guard, then the legacy fallback, then the cookie
-// rule, re-runs the whole suite against each, and reports what each break
-// costs. It edits the three files in place and restores them in a finally,
-// which is why it is a flag and not the default.
+// nothing, so it removes the guard, then puts back the league fallback the
+// deleted aliases needed, then breaks the cookie rule, re-runs the whole suite
+// against each, and reports what each break costs. It edits the three files in
+// place and restores them in a finally, which is why it is a flag and not the
+// default.
 import { spawn, execFile } from "child_process";
 import fs from "fs";
 import net from "net";
@@ -36,7 +37,6 @@ import { pinTlsVerification } from "../db/url.mjs";
 const execFileAsync = promisify(execFile);
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const BASELINE_DIR = path.join(repoRoot, "baseline");
 
 const BOOT_TIMEOUT_MS = 15000;
 
@@ -46,7 +46,7 @@ const OTHER_LEAGUE = "other";
 const NOHASH_LEAGUE = "nohash";
 
 /** Known only to this process, and only for the life of the scratch database. */
-const PASSPHRASE = "parity-gate-passphrase";
+const PASSPHRASE = "auth-gate-passphrase";
 const OTHER_PASSPHRASE = "other-league-passphrase";
 const WRONG_PASSPHRASE = "not-the-passphrase";
 
@@ -271,36 +271,24 @@ async function runSuite(run, { server, routes, restart }) {
 
   const week = await currentWeek(port, cookie);
 
-  const legacyWrite = await request(
-    port,
-    "PUT",
-    `/api/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
-    { cookie, body: { matchups: week.legacy } }
-  );
-  run.check(legacyWrite.status === 200, "PUT the alias with the cookie", String(legacyWrite.status));
-
   const leagueWrite = await request(
     port,
     "PUT",
     `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
-    { cookie, body: { matchups: week.league } }
+    { cookie, body: { matchups: week } }
   );
   run.check(leagueWrite.status === 200, "PUT the league route with the cookie", String(leagueWrite.status));
 
   const locked = await lock(port, LEAGUE, cookie);
   run.check(locked.status === 204, "lock", String(locked.status));
 
-  for (const [label, route, body] of [
-    ["the alias", `/api/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`, week.legacy],
-    [
-      "the league route",
-      `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
-      week.league,
-    ],
-  ]) {
-    const after = await request(port, "PUT", route, { cookie, body: { matchups: body } });
-    run.check(after.status === 401, `PUT ${label} after lock`, String(after.status));
-  }
+  const after = await request(
+    port,
+    "PUT",
+    `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
+    { cookie, body: { matchups: week } }
+  );
+  run.check(after.status === 401, "PUT the league route after lock", String(after.status));
 
   // --- access stays with its league ----------------------------------------
 
@@ -336,20 +324,32 @@ async function runSuite(run, { server, routes, restart }) {
   const plain = await request(
     port,
     "PUT",
-    `/api/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
-    { cookie, body: JSON.stringify({ matchups: week.legacy }), contentType: "text/plain" }
+    `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
+    { cookie, body: JSON.stringify({ matchups: week }), contentType: "text/plain" }
   );
   run.check(plain.status === 415, "a text/plain PUT with a valid cookie", String(plain.status));
 
-  const reads = [
-    ...recordedRoutes(),
-    "/api/leagues",
-    `/api/leagues/${LEAGUE}`,
-    `/api/leagues/${LEAGUE}/seasons`,
-    `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}`,
-    `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks`,
-    `/api/leagues/${LEAGUE}/session`,
-  ];
+  // Every write route names its league, so a write path that names none names
+  // nothing — and must be refused even by a caller holding a real unlock. The
+  // guard used to read an unslugged path as the one league, because the deleted
+  // aliases wrote that way; the check below is what stops that coming back.
+  for (const route of [
+    `/api/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`, // the alias, deleted in 7.6
+    "/api/made/up",
+  ]) {
+    const unslugged = await request(port, "PUT", route, { cookie, body: { matchups: week } });
+    run.check(
+      unslugged.status === 401,
+      `PUT ${route} with a valid cookie`,
+      `${unslugged.status}, names no league`
+    );
+  }
+
+  // The read surface, walked off the stack like the writes rather than listed,
+  // for the same reason: a list of reads goes stale the week one is added.
+  const reads = routes
+    .filter((route) => route.method === "GET")
+    .map((route) => fillParams(route.path));
 
   const cookied = [];
   for (const route of reads) {
@@ -366,8 +366,8 @@ async function runSuite(run, { server, routes, restart }) {
   const survived = await request(
     port,
     "PUT",
-    `/api/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
-    { cookie, body: { matchups: week.legacy } }
+    `/api/leagues/${LEAGUE}/seasons/${WRITE_YEAR}/weeks/${WRITE_WEEK}`,
+    { cookie, body: { matchups: week } }
   );
   run.check(
     survived.status === 200,
@@ -391,21 +391,12 @@ async function runSuite(run, { server, routes, restart }) {
   return port;
 }
 
-/** The thirteen routes baseline/ recorded, read from the manifest rather than listed. */
-function recordedRoutes() {
-  const manifest = JSON.parse(
-    fs.readFileSync(path.join(BASELINE_DIR, "manifest.json"), "utf-8")
-  );
-  return manifest.routes.map((route) => route.route);
-}
-
 /**
- * The week the write checks send back, in both dialects, exactly as each route
- * serves it. Echoing a week rather than editing one keeps the gate about who
- * may write, not about what a write does — that is api:parity's half.
+ * The week the write checks send back, exactly as the route serves it. Echoing a
+ * week rather than editing one keeps the gate about who may write, not about
+ * what a write does.
  */
 async function currentWeek(port, cookie) {
-  const legacy = await request(port, "GET", `/seasons/${WRITE_YEAR}`, { cookie });
   const league = await request(
     port,
     "GET",
@@ -413,15 +404,12 @@ async function currentWeek(port, cookie) {
     { cookie }
   );
 
-  if (legacy.json?.weeks?.[WRITE_WEEK] === undefined) {
+  if (league.json?.weeks?.[WRITE_WEEK] === undefined) {
     throw new Error(`${WRITE_YEAR} week ${WRITE_WEEK} is missing from the scratch database`);
   }
 
-  return {
-    legacy: legacy.json.weeks[WRITE_WEEK].matchups,
-    // position is the array order the route assigns on write, not a field it takes.
-    league: league.json.weeks[WRITE_WEEK].matchups.map(({ position, ...rest }) => rest),
-  };
+  // position is the array order the route assigns on write, not a field it takes.
+  return league.json.weeks[WRITE_WEEK].matchups.map(({ position, ...rest }) => rest);
 }
 
 // ---------------------------------------------------------------------------
@@ -441,10 +429,14 @@ const BREAKS = [
     replace: "// app.use(requireWrite);",
   },
   {
-    name: "the DEFAULT_LEAGUE fallback dropped",
+    // The inverse of the break this used to be. Until 7.6 the guard read an
+    // unslugged write path as the one league, because the aliases wrote that
+    // way; putting the fallback back is what an unrecognised write path
+    // silently reaching real data looks like in one line.
+    name: "the league fallback put back",
     file: "server/guard.mjs",
-    find: "if (match === null) return DEFAULT_LEAGUE;",
-    replace: "if (match === null) return null;",
+    find: "  if (match === null) return null;",
+    replace: '  if (match === null) return "fan-club";',
   },
   {
     name: "saveUninitialized: true",
@@ -509,7 +501,7 @@ async function startServer(databaseUrl) {
   while (Date.now() < deadline) {
     if (exited !== null) throw new Error(`server exited with code ${exited}\n${stderr}`);
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/seasons`);
+      const res = await fetch(`http://127.0.0.1:${port}/healthz`);
       if (res.ok) return { port, stop: () => child.kill() };
     } catch {
       // not listening yet

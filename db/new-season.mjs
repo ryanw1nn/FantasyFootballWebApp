@@ -24,10 +24,10 @@
 // the season is enterable from the app on day one and nothing here has to be
 // re-run in October.
 //
-// Both sides of every seeded row are NULL, which is why server/serialize.mjs
-// had to learn the difference between "no opponent" and "nobody picked yet" —
-// the file only ever had the first, and the editor renders it as uneditable
-// text.
+// Both sides of every seeded row are NULL, which is why something has to tell
+// "no opponent" from "nobody picked yet" — the file only ever had the first. The
+// rule lives in isBye (src/stats/league.js): exactly one side null is a BYE, and
+// the editor renders that as uneditable text; both sides null is a dropdown.
 //
 // The playoff weeks are copied, not invented: their statuses and labels are the
 // bracket's wiring (#1 SEED VS BYE, loser #4/#5 vs loser #3/#6) and

@@ -5,22 +5,19 @@
 // route added anywhere later starts out denied; nobody has to remember to guard
 // it. A write to a path that doesn't exist is a 401 rather than a 404, so an
 // anonymous caller can't use the guard to discover which write routes exist.
-import { DEFAULT_LEAGUE, leagueBySlug, pool } from "./queries.mjs";
+import { leagueBySlug, pool } from "./queries.mjs";
 
 const READS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 // Express matches routes case-insensitively and ignores a trailing slash, so
 // these must too. A pattern stricter than the router would let /API/leagues/x/…
-// fall through to the default league below.
+// name no league, and every write to it would be refused.
 
 /** The only writes anyone may make without an unlock: the unlock and the lock. */
 const OPEN_WRITES = [/^\/api\/leagues\/[^/]+\/(unlock|lock)\/?$/i];
 
-/** /api/leagues/:slug/… names its league. */
+/** /api/leagues/:slug/… names its league. Nothing else names one at all. */
 const LEAGUE_PATH = /^\/api\/leagues\/([^/]+)(?:\/|$)/i;
-
-/** Anything under /api/leagues that isn't followed by a slug names no league. */
-const LEAGUES_PREFIX = /^\/api\/leagues\/?$/i;
 
 export async function requireWrite(req, res, next) {
   if (READS.has(req.method)) return next();
@@ -37,14 +34,17 @@ export async function requireWrite(req, res, next) {
 }
 
 /**
- * The league a write path belongs to, or null when it names none. The legacy
- * aliases carry no slug and have only ever meant the default league.
+ * The league a write path belongs to, or null when it names none.
+ *
+ * Every write route the server has lives under /api/leagues/:slug/, so a write
+ * path that carries no slug addresses no league and is refused. It used to fall
+ * back to the one league, because the compatibility aliases wrote to it without
+ * naming it; with those gone, a fallback could only ever hand an unrecognised
+ * path the real league's data.
  */
 function slugOf(path) {
-  if (LEAGUES_PREFIX.test(path)) return null;
-
   const match = path.match(LEAGUE_PATH);
-  if (match === null) return DEFAULT_LEAGUE;
+  if (match === null) return null;
 
   // The router decodes params before a handler sees them, so decode the same way.
   try {

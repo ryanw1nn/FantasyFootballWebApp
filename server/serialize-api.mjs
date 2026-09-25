@@ -3,9 +3,9 @@
 // The database's dialect, not the file's: keys are the column names, a team is
 // an id, playoff_rounds is the rung actually reached, an absent value is an
 // explicit null rather than an absent key, and no opponent is null rather than
-// "BYE". None of serialize.mjs's translations belong here — that file exists so
-// the four aliases can keep the file's quirks until they are deleted, and a
-// quirk taught to both dialects never goes away.
+// "BYE". This is now the only dialect the server speaks: the compatibility
+// serializer that kept the file's quirks alive for the four aliases went with
+// them in Phase 7, and a quirk taught to a second dialect never goes away.
 //
 // numeric still arrives from pg as a fixed-scale string, so the same Number()
 // boundary applies: rows in, JSON-ready values out.

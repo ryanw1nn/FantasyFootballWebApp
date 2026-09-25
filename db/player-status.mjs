@@ -13,9 +13,9 @@
 // Setting that by hand is six UPDATEs and a chance to miss one, which is the
 // whole reason this is a script. It is also the repeatable record of a change
 // the import cannot make: db/import.mjs reproduces src/data/seasons.json exactly
-// and that file is frozen — the parity gate checks its checksum. A correction
-// made after the file stopped being written lives here instead, and is re-run
-// after any db:import that rebuilds the database.
+// and that file stopped being written in Phase 1. A correction decided after
+// that lives here instead, and is re-run after any db:import that rebuilds the
+// database.
 //
 // 'botted' is not offered. A botted row is a slot with no player at all, so
 // there is nothing here to name it by, and 001's teams_botted_has_no_player

@@ -202,14 +202,14 @@ makes the season enterable from the app on day one.
 
 Three things worth knowing:
 
-- **Both sides of a seeded row are `NULL`, and that is not a BYE.** The file only
-  ever had "no opponent", which `server/serialize.mjs` spells `"BYE"` and
-  `EditSeasonPage` renders as uneditable text — a whole season of those would be
-  impossible to fill in. A row that is null on *both* sides now serializes as
-  `null`, which the editor renders as a team dropdown. One side null still says
-  `"BYE"`, which is the real thing: the #1 and #2 seeds in week 15. Nothing
-  imported from the file is null on both sides, so the parity gate never sees
-  this branch.
+- **Both sides of a seeded row are `NULL`, and that is not a BYE.** The payload
+  says `null` for either case; the difference is read at the edge, by `isBye` in
+  `src/stats/league.js`, which calls a matchup a BYE only when *exactly one* side
+  is null. That is the real thing — the #1 and #2 seeds in week 15 — and
+  `EditSeasonPage` renders it as the uneditable word `BYE`. A row that is null on
+  *both* sides is a slot nobody has filled yet, and the editor renders it as a
+  team dropdown; a whole season of uneditable text would be impossible to fill
+  in. Nothing imported from the file is null on both sides.
 - **The playoff weeks are copied, not invented.** Their `status` and `label`
   values are the bracket's wiring, and `position` has to come with them because
   `PlayoffBracket.jsx` splits a week by slicing the array rather than by reading
@@ -233,9 +233,9 @@ npm run db:team -- --year 2026 --rename "Keith John:EPA THI"
 ```
 
 It updates one column and nothing else, which is worth stating because it looks
-like it should be more. Matchups and standings both reference teams by **id**,
-and a matchup side in the legacy payload is the player's `display_name` rather
-than the team name — so no game moves, no score is touched, and **no
+like it should be more. Matchups and standings both reference teams by **id**, and
+the label the client draws beside a matchup side is the player's `display_name`
+rather than the team name — so no game moves, no score is touched, and **no
 `db:recompute` is needed**: the standings row serializes its name by reading the
 team row, so the change shows up on the next request. The team name appears in
 `teams[]` and `standings[]` and nowhere else.
@@ -247,9 +247,9 @@ they played — and this script will not do it.
 
 ### Corrections the import cannot make
 
-`db:import` reproduces `seasons.json` exactly and that file is frozen — the
-parity gate checks its checksum. A correction decided after it stopped being
-written therefore cannot go in it, and lives as a script instead.
+`db:import` reproduces `seasons.json` exactly, and that file stopped being
+written in Phase 1. A correction decided after that cannot go in it, and lives as
+a script instead.
 
 ```
 npm run db:player -- --player "Max Strater" --status inactive

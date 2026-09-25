@@ -313,6 +313,36 @@ Decided here so 7.6 executes rather than deliberates. Counted against the tree a
 **Kept and renamed: nothing.** A rename in the same commit as a delete makes the
 diff unreadable.
 
+**Executed 2026-09-24 (7.6), with four amendments to the list above.** The five
+files and `baseline/` are gone — 1,302 lines and 288 KB, one dated copy of
+`baseline/` kept in `~/fantasy-football-backups/` first, because it was the only
+recording of what the JSON-backed server answered and it is not in git.
+
+- The `guard.mjs` fallback did not just go: `slugOf` now returns `null` for a path
+  that names no league, and `LEAGUES_PREFIX` went with it, because every path that
+  fails to match `LEAGUE_PATH` already returns `null`. A write to an unslugged
+  path is a 401 — verified with a real unlock in hand, which is the case that
+  matters and the one nothing checked before.
+- `api:auth` kept three `--prove` breaks rather than dropping to two. The
+  `DEFAULT_LEAGUE` break was **inverted**: putting the fallback back is what an
+  unrecognised write path silently reaching real data looks like in one line, and
+  two new checks catch it — a cookied `PUT` to the deleted alias path and to
+  `/api/made/up`, both of which must be 401.
+- The gate's cookieless-GET list is now **walked off the router stack** like the
+  writes, rather than read from `baseline/manifest.json`. Six GETs, and the list
+  cannot go stale.
+- Five comments named `server/serialize.mjs` or the parity gate, not the three the
+  plan found: `db/README.md` (twice), `db/new-season.mjs`, `db/rename-team.mjs`,
+  `db/player-status.mjs`, `server/serialize-api.mjs` and `server/routes/leagues.js`.
+  Each now names where the rule lives — `isBye` and `ownerLabel` in
+  `src/stats/league.js`, or `server/serialize-api.mjs`.
+
+**After:** `api:auth` green at **24** `ok` lines, **3** write routes, **6**
+cookieless GETs, and failing under all three `--prove` breaks. `db:verify` 72,
+2026 skipped, nine `prev_place` nulls. The build reproduces
+`index-DIAxshQw.js` at 306.31 kB — the *same asset hash* as before the commit, so
+the client is byte-identical and nothing under `src/` moved.
+
 ## (n) Still one league, still no signups
 
 Phase 0's decision, restated because a public URL is where it gets tested.

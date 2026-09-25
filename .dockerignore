@@ -16,12 +16,10 @@ dist
 dist-ssr
 *.local
 
-# History and local-only data. baseline/ is 288 KB of recorded payloads and
-# backups/ holds dumps of the database — neither belongs in an image that serves
-# the public.
+# History and local-only data. backups/ holds dumps of the database, which is the
+# last thing that belongs in an image that serves the public.
 .git
 .gitignore
-baseline
 backups
 
 # Prose. The image needs no README and no decision records.

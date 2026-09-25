@@ -1,12 +1,13 @@
-// The league-scoped routes, which speak the database's own terms — team ids,
-// playoff_rounds as the rung reached, status rather than state, null opponents
-// rather than "BYE". Nothing consumes them yet, and they must never learn the
-// file's quirks: that is what server/routes/legacy.js is for.
+// The league-scoped routes, and since Phase 7 the only ones: they speak the
+// database's own terms — team ids, playoff_rounds as the rung reached, status
+// rather than state, null opponents rather than "BYE". The compatibility aliases
+// that spoke src/data/seasons.json's dialect were deleted once the client had
+// stopped calling them, and nothing here should learn their quirks back.
 //
-// Every handler here runs the same query layer as its alias in legacy.js and
-// differs only in how it reads and writes the payload — the serializer it hands
-// the bundle to, and the row reader it gives the write. Two implementations of
-// "fetch a season" is how two dialects drift into two behaviours.
+// Every handler runs the query layer and differs from the next only in how it
+// reads and writes the payload — the serializer it hands the bundle to, and the
+// row reader it gives the write. Two implementations of "fetch a season" is how
+// one dialect becomes two behaviours.
 import express from "express";
 import {
   allLeagues,

@@ -1,339 +1,150 @@
-# Fantasy Football League Dashboard
+# The Fan Club
 
-A comprehensive web application for tracking and managing fantasy football league statistics across multiple seasons. Built with React, Express, and Tailwind CSS, this dashboard provides real-time insights into team performance, head-to-head matchups, and playoff brackets.
+A dashboard for one fantasy football league's history: seven seasons of standings,
+weekly matchups, playoff brackets, per-player careers and all-time totals, plus an
+editor for entering scores as the season runs.
 
-## Features
+The data lives in Postgres. Reading is open to anyone; every write needs the
+league's passphrase.
 
-### Core Functionality
-- **Multi-Season Tracking**: View and compare league statistics across different seasons
-- **Real-Time Statistics**: Live calculation of wins, losses, points for/against, and win percentages
-- **Interactive Dashboards**: Multiple view modes for different use cases
-- **Playoff Bracket Visualization**: Visual representation of playoff matchups and progression
-- **Season Editor**: Full CRUD operations for managing matchups, scores, and team data
+## Stack
 
-### View Modes
-- **Season View**: Detailed standings and statistics for a selected season
-- **All-Time View**: Aggregated statistics across all seasons with sortable metrics
-- **Edit Mode**: Administrative interface for updating season data
-- **Bracket View**: Tournament-style visualization of playoff matchups
+- **Client** — React 19 + React Router 7, Vite 7, Tailwind 3, Lucide icons. Every
+  derived number (records, PF/PA, awards, brackets) is computed by pure functions
+  under `src/stats/`, which is why they can be exercised without a browser.
+- **Server** — Express 5, `express-session` with `connect-pg-simple` (sessions
+  live in Postgres, not in memory), `helmet`, `compression`, and
+  `express-rate-limit` on the unlock.
+- **Database** — Postgres 18, reached through `pg`. Schema changes are numbered
+  SQL files under `db/migrations/`, applied by `npm run db:migrate`.
 
-### Key Metrics
-- Win-Loss-Tie records
-- Points For (PF) and Points Against (PA)
-- Points For Per Game (PFPG) and Points Against Per Game (PAPG)
-- Win percentage calculations
-- League-wide averages and totals
+In production Express serves the built client and the API from **one origin**, so
+there is no CORS configuration and no second host to deploy.
 
-## Technology Stack
+## Running it locally
 
-### Frontend
-- **React 19.1.1**: Component-based UI framework
-- **Vite 7.1.2**: Fast build tool and development server
-- **Tailwind CSS 3.4.18**: Utility-first CSS framework
-- **Lucide React 0.552.0**: Icon library
-
-### Backend
-- **Express 5.1.0**: Web application framework
-- **CORS 2.8.5**: Cross-origin resource sharing middleware
-- **Body Parser 2.2.0**: Request body parsing middleware
-
-## Project Structure
-
-```
-fantasy-football-web/
-├── src/
-│   ├── App.jsx                      # Main application component
-│   ├── components/
-│   │   ├── AllTimeTable.jsx         # All-time statistics table
-│   │   ├── EditSeasonPage.jsx       # Season editing interface
-│   │   ├── PlayoffBracket.jsx       # Playoff bracket visualization
-│   │   ├── PlayerStatsPage.jsx      # Individual player statistics view
-│   │   ├── SeasonTable.jsx          # Season standings table
-│   │   └── StatsCard.jsx            # Reusable statistics card
-│   ├── data/
-│   │   └── seasons.json             # League data storage
-│   ├── index.css                    # Global styles and Tailwind imports
-│   └── main.jsx                     # Application entry point
-├── server.js                        # Express server configuration
-├── public/                          # Static assets
-├── package.json                     # Project dependencies
-├── vite.config.js                   # Vite configuration
-├── tailwind.config.js               # Tailwind CSS configuration
-└── postcss.config.js                # PostCSS configuration
-```
-
-## Installation
-
-### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm or yarn package manager
-
-### Setup Steps
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/ryanw1nn/FantasyFootballWebApp.git
-   cd FantasyFootballWebApp
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables** (optional):
-   Create a `.env` file in the root directory:
-   ```env
-   VITE_API_URL=http://localhost:5001
-   ```
-
-4. **Prepare data file**:
-   Ensure `src/data/seasons.json` exists with valid league data structure
-
-## Usage
-
-### Development Mode
-
-Run the development server with hot module replacement:
+Prerequisites: Node **24 or newer** (`engines` enforces it) and Docker for the
+database.
 
 ```bash
-npm run dev
+npm install
+npm run db:up                 # Postgres 18 in Docker, on localhost:5433
+npm run db:migrate            # apply db/migrations/ in order
+npm run db:import             # load src/data/seasons.json into an empty database
+npm run db:recompute          # derive standings from the matchups
+npm run dev                   # Vite on 5173; in another shell, npm start for the API on 5001
 ```
 
-The application will be available at `http://localhost:5173`
+Configuration comes from the environment, and none of it belongs in a commit:
 
-### Production Mode
+| Variable | What it is |
+| --- | --- |
+| `DATABASE_URL` | the local database, on `localhost:5433` |
+| `DATABASE_URL_PROD` | the production database, read only by commands you type deliberately |
+| `SESSION_SECRET` | 32+ random characters; the server refuses to boot without one |
+| `VITE_API_URL` | optional. Left unset, the client calls the API on its own origin, which is what production does |
 
-1. **Build the application**:
-   ```bash
-   npm run build
-   ```
+Nothing prefixed `VITE_` can be a secret: Vite inlines those into the bundle every
+visitor downloads.
 
-2. **Start the production server**:
-   ```bash
-   npm start
-   ```
-
-The server will run on `http://localhost:5001`
-
-### Preview Production Build
-
-Test the production build locally:
+To run the way production does, build the client and let Express serve it:
 
 ```bash
-npm run preview
+npm run build && npm start     # everything on http://localhost:5001
 ```
 
-## API Endpoints
+Or build the image, which is what the host runs:
 
-The Express backend provides the following endpoints:
-
-### Get Season Data
-```
-GET /api/seasons
-```
-Returns all season data from the JSON file.
-
-**Response**: `200 OK`
-```json
-{
-  "2024": [
-    {
-      "name": "Team Name",
-      "wins": 10,
-      "losses": 3,
-      "ties": 1,
-      "pf": 1500.5,
-      "pa": 1200.3,
-      "state": "active"
-    }
-  ]
-}
+```bash
+docker build -t fanclub .
+docker run -p 5001:5001 -e DATABASE_URL=… -e SESSION_SECRET=… fanclub
 ```
 
-### Update Season Data
+## The URLs
+
+The client is a single-page app. Every view carries its league, and the year is a
+query parameter so it survives a switch between views:
+
+| URL | Opens |
+| --- | --- |
+| `/l/:slug/season?year=2026` | standings and season stats |
+| `/l/:slug/alltime` | the all-time table, across every season |
+| `/l/:slug/bracket?year=2026` | the playoff bracket |
+| `/l/:slug/edit?year=2026` | the score editor — needs the passphrase |
+| `/l/:slug/players/:name` | one player's career |
+
+The grammar, and the four judgement calls behind it, are in
+[`docs/url-grammar.md`](docs/url-grammar.md).
+
+## The API
+
+Every route is league-scoped, and the six reads need no cookie:
+
 ```
-POST /api/seasons
-Content-Type: application/json
-```
-Updates the season data file with new information.
+GET  /api/leagues                                  every league
+GET  /api/leagues/:slug                            one league, and the shape of its seasons
+GET  /api/leagues/:slug/seasons                    every season, keyed by year
+GET  /api/leagues/:slug/seasons/:year              teams, standings and weeks
+GET  /api/leagues/:slug/seasons/:year/weeks        just the weeks, for the editor
+GET  /api/leagues/:slug/session                    whether this session may write
 
-**Request Body**: Complete season data object
-
-**Response**: `200 OK`
-```json
-{
-  "message": "Season data updated successfully"
-}
-```
-
-## Data Structure
-
-### Season Data Format
-
-```json
-{
-  "YEAR": [
-    {
-      "name": "string",           // Team name (required)
-      "wins": "number",            // Number of wins
-      "losses": "number",          // Number of losses
-      "ties": "number",            // Number of ties
-      "pf": "number",              // Points for
-      "pa": "number",              // Points against
-      "state": "string"            // Team state: 'active' | 'out' | 'eliminated'
-    }
-  ],
-  "weeks": {
-    "WEEK_NUMBER": {
-      "matchups": [
-        {
-          "team1": "string",       // First team name or 'BYE'
-          "score1": "number",      // First team score (null if not played)
-          "team2": "string",       // Second team name or 'BYE'
-          "score2": "number",      // Second team score (null if not played)
-          "label": "string",       // Optional matchup label (e.g., "Semifinals")
-          "status": "string"       // Optional status: 'active' | 'eliminated' | 'out'
-        }
-      ]
-    }
-  }
-}
+POST /api/leagues/:slug/unlock                     { passphrase } → a session cookie
+POST /api/leagues/:slug/lock                       give the unlock back
+PUT  /api/leagues/:slug/seasons/:year/weeks/:week  { matchups: [...] }
 ```
 
-## Component Documentation
+`GET /healthz` answers for the service rather than the process: it queries the
+database, so it is a 503 when Postgres is unreachable.
 
-### App.jsx
-Root component managing application state, view modes, and data fetching. Orchestrates all child components and handles API communication.
+A matchup is a pair of team ids and their scores — `team1_id`, `team1_score`,
+`team2_id`, `team2_score` — plus an optional `status` and `label`. A side with no
+opponent is `null`: exactly one null side is a BYE, and both null is a slot nobody
+has filled in yet.
 
-### AllTimeTable.jsx
-Displays aggregated statistics across all seasons. Supports sorting by any metric and calculates career totals for each team.
+**Writes are closed by default.** A guard ahead of every router refuses any
+non-read request whose league has not been unlocked in this session, so a write
+route added later starts out denied rather than open, and a write to a path that
+names no league is refused rather than aimed at a default. `npm run api:auth`
+proves it: it walks Express's own router stack, sends every write route it finds
+with no cookie, and fails if any of them answers anything but 401. Add `-- --prove`
+and it breaks the guard three ways on purpose, then reports which checks each
+break costs.
 
-### SeasonTable.jsx
-Shows detailed standings for a single season. Calculates derived metrics like win percentage and points per game.
+## Commands
 
-### EditSeasonPage.jsx
-Administrative interface for modifying season data. Includes matchup editing, score updates, and team management.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Vite dev server on 5173 (`strictPort`, so it will not wander to 5174) |
+| `npm start` | the API, and the built client from `dist/`, on 5001 |
+| `npm run build` | build the client into `dist/` |
+| `npm run db:up` / `db:down` | the Postgres container |
+| `npm run db:migrate` / `db:status` | apply migrations / list what is applied |
+| `npm run db:check` | name the local and production targets without touching either |
+| `npm run db:import` | load `src/data/seasons.json` — **truncate and reload**, never against production |
+| `npm run db:recompute` | rewrite standings from the matchup rows |
+| `npm run db:verify` | diff the database against `seasons.json`, read-only |
+| `npm run db:season` | lay out a new season, all 17 weeks |
+| `npm run db:team` / `db:player` | rename a team / set a player active or inactive |
+| `npm run db:passphrase` | set a league's write passphrase, at a prompt |
+| `npm run api:auth` | the write-guard gate, above |
 
-### PlayoffBracket.jsx
-Visual tournament bracket for playoff matchups. Supports multiple rounds and dynamic status indicators.
+`src/data/seasons.json` is not a backup and not an answer key. It is six of the
+seven seasons as they stood in Phase 1, kept for exactly two jobs: building an
+empty database from nothing, and giving `db:verify` something to diff against.
+**The database is the source of truth**, and the two have disagreed once already —
+about a 2025 score, which the file got wrong.
 
-### StatsCard.jsx
-Reusable component for displaying key statistics in a card format. Includes icon support and subtitle text.
+## Where the decisions are written down
 
-## Configuration
+Each of these is a decision record: what was chosen, what was declined, and what
+the numbers were read against.
 
-### Tailwind CSS Customization
-
-Edit `tailwind.config.js` to customize colors, spacing, and other design tokens:
-
-```javascript
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,jsx}"
-  ],
-  theme: {
-    extend: {
-      // Add custom configurations
-    }
-  }
-}
-```
-
-### Vite Configuration
-
-Modify `vite.config.js` for build optimization and plugin settings:
-
-```javascript
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173
-  }
-})
-```
-
-## Troubleshooting
-
-### Port Already in Use
-If port 5001 is occupied, modify the port in `server.js`:
-```javascript
-const PORT = process.env.PORT || 5001;
-```
-
-### Data Not Loading
-1. Verify `src/data/seasons.json` exists and contains valid JSON
-2. Check console for API errors
-3. Ensure backend server is running (`npm start`)
-
-### Build Errors
-1. Clear node_modules and reinstall: `rm -rf node_modules && npm install`
-2. Clear Vite cache: `rm -rf .vite`
-3. Verify Node.js version compatibility
-
-### CORS Issues
-Ensure the Express server has CORS enabled (already configured in `server.js`):
-```javascript
-app.use(cors());
-```
-
-## Development Guidelines
-
-### Code Style
-- Use functional components with hooks
-- Follow React best practices for state management
-- Maintain consistent formatting with Prettier (if configured)
-- Use meaningful variable and function names
-
-### Component Structure
-- Keep components focused on single responsibilities
-- Extract reusable logic into custom hooks
-- Use PropTypes or TypeScript for type checking (if needed)
-
-### State Management
-- Use React hooks (useState, useEffect, useMemo) for local state
-- Lift state up when shared between components
-- Consider Context API for deeply nested prop drilling
-
-## Performance Optimization
-
-### Implemented Optimizations
-- **useMemo**: Expensive calculations cached and recomputed only when dependencies change
-- **Component Code Splitting**: React.lazy() can be added for route-based code splitting
-- **Tailwind CSS Purging**: Unused styles automatically removed in production builds
-
-### Recommendations
-- Implement pagination for large season datasets
-- Add debouncing to search/filter inputs
-- Consider lazy loading for playoff bracket images
-
-## Future Enhancements
-
-Potential features for future development:
-- User authentication and authorization
-- Real-time updates with WebSocket integration
-- Advanced analytics and data visualizations
-- Mobile-responsive design improvements
-- Export functionality (PDF, CSV)
-- Player-level statistics tracking
-- Draft history and analysis
-- Trade management system
+- [`docs/schema.md`](docs/schema.md) — the tables, and why each constraint exists
+- [`docs/url-grammar.md`](docs/url-grammar.md) — the client's routes
+- [`docs/view-dialect.md`](docs/view-dialect.md) — how the client reads the API's shape
+- [`docs/deploy.md`](docs/deploy.md) — hosting, secrets, backups, monitoring
+- [`db/README.md`](db/README.md) — the database scripts, one by one
 
 ## License
 
-ISC
-
-## Repository
-
-**GitHub**: [https://github.com/ryanw1nn/FantasyFootballWebApp](https://github.com/ryanw1nn/FantasyFootballWebApp)
-
-**Issues**: [https://github.com/ryanw1nn/FantasyFootballWebApp/issues](https://github.com/ryanw1nn/FantasyFootballWebApp/issues)
-
-
-## Support
-
-For questions, issues, or feature requests, please open an issue on the GitHub repository. 
+ISC. Issues: https://github.com/ryanw1nn/FantasyFootballWebApp/issues

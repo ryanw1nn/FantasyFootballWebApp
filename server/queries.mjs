@@ -13,12 +13,11 @@
 // are left that way here and converted once, at the serializer boundary.
 //
 // The slug, year and week a caller supplies are parsed here rather than in a
-// route, so both dialects of route get the same 400 and no unchecked value can
-// reach the pool.
+// route, so every route gets the same 400 and no unchecked value can reach the
+// pool.
 import { pool } from "../db/pool.mjs";
 import { writeStandings } from "../db/standings.mjs";
 import { RequestError } from "./errors.mjs";
-import { nameOf } from "./serialize.mjs";
 import {
   parseLabel,
   parseMatchups,
@@ -30,9 +29,6 @@ import {
 } from "./validate.mjs";
 
 export { pool };
-
-/** The one league that exists, and the only one the compat routes serve. */
-export const DEFAULT_LEAGUE = "fan-club";
 
 // ---------------------------------------------------------------------------
 // Leagues
@@ -276,15 +272,6 @@ export async function replaceWeek(slug, year, week, matchups, toRow) {
   }
 }
 
-/** A BYE, an empty slot and a missing key are all "no opponent". */
-function resolveTeam(name, teams) {
-  if (!name || name === "BYE") return null;
-
-  const team = teams.find((row) => nameOf(row) === name);
-  if (team === undefined) throw new RequestError(400, `Unknown team "${name}"`);
-  return team.id;
-}
-
 /** A team id must belong to this season — the foreign key is not an error page. */
 function resolveTeamId(id, teams) {
   if (id === null || id === undefined) return null;
@@ -306,26 +293,10 @@ function requireDistinct(row) {
   return row;
 }
 
-/** Everything the serializer emits for a matchup, and nothing else. */
-const NAME_KEYS = ["team1", "team1Score", "team2", "team2Score", "status", "label"];
+/** Everything a matchup body may carry, and nothing else. */
 const ID_KEYS = ["team1_id", "team1_score", "team2_id", "team2_score", "status", "label"];
 
-/** The aliases' body: a side is a display name, "BYE", or an absent key. */
-export function matchupFromNames(matchup, position, teams) {
-  requireKnownKeys(matchup, NAME_KEYS);
-
-  return requireDistinct({
-    position,
-    status: parseStatus(matchup.status),
-    label: parseLabel(matchup.label),
-    team1_id: resolveTeam(matchup.team1, teams),
-    team1_score: score(matchup.team1Score),
-    team2_id: resolveTeam(matchup.team2, teams),
-    team2_score: score(matchup.team2Score),
-  });
-}
-
-/** The league routes' body: a side is a team id, and no opponent is null. */
+/** A matchup as a write sends it: a side is a team id, and no opponent is null. */
 export function matchupFromIds(matchup, position, teams) {
   requireKnownKeys(matchup, ID_KEYS);
 

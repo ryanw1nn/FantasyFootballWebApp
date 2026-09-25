@@ -15,9 +15,10 @@
 //   * matchups reference teams by id, so no game moves and no score is touched.
 //   * standings reference teams by id too, and serialize the name by reading the
 //     team row — so the new name appears immediately, with no db:recompute.
-//   * a matchup *side* in the legacy payload is the player's display_name, not
-//     the team name (server/serialize.mjs), so weeks render identically either
-//     way. The team name shows up in teams[] and standings[] and nowhere else.
+//   * a matchup side is a team id, and the label the client draws beside it is
+//     the player's display_name, not the team name (ownerLabel in
+//     src/stats/league.js) — so weeks render identically either way. The team
+//     name shows up in teams[] and standings[] and nowhere else.
 //
 // What it cannot do is rename the person: display_name lives on players and is
 // shared across every season they played. That is a different change with a

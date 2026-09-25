@@ -24,8 +24,6 @@
     "db:player": "node db/player-status.mjs",
     "db:team": "node db/rename-team.mjs",
     "db:passphrase": "node db/passphrase.mjs",
-    "baseline:capture": "node scripts/capture-baseline.mjs",
-    "api:parity": "node scripts/parity.mjs",
     "api:auth": "node scripts/auth.mjs"
   },
   "devDependencies": {
