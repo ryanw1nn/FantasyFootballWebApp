@@ -144,7 +144,7 @@ secret on the internet within seconds: **rotate, never amend.**
 
 | Secret | Where it lives | Lifecycle |
 | --- | --- | --- |
-| `DATABASE_URL` | Render's environment, holding the Neon connection string with `sslmode=require` | Rotated from the Neon dashboard. `db/url.mjs` upgrades `require` to `verify-full` at connect time, so a `pg` v9 upgrade cannot quietly weaken it. |
+| `DATABASE_URL` | Render's environment, holding the Neon connection string with `sslmode=require` — **the direct endpoint, never `-pooler`**, see *The pooler serves an empty `search_path`* | Rotated from the Neon dashboard. `db/url.mjs` upgrades `require` to `verify-full` at connect time, so a `pg` v9 upgrade cannot quietly weaken it. |
 | `SESSION_SECRET` | Render's environment | A fresh random string of **at least 32 characters** — `server/session.mjs:33` refuses to boot in production below that — generated for production and **different from the local one**. Rotating it signs every session out, so it is a decision, not a side effect. |
 | League passphrase | A hash in `leagues.write_secret_hash` | Set with `npm run db:passphrase -- --league fan-club --yes`, typed at the prompt. `db/passphrase.mjs` refuses `--passphrase` as an argument, because arguments land in shell history and in `ps`. |
 
@@ -488,50 +488,83 @@ a custom-format archive is seekable and `pg_restore -l` against a pipe can read
 nothing at all while still exiting 0. And **`-v`**, so a restore that does nothing
 says so instead of returning in silence.
 
-### The pooler poisons a restore, and hides the fact
+### The pooler serves an empty `search_path`, so the app uses the direct endpoint
 
-**Read on 2026-09-25, against the live Neon database.** Line 16 of the dump is
-`SELECT pg_catalog.set_config('search_path', '', false)`. The `false` makes it
-session-scoped rather than transaction-scoped, so it should die with the restore
-session. **Through the `-pooler` endpoint it does not** — it sticks to the pooled
-server connection and is handed to whoever gets that connection next.
+**Read on 2026-09-25, against the live Neon database.** The two endpoints do not
+behave the same way:
 
-What that looked like, in the order it appeared:
+| Endpoint | `show search_path` | `select count(*) from seasons` |
+| --- | --- | --- |
+| `...-pooler.c-5...` | *empty*, **five connections out of five** | `ERROR: relation "seasons" does not exist` |
+| `...c-5...` (direct) | `"$user", public` | 7 |
+
+**This would have failed the first deploy and looked like something else.**
+`db/pool.mjs` reads `DATABASE_URL` and nearly every query in
+`server/queries.mjs` names its tables unqualified, so every read would have
+errored — while `/healthz` stayed **200**, because its `SELECT 1` names no table.
+Every indicator 7.8 tells you to check would have been green.
+
+**Two fixes were tried and the pooler refuses both, by design:**
+
+1. *Role-level default.* `ALTER ROLE neondb_owner SET search_path TO "$user", public;`
+   applies — `pg_roles.rolconfig` reads `{"search_path=\"$user\", public"}` — and the
+   pooler **still** serves an empty path. It ignores role-level `search_path`.
+2. *Startup parameter.* `?options=-c search_path=public` does not connect at all:
+   `ERROR: unsupported startup parameter in options: search_path. Please use
+   unpooled connection or remove this parameter from the startup package.`
+
+**Decided: `DATABASE_URL` holds the direct (unpooled) endpoint — the host without
+`-pooler` — everywhere.** Render's environment in 7.8, every `db/` command, and
+(k)'s backup job. This is Neon's own instruction, printed by its own error.
+
+It also costs nothing here. A pooler absorbs many short-lived connections —
+serverless functions, per-request connects. This app is one long-lived Node
+process holding at most **5** connections (`db/pool.mjs:30`), which is exactly the
+shape that gains nothing from PgBouncer and inherits its surprises. **No code
+change**, so `git diff -- db/` stays *comments only* as 7.12 asserts; the whole
+change is which string goes in one environment variable. *This fills in a blank
+in (f), which said "the Neon connection string" without saying which endpoint.*
+
+The `ALTER ROLE` is left in place. It changes nothing on the direct endpoint,
+which already had that value as its built-in default, but it makes explicit an
+assumption the app had been depending on silently for six phases.
+
+*A first diagnosis blamed the restore's `set_config('search_path', '', false)` on
+line 16 of the dump, leaking across a pooled connection. It was wrong: leaked
+session state would vary between connections, and five consecutive ones were
+identical. Recorded because the wrong explanation was plausible enough to act on,
+and acting on it would have meant re-running a restore that had already
+succeeded.*
+
+### How this presented, and the reading habit it should change
+
+The restore succeeded on the first attempt and looked for an hour as though it
+had failed. Every symptom came from the empty path:
 
 | Symptom | What it actually meant |
 | --- | --- |
 | `pg_restore` exits 0, silent | The restore **worked** |
-| `db:migrate` → `no schema has been selected to create in` | `search_path` is empty, so unqualified `CREATE TABLE schema_migrations` has nowhere to go |
-| `\dt` → *Did not find any tables* | `\dt` lists tables **in the search path**. The tables were there the whole time |
+| `db:migrate` → `no schema has been selected to create in` | `migrate.mjs:14`'s unqualified `CREATE TABLE schema_migrations` has nowhere to go |
+| `\dt` → *Did not find any tables* | `\dt` lists tables **in the search path**. All eight were there |
 | A second restore → `relation "leagues" already exists` | Proof the first one succeeded |
 
-**Both wrong diagnoses came from trusting `\dt`.** An empty `search_path` makes a
-full database look empty, which reads as "the restore did nothing" and invites a
-re-run. The one command that cannot lie is a schema-qualified count:
+**`\dt`'s answer was read twice as "the restore did nothing", and the second
+reading nearly caused a re-run of a restore that had already worked.** The only
+count that cannot lie is a schema-qualified one:
 
 ```sh
 docker compose exec -T db psql "$PROD_DIRECT" -c 'select count(*) from public.seasons;'
 ```
 
-Ruled out, so the cause is not configuration: `pg_roles.rolconfig` for
-`neondb_owner` is null, `pg_db_role_setting` returns **0 rows**, and the direct
-endpoint reports `"$user", public`. Nothing is set wrong. Only the route in was.
-
 **The rule: `pg_dump`, `pg_restore` and admin `psql` never point at the `-pooler`
-host.** The pooler is for application traffic; schema work goes to the direct
-endpoint, which is Neon's own guidance and is now this record's. **That includes
-(k)'s weekly backup job**, which is specified against `DATABASE_URL_PROD` and must
-strip `-pooler` the same way.
+host** — schema work goes to the direct endpoint, which is Neon's own guidance.
+**(k)'s weekly backup job is specified against `DATABASE_URL_PROD` and must strip
+`-pooler` the same way.**
 
-**One consequence for the application, left open deliberately.** `db/pool.mjs`
-points at the pooler and nearly every query in `server/queries.mjs` names tables
-unqualified, so a leaked empty `search_path` reaching an app connection would
-fail every read at once with nothing in the logs to explain it. Pinning
-`options: "-c search_path=public"` on the pool would close it, and it is **not
-done here**: a startup parameter has to survive the pooler, that is untested, and
-an untested change to every production connection is worse than the hazard. *The
-check to run before the first deploy* is `show search_path` against the pooler,
-confirming it has recycled back to `"$user", public`.
+Two smaller corrections from the same hour: pass a custom-format dump to
+`pg_restore` as a **file path, not on stdin** — the archive is seekable and a pipe
+can yield nothing while still exiting 0 — and pass **`-v`**, so a restore that does
+nothing says so rather than returning in silence.
 
 ### The counts production must read
 
