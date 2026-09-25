@@ -1034,9 +1034,9 @@ plus a `phase7-pre-ship-*` directory and an unrelated one: it deleted **3** —
 mid-January, and two mid-February — and kept the first of each month, the newest
 eight, and both directories that were not its own.
 
-### The restore drill, performed
+### The first restore drill, before the job was installed
 
-**Against the newest production dump on disk** —
+**Against the newest production dump on disk at the time** —
 `~/fantasy-football-backups/phase7-post-write-20260925-155645/prod.dump`, 35,854
 bytes, the one 7.9 took through the public URL.
 
@@ -1075,20 +1075,65 @@ on 2026-09-24. **Written with the date, because a limit recorded without one is 
 limit nobody re-checks.** It remains an undo for a bad edit made this morning,
 never archival.
 
-### What is owed: the install, and the first real run
+### Installed, and the first scheduled run
 
-**The job is written and proven; it is not yet installed, and it has never run
-against Neon.** Both remaining actions write a production credential to disk and
-open a connection to the production database, so they are typed by the
-commissioner rather than by an assistant. The block is in
-`docs/runbook.md` → *Installing it, once*: write `~/.config/fanclub/prod-url` at
-mode 600, copy the plist into `~/Library/LaunchAgents/`, `launchctl bootstrap`,
-then `launchctl kickstart -k` for the first run and read the log line.
+**Installed 2026-09-25.** The credential is `~/.config/fanclub/prod-url`, mode
+600, outside the repo; the plist is in `~/Library/LaunchAgents/`, bootstrapped
+into the GUI domain; and the job was kicked off by hand for its first run.
 
-**Until that one line says `ok`, 7.10's gate is not met** — the gate asks for a
-dump the schedule produced and a restore of it, and only the restore half is
-done. Everything else the step asks for is in the tree: the retention rule is in
-the script, and the runbook has four procedures.
+| Run | Read |
+| --- | --- |
+| `launchctl kickstart -k`, 16:35:39 | `ok prod-weekly-20260925-163515 dump=35079B sql=64294B checksums=verified pruned=0` |
+| a foreground run, 16:37:11 | `ok prod-weekly-20260925-163649 dump=35079B sql=64294B checksums=verified pruned=0` — byte-identical, so the job is deterministic against an unchanged database |
+
+**One instruction was wrong and cost a diagnosis.** The step said to read
+`backup.log` straight after `kickstart`, and `kickstart` returns immediately
+while the run takes about 25 seconds — so the first look found **no log file at
+all**, which is the same symptom as a job that never spawned. It had spawned and
+was still dumping. *The log line is written at the end of a run, by design: a
+line in that file means a complete, checksummed dump, never an attempt.* The
+runbook says to wait for it.
+
+### The drill against the dump the schedule produced
+
+**Performed 2026-09-25** on `prod-weekly-20260925-163515` — the launchd run's own
+output, not the by-hand one, because the gate asks for a dump the schedule made.
+
+| Read | |
+| --- | --- |
+| checksums | `prod.dump: OK`, `prod.sql: OK` |
+| restore | `--exit-on-error`, no errors |
+| counts | **7** seasons, **84** teams, **618** matchups, **16** players, **84** standings, **4** migrations, 3 sessions |
+| 2026 | 103 matchups, **12** scored |
+| `players.id = 18` | Patrick O'Donald, present |
+| passphrase | `write_secret_hash` not null — **survived the restore** |
+| `db:migrate` | *Up to date — nothing to apply* |
+| `db:verify` | **72** team-seasons, 2026 skipped, the nine whitelisted nulls named |
+| elapsed | **2 seconds** |
+
+Throwaway dropped; `postgres` and `fanclub` are the only databases left.
+
+**2026 reads 12 scored here and 13 in 7.9's dump**, and both are right: the test
+score was removed through the editor after 7.9's dump was taken. *A dump is a
+recovery point, not a mirror* — confirmed from the other side, against a file the
+schedule produced.
+
+### 7.10 closed
+
+**Done 2026-09-25.** A `launchd` job dumps production weekly into
+`~/fantasy-football-backups/`, both formats, checksummed and re-verified in the
+same run, with retention enforced in the script and one log line per run. **It
+has run on its own, and the dump it produced has been restored into a throwaway
+database and verified green in two seconds.** `docs/runbook.md` has four
+procedures — restore, roll back, rotate the passphrase, rotate `SESSION_SECRET`
+— plus the install block and a table naming what each exit code means.
+
+*One decision was corrected:* (k)'s `docker compose exec` became a throwaway
+`docker run`, for three reasons — no working directory, no dependence on the
+local database being up, and no paused-container hang.
+
+**Losing the database is now survivable, so the link is safe to hand out.** Next
+is 7.11: a monitor that tells you before the group chat does.
 
 ## The declines, in one place
 

@@ -206,11 +206,16 @@ chmod 600 ~/.config/fanclub/prod-url
 cp ~/fantasy-football-web/scripts/com.ryanwinn.fanclub.backup.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ryanwinn.fanclub.backup.plist
 launchctl kickstart -k gui/$(id -u)/com.ryanwinn.fanclub.backup      # the first run, by hand
+sleep 30                                                             # kickstart returns at once; the run takes ~25 s
 tail -1 ~/fantasy-football-backups/backup.log                        # expect: ok prod-weekly-… checksums=verified
 ```
 
 The script strips `-pooler` itself, so it does not matter which endpoint that
-line of `.env` holds. **`launchctl bootout gui/$(id -u)/…` unloads it** — and
+line of `.env` holds. **Wait for the run before reading the log:** `kickstart`
+returns immediately and the dump takes about 25 seconds, and *the log line is
+written at the end of a run by design* — a line in that file means a complete,
+checksummed dump, never an attempt. An empty or missing log right after
+`kickstart` means the job is still working, not that it failed. **`launchctl bootout gui/$(id -u)/…` unloads it** — and
 `bootout` then `bootstrap` again is how a plist edit takes effect; editing the
 file alone does nothing.
 
