@@ -796,6 +796,134 @@ The free instance's idle shutdown logged **`SIGTERM received, shutting down.`** 
 and 7.10 makes losing the database survivable; those are what make a link safe to
 hand out.
 
+## 7.9 — The second deploy, with a write in between
+
+The card's gate, run literally: *"you can redeploy mid-season and lose nothing."*
+That is not a property of a Dockerfile, it is a sequence, so the only record that
+counts is one taken while performing it.
+
+**Split by who can run it.** The refusals are machine-checkable from anywhere and
+were taken first, below. Everything else needs the passphrase, a browser
+inspector, and the Render dashboard, and is written here as an ordered runbook to
+be performed and then filled in. *No part of this step writes to Neon from a
+script;* the only write production takes is the one made through the UI.
+
+### Taken first: the refusals, from the internet, 2026-09-25
+
+The guard's claim, made against the real host with no cookie rather than against
+a scratch server. `server/guard.mjs` keys on the **method, not the route**, and
+runs ahead of every router, so a write to a path that does not exist is a 401
+rather than a 404 — an anonymous caller cannot use the guard to enumerate the
+write routes.
+
+| Anonymous request, no cookie | Read |
+| --- | --- |
+| `PUT /api/leagues/fan-club/seasons/2026/weeks/1` | **401** `{"error":"Unlock this league to make changes."}` |
+| `PUT /api/seasons/2026/weeks/1` — names no league, 7.6's retired shape | **401**, the same body — `slugOf()` returns null and there is no fallback to the one league |
+| `PUT /api/leagues/other-league/seasons/2026/weeks/1` — names a league that does not exist | **401**, not 404 |
+| `GET /api/leagues/fan-club/session` | `200 {"canWrite":false}`, and **no `Set-Cookie`** — `saveUninitialized: false`, so a reader never gets a session row |
+| `GET /api/leagues/fan-club/seasons` | `200`, **113,308** bytes plain, **11,221** gzipped |
+| `/healthz` | `200`, 0.44 s warm |
+| shipped bundle | `/assets/index-DLKzlqb6.js` — the byte-identical artefact 7.8 recorded |
+
+**One reading worth writing down, because it looks wrong and is not.**
+`POST /api/leagues/fan-club/lock` with no cookie is **204**, not 401. Lock is one
+of the two `OPEN_WRITES` (`guard.mjs:16`), and it has to be: a caller whose
+session has already expired must still be able to lock. With no session there is
+nothing to empty, so the 204 is an accurate no-op. *It is not a hole* — it grants
+nothing and reads nothing. The sentence the gate asserts is about the write
+routes the guard defends, and all three of those are 401 above.
+
+### The runbook, in order — performed at a browser and the dashboard
+
+Order matters twice: the score must be written **before** the redeploy, and the
+dump must be taken **after** it.
+
+**1. Unlock on the real URL, over HTTPS, and look at the cookie.** Open the
+inspector's storage pane, not just the form. Expect `ffc.sid`, **`Secure`**,
+**`HttpOnly`**, **`SameSite=Lax`**, `Path=/`, scoped to
+`fantasyfootballwebapp.onrender.com`, `Max-Age` thirty days.
+
+> **`Secure` is the whole check.** Render terminates TLS and forwards plain
+> HTTP. Without `app.set("trust proxy", 1)` (`index.js:23`) Express sees `http`,
+> `secure: isProduction` refuses to set the cookie, and the unlock *appears* to
+> succeed while nothing persists. Everything about that failure says "the
+> passphrase was wrong" and nothing about it says "the cookie was refused". It is
+> the single most common works-locally-breaks-in-production bug in this shape of
+> app, and this line is where it is found or ruled out.
+
+**The unlock limiter is 10 attempts per 15 minutes** (`routes/session.js:19`),
+keyed on the IP that `trust proxy` resolves. Ten wrong guesses lock the
+commissioner out for a quarter of an hour; have the passphrase 7.7 set to hand
+before starting.
+
+**2. Write a real 2026 score.** The season actually in progress — the honest
+test, and the one `db:import` would have deleted. Save it, and see it appear in
+the season table **without a reload** (5.5's `refresh()`). Write down the week,
+the matchup and both numbers; step 5 is meaningless without them.
+
+**3. Redeploy.** Auto-deploy is on, so **the commit carrying this section is the
+redeploy** — no throwaway commit is needed, and pushing it is the trigger. Watch
+the log for `SIGTERM received, shutting down.` (`index.js:147`) from the old
+instance, then the new `Server running` pair. **Capture the build duration**,
+which is the one figure 7.8 could not scroll back far enough to read.
+
+**4. The session survived, or it did not.** After the deploy, without unlocking
+again, confirm you are still unlocked. You should be: sessions live in Postgres
+(migration `004`, `connect-pg-simple`), not in the process, which is exactly why
+Phase 3 decided it that way. A sign-out means either `SESSION_SECRET` changed
+between deploys or the store is not being used, and both are worth stopping for.
+
+**5. Find the score still there.** Reload and read the number back. *This is the
+sentence the whole migration exists to make true:* on the old architecture the
+score lived in `src/data/seasons.json`, and the deploy would have overwritten it
+with whatever the commit said.
+
+**6. Take a dump of production, immediately.** Through the container, direct
+endpoint, both formats — the same idiom 7.7 used, and the pooler is avoided for
+the same reason.
+
+```sh
+PROD=$(grep '^DATABASE_URL_PROD=' .env | cut -d= -f2-)
+PROD_DIRECT=$(printf '%s' "$PROD" | sed 's/-pooler//')
+OUT=~/fantasy-football-backups/phase7-post-write-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$OUT"
+
+docker compose exec -T db pg_dump "$PROD_DIRECT" -Fc  > "$OUT/prod.dump"
+docker compose exec -T db pg_dump "$PROD_DIRECT"      > "$OUT/prod.sql"
+( cd "$OUT" && shasum -a 256 prod.dump prod.sql > SHA256SUMS.txt && shasum -a 256 -c SHA256SUMS.txt )
+
+grep -c "<the score you wrote>" "$OUT/prod.sql"        # expect 1 or more
+npm run db:check                                       # DATABASE_URL must still say localhost:5433
+```
+
+**This is the first backup that contains something the laptop does not.** From
+this line the direction of truth has reversed: **production is upstream and the
+working database is the copy**, which is (e)'s recorded consequence arriving.
+7.10 turns this dump into a schedule, so the schedule automates something that
+has been watched to work rather than something assumed.
+
+### Fill in when performed
+
+| Check | Read |
+| --- | --- |
+| cookie `Secure` / `HttpOnly` / `SameSite=Lax` | |
+| the score written — year, week, matchup, both numbers | |
+| redeploy trigger | the commit carrying this section |
+| `SIGTERM received, shutting down.` seen | |
+| **build duration** — 7.8's missing figure | |
+| bundle after redeploy | expect `/assets/index-DLKzlqb6.js` **unchanged**: a docs-only commit must not move `dist/` |
+| still unlocked after the deploy | |
+| **the score, read back after the deploy** | |
+| anonymous `PUT` on all three write shapes | **401 / 401 / 401**, taken above |
+| production dump, checksummed, score present | |
+
+**Done when:** a score saved through the public URL survives a redeploy, the
+session survives it too, the cookie is `Secure`/`HttpOnly`/`Lax`, an anonymous
+`PUT` is 401 on every write path, and a dump of production with that score in it
+is on disk with a checksum. **The card's gate is met at that line**; everything
+after it is what keeps it met.
+
 ## The declines, in one place
 
 So the next reader knows they were considered: the **buildpack** (b), a **second
