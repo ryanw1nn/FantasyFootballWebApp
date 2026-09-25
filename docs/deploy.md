@@ -637,6 +637,141 @@ write lands through the public URL: from then on production holds something the
 dump does not, the direction reverses, and recovery means (k)'s weekly dump
 rather than this one.
 
+## The 7.8 service, and the first deploy
+
+**Smoke only.** Nothing here is the phase's gate — 7.9 is, because it redeploys
+with a write in between. What 7.8 has to establish is narrower: the image Render
+builds is the image 7.5 ran, the service reaches the database it is supposed to
+reach, and the log lines say so without printing a credential.
+
+### What was proven on the laptop first, and why it is not the same as 7.5
+
+7.5 built the image from the working tree. **Render builds from the git
+repository**, which is a different context and can differ in exactly the way
+that matters: a file that was never committed, or one `.dockerignore` removes.
+So the build was repeated from a clean clone of `main` before the dashboard was
+opened at all.
+
+| Read on 2026-09-25 | Value |
+| --- | --- |
+| commit Render will build | `b5e55aa`, and `git ls-remote origin refs/heads/main` is the same sha — GitHub holds exactly what the laptop holds |
+| clone contents | no `.env` in the clone at all, so the bundle's relative base URL does not even depend on `.dockerignore` here — it depends on the file being gitignored, which it is |
+| build | **30.5 s** cold, `fanclub:7.8-clone` |
+| image | **69.7 MB** to pull (69,733,225 bytes), 315 MB on disk with the base layers — 7.5's figures |
+| bundle | `dist/assets/index-DLKzlqb6.js`, **306,291 bytes** — *the same content hash and the same byte count as the `fanclub:7.5` image*, so the clean clone reproduces 7.5's build exactly |
+| `localhost:5001` in the bundle | **0** — this is the number 7.12 asserts, now measured in a build made from the repository rather than from the tree |
+| `docker run` → `/healthz` 200 | **1.47 s** |
+
+**One correction to the plan page:** it records the no-base-URL bundle at
+**306,292** bytes. The image's bundle is **306,291**, in both the 7.5 image and
+the clean-clone image. The 306,292 came from a local `npm run build`; the image's
+is one byte smaller and it is the one that ships. 5.2's rule again — trust the
+tree, correct the page.
+
+### The pre-flight smoke, against the image Render will build
+
+Run in production mode against the *local* database, on port 5099 so nothing
+already listening is disturbed:
+
+| Check | Read |
+| --- | --- |
+| `/healthz` | `200`, `{"ok":true}` |
+| boot log | `Server running on http://localhost:5001` and `Serving host.docker.internal:5433/fanclub` — `describeTarget()`, no credential |
+| `GET /api/leagues` | `The Fan Club`, `season_years` **2020–2026**, `latest_year` 2026 |
+| `GET /api/leagues/fan-club/seasons` | `seasons` keyed **2020,2021,2022,2023,2024,2025,2026** — seven |
+| payload | **113,308 bytes** plain, **11,863** gzipped, `Content-Encoding: gzip` present |
+| `GET /l/fan-club/season` | `200 text/html`, `Cache-Control: no-cache` — the SPA fallback |
+| `/assets/index-*.js` | `Cache-Control: public, max-age=31536000, immutable` |
+| CORS with `Origin: http://localhost:5173` | **no `Access-Control-Allow-Origin` at all** |
+| anonymous `PUT .../2026/weeks/1` | **401** |
+| helmet | CSP `default-src 'self'` with `style-src 'self' https: 'unsafe-inline'` and `font-src 'self' https: data:` — the two that keep the Google Fonts `@import` working; HSTS a year, `nosniff` |
+
+### The service
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| repository | `github.com/ryanw1nn/FantasyFootballWebApp`, branch `main` | public, and the source of truth |
+| environment | **Docker** | (b) |
+| plan | **Free** | (a) |
+| region | **Ohio (`us-east-2`)** | Neon's endpoint is `...c-5.us-east-2.aws.neon.tech`. A service in Oregon pays a cross-country round trip per query, and a whole-league read is several. **This cannot be changed later without recreating the service.** |
+| health check path | `/healthz` | registered at `server/index.js:66`, above the session middleware and far above the SPA fallback, so it neither touches the session table nor gets answered with a cheerful 200 of HTML |
+| Dockerfile path | repository root | the default |
+
+### Four environment variables, and not a fifth
+
+| Name | Value |
+| --- | --- |
+| `DATABASE_URL` | the Neon string for the **direct** endpoint — host `ep-shiny-moon-aysjdm4c.c-5.us-east-2.aws.neon.tech`, database `neondb`, `?sslmode=require&channel_binding=require`. **Never the `-pooler` host**; see *The pooler serves an empty `search_path`*. |
+| `SESSION_SECRET` | the 43 characters at `~/fantasy-football-secrets/prod-session-secret.txt`. Paste the characters, not the file's trailing newline. |
+| `NODE_ENV` | `production` |
+| `PORT` | only if Render does not inject it. `server/index.js:130` reads it and falls back to 5001. |
+
+**Do not set `VITE_API_URL`.** It is read at *build* time, inside the image, and
+setting it to anything at all — including the service's own URL — bakes an
+absolute origin into the bundle and undoes 7.3. 7.12's bundle grep is what
+notices.
+
+**`DATABASE_URL_PROD` does not go to Render.** It exists only on the laptop, and
+only so `db/` commands can be pointed at production deliberately; the running
+service reads `DATABASE_URL` like everything else.
+
+**The connection path is already exercised.** 7.7 ran `db:migrate` and
+`db:verify` through `db/pool.mjs` against the direct endpoint, which is `pg`
+connecting with `sslmode` pinned to `verify-full` by `db/url.mjs` — the same
+library, the same string, the same host the service will use. *One note on the
+string:* `pg` does not implement libpq's `channel_binding`, so that parameter is
+ignored rather than enforced. It is harmless and it is not a guarantee.
+
+**Worth confirming from the laptop before the deploy**, because it is the one
+failure that would otherwise present as a blank site:
+
+```sh
+PROD=$(grep '^DATABASE_URL_PROD=' .env | cut -d= -f2-)
+DATABASE_URL="$(printf '%s' "$PROD" | sed 's/-pooler//')" npm run db:verify
+```
+
+### Auto-deploy: off for the first one, then on
+
+Leave it **off** for the first deploy so it can be triggered deliberately and the
+whole log read, then turn it **on**. One committer, one branch, and the repo is
+the source of truth, so a push to `main` deploying is the right default.
+
+**The consequence, written down here so 7.14 is not a style preference: from the
+moment auto-deploy is on, a commit to `main` is a deploy.** Branch for anything
+uncertain. And (d) still holds — migrations are never run at boot, so a deploy
+that needs one is two steps in a fixed order, migration first.
+
+### The three ways the first deploy can fail, each with one cause
+
+| Symptom | Cause | Not the fix |
+| --- | --- | --- |
+| **build fails** | the build context — something uncommitted, or removed by `.dockerignore`. The clean-clone build above is what makes this unlikely. | editing the Dockerfile |
+| **boots and exits** | `server/index.js:174` *Refusing to start: SESSION_SECRET…*, or `:181` *Cannot reach the database at …* — both name themselves, and the second prints the host without the credential | a retry loop |
+| **boots, health check fails** | the path, the port, or `/healthz` unreachable | a longer timeout |
+
+### The first look, on the real URL
+
+`/healthz` 200. The season dropdown offers **seven** years. The header reads
+*The Fan Club* — which is `GET /api/leagues` having reached the database rather
+than a cache. `curl -sI <url>/l/fan-club/season` is `200 text/html`. The log says
+*Server running* and *Serving …neon.tech/neondb*, which is `describeTarget()`
+confirming production is talking to production without printing a secret.
+
+Then leave it alone for fifteen minutes, open it again, and **time the cold
+start**. That is the number (j) decided to accept, and it is easier to accept one
+that has been measured. The local baseline to compare it against is the 1.47 s
+above — which is the container starting, not a host allocating one.
+
+| Measured on the real URL | |
+| --- | --- |
+| service URL | *to be recorded* |
+| first deploy, build duration | *to be recorded* |
+| cold start after 15 minutes idle | *to be recorded* |
+
+**Do not send the link to anyone yet.** 7.9 proves a write survives a redeploy
+and 7.10 makes losing the database survivable; those are what make a link safe to
+hand out.
+
 ## The declines, in one place
 
 So the next reader knows they were considered: the **buildpack** (b), a **second
