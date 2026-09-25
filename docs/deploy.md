@@ -133,6 +133,9 @@ a database is built from nothing — the gates' scratch databases, and only thos
 and it is what `db:verify` diffs six of the seven seasons against. It is not a
 backup and it is not an answer key for the live site.
 
+The commands that execute this decision, the counts they must produce, and the
+rollback if they do not are in *The 7.7 load, and the shape of a rollback* below.
+
 ## (f) Secrets, and their lifecycle
 
 **Three, and none of them is in the repo.** The repo is public
@@ -406,6 +409,200 @@ prevents in production, seen locally, and it is not the image being broken.
 
 A first deploy that exits is one of these three, and the log says which. None of
 them is a reason to add a retry loop.
+
+## The 7.7 load, and the shape of a rollback
+
+Written before anything serves. **This is the last moment production is
+disposable** — the moment a write lands in production (7.9), every answer below
+stops being available.
+
+### The order is restore-first, and migrate-first is wrong
+
+Two orders are possible and only one of them runs. Read off the dump on
+2026-09-25:
+
+| Read | Value | What it settles |
+| --- | --- | --- |
+| `CREATE TABLE` statements in the dump | 8 | The dump brings the whole schema |
+| `IF NOT EXISTS` in the dump | 0 | Every one collides against an existing table |
+| `schema_migrations` rows in the dump | 4 (`001`–`004`) | Migration state travels with the data |
+| `ALTER TABLE … OWNER TO fanclub` | 8 | `--no-owner` is required, not cosmetic |
+
+So **do not run `db:migrate` before the restore.** A migrated database already
+holds all eight tables, and `pg_restore` would report eight `relation already
+exists` failures and duplicate the four `schema_migrations` rows — a wall of
+errors with any real one hidden inside it. Restore into the empty database, and
+run `db:migrate` **afterwards**, where its job is to print *up to date — nothing
+to apply* and so prove `schema_migrations` arrived intact.
+
+The alternative route — `--data-only --disable-triggers` into a migrated schema —
+makes foreign-key ordering your problem for no gain, and is declined.
+
+### The rule about `DATABASE_URL`
+
+Everything in `db/` reads `DATABASE_URL`; nothing reads `DATABASE_URL_PROD`
+(`db/check-env.mjs:51–56` exists to say so). Production commands take a one-shot
+override and **never an edited `.env`** — the minute you swap the two lines "just
+for a minute" is the minute that contains a `db:reset`.
+
+There is no Postgres client on this machine, so `pg_restore` and `psql` run
+inside the `fanclub-db` container, as 7.1's dumps did: an 18.6 client against an
+18.6 server, which is the pairing that makes the file restorable at all.
+
+### The commands, in order
+
+**Every command below uses the direct endpoint, never the pooler.** See *The
+pooler poisons a restore* below for why; it cost this step three failed
+diagnoses.
+
+```sh
+PROD=$(grep '^DATABASE_URL_PROD=' .env | cut -d= -f2-)
+PROD_DIRECT=$(printf '%s' "$PROD" | sed 's/-pooler//')   # schema work goes here
+DUMP=~/fantasy-football-backups/phase7-pre-ship-20260924-184322/fanclub.dump
+
+# 0. the file is the one that was checksummed, and Neon is still empty
+shasum -a 256 -c ~/fantasy-football-backups/phase7-pre-ship-20260924-184322/SHA256SUMS.txt
+docker compose exec -T db psql "$PROD_DIRECT" -c '\dn' -c '\dt'
+
+# 1. restore — not import, and not after a migrate
+docker compose cp "$DUMP" db:/tmp/fanclub.dump
+docker compose exec -T db pg_restore --no-owner --no-privileges \
+  --exit-on-error -v -d "$PROD_DIRECT" /tmp/fanclub.dump
+docker compose exec -T db rm -f /tmp/fanclub.dump
+
+# 2. prove the migration state travelled
+DATABASE_URL="$PROD_DIRECT" npm run db:migrate         # expect: up to date — nothing to apply
+
+# 3. count everything against the working database
+DATABASE_URL="$PROD_DIRECT" npm run db:verify          # expect: 72 team-seasons, 2026 skipped
+
+# 4. a new passphrase, typed at the prompt, twice, never an argument
+DATABASE_URL="$PROD_DIRECT" npm run db:passphrase -- --league fan-club --yes
+
+# 5. the guard that stays useful for years
+npm run db:check                                       # DATABASE_URL must still say localhost:5433
+```
+
+Two notes on the restore command. **Pass the dump as a file path, not on stdin** —
+a custom-format archive is seekable and `pg_restore -l` against a pipe can read
+nothing at all while still exiting 0. And **`-v`**, so a restore that does nothing
+says so instead of returning in silence.
+
+### The pooler poisons a restore, and hides the fact
+
+**Read on 2026-09-25, against the live Neon database.** Line 16 of the dump is
+`SELECT pg_catalog.set_config('search_path', '', false)`. The `false` makes it
+session-scoped rather than transaction-scoped, so it should die with the restore
+session. **Through the `-pooler` endpoint it does not** — it sticks to the pooled
+server connection and is handed to whoever gets that connection next.
+
+What that looked like, in the order it appeared:
+
+| Symptom | What it actually meant |
+| --- | --- |
+| `pg_restore` exits 0, silent | The restore **worked** |
+| `db:migrate` → `no schema has been selected to create in` | `search_path` is empty, so unqualified `CREATE TABLE schema_migrations` has nowhere to go |
+| `\dt` → *Did not find any tables* | `\dt` lists tables **in the search path**. The tables were there the whole time |
+| A second restore → `relation "leagues" already exists` | Proof the first one succeeded |
+
+**Both wrong diagnoses came from trusting `\dt`.** An empty `search_path` makes a
+full database look empty, which reads as "the restore did nothing" and invites a
+re-run. The one command that cannot lie is a schema-qualified count:
+
+```sh
+docker compose exec -T db psql "$PROD_DIRECT" -c 'select count(*) from public.seasons;'
+```
+
+Ruled out, so the cause is not configuration: `pg_roles.rolconfig` for
+`neondb_owner` is null, `pg_db_role_setting` returns **0 rows**, and the direct
+endpoint reports `"$user", public`. Nothing is set wrong. Only the route in was.
+
+**The rule: `pg_dump`, `pg_restore` and admin `psql` never point at the `-pooler`
+host.** The pooler is for application traffic; schema work goes to the direct
+endpoint, which is Neon's own guidance and is now this record's. **That includes
+(k)'s weekly backup job**, which is specified against `DATABASE_URL_PROD` and must
+strip `-pooler` the same way.
+
+**One consequence for the application, left open deliberately.** `db/pool.mjs`
+points at the pooler and nearly every query in `server/queries.mjs` names tables
+unqualified, so a leaked empty `search_path` reaching an app connection would
+fail every read at once with nothing in the logs to explain it. Pinning
+`options: "-c search_path=public"` on the pool would close it, and it is **not
+done here**: a startup parameter has to survive the pooler, that is untested, and
+an untested change to every production connection is worse than the hazard. *The
+check to run before the first deploy* is `show search_path` against the pooler,
+confirming it has recycled back to `"$user", public`.
+
+### The counts production must read
+
+Read off the working database on 2026-09-25, and identical to 7.1's:
+
+| | Count |
+| --- | --- |
+| leagues | 1 |
+| seasons | 7 (2020–2026) |
+| teams (team-seasons) | 84 |
+| matchups | 618 |
+| players | 16, including `id = 18` Patrick O'Donald |
+| standings | 84 |
+| `schema_migrations` | 4 |
+| 2026 | 103 matchups, 12 scored, weeks 1–17 |
+
+**Read back off production on 2026-09-25, through the direct endpoint:**
+`1 / 7 / 84 / 618 / 16 / 84 / 4`, matching the working database exactly.
+`db:migrate` reported *Up to date — nothing to apply*, so `schema_migrations`
+travelled intact. `db:verify` compared **72** team-seasons, skipped 2026 as
+*created after seasons.json*, and named the nine whitelisted `prev_place` nulls
+one by one. **The load is done and production holds seven seasons.**
+
+`db:verify` reads **72** team-seasons rather than 84 because it skips 2026 as
+*created after seasons.json*. **Look at the 2026 row twice** — it is the row an
+import would have silently removed.
+
+### The passphrase is replaced, not inherited
+
+The dump carries `leagues.write_secret_hash`, so the league **arrives already
+unlockable with the local passphrase** — convenient and wrong. A development
+secret that has been in a laptop's shell history since Phase 3 should not be the
+thing standing between the internet and the score table. Set a new one, before
+the service exists rather than after. Replacing it signs nobody out
+(`db/passphrase.mjs:11`): sessions record the league, not the phrase.
+
+The script prompts, twice, with echo off, and refuses `--passphrase` as an
+argument outright — arguments land in shell history and in `ps`. It therefore
+cannot be run unattended, by a person or by anything else.
+
+**Replaced on 2026-09-25.** The first attempt was rejected — *passphrase must be
+at least 12 characters* — which is `server/passphrase.mjs` refusing a weak secret
+on the one credential that faces the internet. The second was accepted.
+
+### The session secret
+
+43 random characters, base64url, generated 2026-09-25 and held at
+`~/fantasy-football-secrets/prod-session-secret.txt` (mode 600, outside the
+repo). Different from the local one. It goes into **Render's environment in 7.8
+and nowhere else** — never into `.env`, never into a commit.
+`server/session.mjs:30–36` refuses to boot without one and refuses one shorter
+than 32 characters in production, so a missing secret is a failed deploy rather
+than a silently insecure site.
+
+### The rollback
+
+**If the restore is wrong, production is still disposable.** Either drop the
+objects and restore again, or delete and recreate the Neon branch and restore
+into it:
+
+```sh
+docker compose exec -T db psql "$PROD" -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'
+shasum -a 256 -c .../SHA256SUMS.txt        # the same file, checked again
+docker compose exec -T db pg_restore --no-owner --no-privileges --exit-on-error -d "$PROD" < "$DUMP"
+```
+
+Restoring twice from the same checksummed file is safe because the file is the
+only source and it is immutable. **This stops being true at 7.9**, when the first
+write lands through the public URL: from then on production holds something the
+dump does not, the direction reverses, and recovery means (k)'s weekly dump
+rather than this one.
 
 ## The declines, in one place
 
