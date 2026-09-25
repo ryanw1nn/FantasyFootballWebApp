@@ -255,3 +255,131 @@ job depends on a working directory.
 
 **Drill it quarterly** — procedure 1, step 1, against the newest dump. *A dump
 nobody has read back is a file, not a backup.*
+
+---
+
+## The uptime monitor
+
+**UptimeRobot free tier, one keyword monitor on `/healthz`, every 30 minutes,
+alerting after two consecutive failures.** It is the only thing that tells you
+the site is down before the group chat does.
+
+**Not every 5 minutes**, which is what this project decided first: `/healthz`
+queries the database, so a ping frequent enough to keep Render awake keeps Neon
+awake too — and Neon's free compute allowance is **100 CU-hours a month**, which
+always-on exhausts on about **day 17**. See *The two budgets* below. A monitor
+that suspends the database it watches is worse than no monitor.
+
+### Setting it up, once
+
+Free plan, read 2026-09-25: 50 monitors, a **5-minute** *minimum* interval
+(30 is a deliberate choice, not a limit), keyword monitoring, email alerts.
+
+| Field | Value | Why this and not the other thing |
+| --- | --- | --- |
+| Monitor type | **Keyword** | An HTTP monitor only reads the status code. A keyword monitor reads the body, so it also catches a **200 carrying the wrong body** — which is what the SPA fallback serves if `/healthz` is ever shadowed by a routing change |
+| URL | `https://fantasyfootballwebapp.onrender.com/healthz` | **Not `/`.** The health route queries the database; the shell does not. A site serving HTML beautifully while Postgres is unreachable is the exact outage this exists for |
+| Keyword | `"ok":true` | Present on a healthy response only. The 503 body is `{"ok":false,…}`, so a red database fails the keyword check as well as the status check — one monitor, both cases |
+| Alert when | keyword **not** found | |
+| Interval | **30 minutes** | Short enough to matter for sixteen readers, long enough that both Render and Neon sleep between checks. 5 or 10 minutes both keep Render awake and both burn Neon's allowance; 15 races Render's threshold |
+| Alert after | **2 consecutive failures** | Every check now lands on a sleeping instance. Render documents the wake as "about one minute"; one slow wake should not page you |
+| Request timeout | as high as the plan allows | Same reason. The measured cold start is 12.51 s (7.8), against a documented "about one minute" |
+| Notification | email, to the commissioner | |
+
+### Prove the alert works, without touching production
+
+**A monitor that has never fired is indistinguishable from one that is
+misconfigured.** Prove it the cheap way — break the *monitor*, not the service:
+
+1. Edit the monitor's URL to `https://fantasyfootballwebapp.onrender.com/healthz-nope`
+   and save. That path is not a route, so the SPA fallback answers **200 with
+   HTML**, which contains no `"ok":true`.
+2. Wait two intervals — the alert needs two consecutive failures.
+   **Expect an email within about an hour.**
+3. Put the URL back. Expect a second email saying it is up again.
+
+*Nobody visiting the site sees anything, and production is never paused.* Do
+this again after any change to the health route.
+
+### The two budgets
+
+**Two free tiers, two clocks, and the second one was missed at first.**
+
+| | Render | Neon |
+| --- | --- | --- |
+| Allowance | **750 instance hours** per workspace per month | **100 CU-hours** per project per month |
+| Sleeps after | 15 min without inbound traffic | 5 min without a query |
+| A 5-min ping | ~**744 h** of 750 — fits, barely | ~**186 CU-h** of 100 — **exhausted about day 17** |
+| A 30-min ping | ~**372 h** of 750 | ~**31 CU-h** of 100 |
+
+Both figures re-read 2026-09-25: Render's free-tier page, Neon's plan and
+pricing pages.
+
+**What exhausting each one does.** Render suspends every free web service in the
+workspace until the month rolls over. Neon suspends the project's compute until
+the next billing period — *the data is intact, and every read fails anyway.*
+
+**So the short interval is the dangerous one.** `/healthz` runs `SELECT 1`, so
+keeping Render awake keeps Neon awake, and always-on at Neon's 0.25 CU floor is
+744 × 0.25 = 186 CU-hours against a budget of 100. The site goes dark mid-month,
+the web process stays up, `/healthz` answers 503 forever, and the monitor mails
+you every interval about an outage it caused. **Nothing fixes it but the 1st of
+the month or a paid plan.**
+
+*The 31 CU-hour estimate assumes each wake costs about Neon's own 5-minute idle
+window at the 0.25 CU floor. It is arithmetic off documented numbers, not a
+measurement — read the real figure off Neon's usage page after the first full
+week, and write the date beside it.*
+
+**Anything else deployed to either account comes out of the same allowance.**
+
+### Where an error goes, and the two searches to run
+
+Render's log viewer, `console.error`, and nothing else. **The two searches,
+copy them rather than remembering them:**
+
+| Search for | Finds | Looks like |
+| --- | --- | --- |
+| `Unhandled error on` | Any 500 — the method and path are on the same line (7.4) | `Unhandled error on GET /api/leagues: Error: …` |
+| `Idle database client error` | A connection the database dropped underneath the pool | `Idle database client error: …` |
+
+**Not `Internal error`.** That string is the *response body* the caller
+receives; it is never written to the log, and searching for it returns nothing
+during the outage you are searching during. Measured against
+`server/index.js:121` on 2026-09-25.
+
+**A third worth knowing:** `Health check failed:` is what `/healthz` logs when
+the database is unreachable — one line per failed check, so a red monitor and a
+run of these lines are the same event seen from two sides.
+
+### What is deliberately not monitored
+
+Declined by name, so each is a decision rather than an omission:
+
+- **No error-tracking service** (Sentry and the like) — a signup, an account,
+  and a script in the bundle, for one reader of one log stream.
+- **No analytics.** Fifteen named real people on a public URL. It is a privacy
+  decision before it is a technical one, and 7.14 forbids the script tag.
+- **No performance monitoring.** The slow path is a cold start, it is known,
+  and it is measured in 7.8 and 7.13 rather than watched.
+- **No alerting on anything but liveness.** Nothing else here has a response
+  that differs from reading the logs.
+
+**The trigger for revisiting all four:** a second league, a second person who
+reads the logs, or an error you cannot reproduce from them. Until then, adding
+any of these costs more than it tells you.
+
+### If the monitor goes red
+
+1. Open the URL yourself. A cold start takes about a minute (Render's own
+   figure); a monitor timeout during a wake is not an outage.
+2. `Health check failed:` in the log → the database, not the web process. The
+   site's shell keeps serving HTML the whole time, which is why the monitor
+   reads the health route and not the home page. **Check two things in this
+   order:** Neon's usage page, for a compute allowance exhausted over the 100
+   CU-hour limit — *the one failure a restart cannot fix, and the one a
+   too-frequent monitor causes* — and then Neon's status page.
+3. No log lines at all, and the shell is also down → the service itself. Render's
+   dashboard, then procedure 2.
+4. Green again without you doing anything → note the time. Two of those in a
+   week is a reason to look, not a reason to alert harder.

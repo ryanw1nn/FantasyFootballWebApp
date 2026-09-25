@@ -25,10 +25,27 @@ if (!connectionString) {
 // rather not hold. Five is generous for sixteen readers, and the idle timeout
 // means a service nobody is visiting stops holding connections open against a
 // database that also idles.
+// pg waits forever for a connection by default, which is not a timeout anyone
+// chose. A database that refuses a connection fails in milliseconds; one that
+// has gone silent — a blackholed route, a host between here and Neon that drops
+// packets rather than answering — never fails at all, so /healthz hangs instead
+// of returning its 503 and an outage leaves nothing in the log to search for.
+// Ten seconds is long enough for Neon to wake a compute that scaled to zero
+// after 5 minutes of idling, and short enough that the monitor is told rather
+// than left waiting.
+//
+// query_timeout is the other half, and it is the half that was actually
+// hanging: a connection opened before the network went away is still open, so
+// nothing reconnects and nothing fails — the query simply waits on a socket
+// nobody is listening to. Measured in 7.11: /healthz hung for 163 seconds and
+// wrote no log line at all. A bounded query fails, is logged, and gives the
+// client back to the pool instead of holding one of five forever.
 export const pool = new pg.Pool({
   connectionString: pinTlsVerification(connectionString),
   max: 5,
   idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+  query_timeout: 10_000,
 });
 
 /** Where this connection points, safe to log — no credentials. */

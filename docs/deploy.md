@@ -276,7 +276,8 @@ is the answer if the laptop stops being a plausible scheduler.
 ## (l) Monitoring: one external check, on `/healthz`
 
 **Decided: a free external uptime monitor hitting `/healthz` every 5–15 minutes,
-alerting by email.**
+alerting by email.** ~~5–15 minutes~~ — **corrected to 30 below; the short
+interval keeps Neon awake and exhausts its compute allowance mid-month.**
 
 **External**, because a monitor that runs inside the thing it watches reports
 nothing about the case that matters. **`/healthz` rather than `/`**, because the
@@ -284,11 +285,73 @@ health route touches the database and the SPA shell does not — a site that ser
 HTML beautifully while Postgres is unreachable is exactly the outage that
 otherwise arrives via the group chat.
 
-**The interaction with (j), decided rather than noticed:** a 5-minute interval
+~~**The interaction with (j), decided rather than noticed:** a 5-minute interval
 also keeps the instance awake, spending the hours (j) counted. **Take the
 5-minute interval and spend them** — 744 of 750 with six to spare is the trade,
-and always-on is worth more than the margin. If anything else is ever deployed to
-the same workspace, this is the first thing to lengthen.
+and always-on is worth more than the margin.~~ **Struck 2026-09-25, and the
+reason is two paragraphs down: this counted Render's budget and not Neon's.**
+It is left visible rather than deleted, because the trap is that the arithmetic
+was correct and incomplete.
+
+**Executed 2026-09-25 in 7.11, and the figures were re-read rather than
+trusted.** Render: **750 free instance hours per workspace per calendar month**,
+spin-down after **15 minutes** without inbound traffic, **about one minute** to
+come back — unchanged from the 2026-09-24 reading, with one consequence that
+reading did not record: **exhausting the 750 suspends every free web service in
+the workspace until the month rolls over.** The six-hour margin is therefore not
+headroom, it is the distance between always-on and dark. Neon: **5-minute**
+scale-to-zero, **0.5 GB** storage, **6 hours** of instant restore capped at
+**1 GB-month** — also unchanged, also re-read 2026-09-25.
+
+**Corrected the same day, before the monitor was created: the 5-minute interval
+is wrong, and it is wrong in the direction that takes the site down.** Neon's
+Free plan includes **100 CU-hours per project per month** (read at both Neon's
+plan page and its pricing page, 2026-09-25) — a figure this record had never
+captured, because (k) and 7.10 only ever needed storage, the restore window and
+the scale-to-zero. **`/healthz` runs `SELECT 1`, so a ping frequent enough to
+keep Render awake keeps Neon awake too**, and always-on at Neon's 0.25 CU floor
+is **744 × 0.25 = 186 CU-hours against a budget of 100**. The allowance runs out
+after 400 always-on hours — **about day 17** — and Neon then suspends the compute
+until the next billing period. *The failure mode is the monitor causing the
+outage it reports:* Render serves the shell, every read fails, `/healthz` is 503,
+and nothing restores it but the 1st of the month.
+
+**Decided: 30 minutes, alerting after two consecutive failures.** Render sleeps
+after 15 minutes, so any interval under that costs the same hours whether it is 5
+or 10 — 10 minutes buys nothing and detects half as fast — and 15 minutes races
+the threshold. **Above 15 is the first interval that saves anything**, because
+both services sleep between checks: Render ~372 h of 750, Neon ~31 CU-h of 100.
+The cost is that the cold start comes back, which is what (j) decided to accept
+before (l) embellished it. Two failures rather than one because every check now
+lands on a sleeping instance and Render documents the wake as *"about one
+minute"*.
+
+*The 31 CU-hour estimate assumes each wake costs about Neon's own 5-minute idle
+window at the 0.25 CU floor. It is arithmetic off documented figures, not a
+measurement — check Neon's usage page after the first full week.*
+
+**Declined by name — a keep-awake GET on `/` every 10 minutes beside the
+`/healthz` monitor at 30.** It fits both budgets (no database on `/`, so Neon
+still sleeps) and readers never wait. It is declined because it spends Render to
+six hours of margin for the whole month: one more free service anywhere in the
+workspace suspends both. *Available if the cold start turns out to annoy people
+more than the margin does.*
+
+**The monitor is UptimeRobot's free tier, as a keyword monitor rather than an
+HTTP one.** Free gives 50 monitors, a 5-minute *minimum* interval and email
+alerts (read 2026-09-25) — 30 minutes is chosen, not imposed. A keyword check on `"ok":true` catches one case the status
+check cannot: **a 200 carrying the wrong body**, which is what the SPA fallback
+would serve if `/healthz` were ever shadowed. A 503 fails it too, because a 503
+does not contain the keyword either — so one monitor covers both.
+
+**And one thing this decision assumed and 7.11 measured:** that a database the
+service cannot reach makes `/healthz` go red. **It did not.** A connection
+opened before the network went away stays open, so nothing reconnects and
+nothing fails — `/healthz` hung for **163 seconds**, returned nothing, and
+wrote no log line. `db/pool.mjs` now carries `connectionTimeoutMillis: 10_000`
+and `query_timeout: 10_000`, and the endpoint answers **503 in 10.03 s** on a
+silent database and **0.03 s** on a refused one, logging `Health check failed:`
+both times. *A monitor is only as good as the signal it polls.*
 
 ## (m) What the aliases take with them
 
