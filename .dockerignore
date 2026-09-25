@@ -1,0 +1,41 @@
+# The build context is also what Vite sees during `npm run build`, so this file
+# is a security control before it is a size optimisation.
+
+# The environment file is the one that matters. Vite inlines VITE_* variables at
+# build time, so an environment file in the context ships a bundle whose every
+# request goes to localhost:5001 — the bug src/api/client.js was changed to
+# prevent, arriving by a different door. It would also leave the file itself in
+# an image layer.
+.env
+.env.*
+
+# Host artefacts. node_modules is built for the host's platform and the image
+# installs its own; dist is rebuilt inside the build stage from source.
+node_modules
+dist
+dist-ssr
+*.local
+
+# History and local-only data. baseline/ is 288 KB of recorded payloads and
+# backups/ holds dumps of the database — neither belongs in an image that serves
+# the public.
+.git
+.gitignore
+baseline
+backups
+
+# Prose. The image needs no README and no decision records.
+*.md
+docs
+
+# Nothing in the image builds or runs the local database or the gates.
+docker-compose.yml
+scripts
+
+# Editor and OS noise, and this build's own inputs.
+.vscode
+.idea
+.DS_Store
+*.log
+Dockerfile
+.dockerignore

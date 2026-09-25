@@ -187,8 +187,27 @@ against.
 **The thing to watch is helmet's Content-Security-Policy,** which defaults to
 `default-src 'self'` and has broken more first deploys than every other item on
 the readiness card. This app is a good case for it — one bundled script, one
-stylesheet, both same-origin, no inline script, no CDN, no external font — so the
-default should hold.
+stylesheet, no inline script — so the default should hold.
+
+**Corrected 2026-09-24, while building the image:** this was written as "no CDN,
+no external font", and there is one. `src/index.css:2` is
+`@import url('https://fonts.googleapis.com/css2?family=Inter:...')`, and Vite
+cannot inline a remote import, so the built stylesheet carries it too — every
+visitor's browser fetches Inter from `fonts.googleapis.com`, and the font files
+from `fonts.gstatic.com`. **The default CSP survives it only because helmet's
+defaults are wider than `default-src`:** `style-src 'self' https: 'unsafe-inline'`
+and `font-src 'self' https: data:` both allow any https origin, read off the wire
+from the running container. Two consequences worth writing down rather than
+rediscovering:
+
+- **Tightening `style-src` or `font-src` to `'self'`** — the obvious hardening —
+  breaks the font silently, and the page falls back to a system font with no
+  server-side sign of it.
+- **It is a third-party request per visit,** which sits oddly beside "no
+  analytics, no third-party scripts". Self-hosting Inter would remove it and cost
+  a font file in `public/`. **Not Phase 7's** — it changes what the page looks
+  like if the weights are wrong, and no step here is allowed to do that. Decide
+  it after launch.
 
 **Prove it in the browser console in 7.5, not in 7.13.** A CSP violation is
 silent in the server logs and loud in the console. If one fires, the answer is to
@@ -301,6 +320,62 @@ Strangers cannot create leagues, there is no signup, and league two is Phase 8's
 — after launch. **The production database ships with one league in it.**
 `is_public` exists as a column and is `true`; nothing reads it yet, and Phase 7
 does not teach anything to.
+
+## The image, as built and run — 2026-09-24
+
+Measured, not estimated, from `Dockerfile` and `.dockerignore` at `514c74b` plus
+these two files, on Docker 29.1.3, arm64, against the local container.
+
+| | |
+| --- | --- |
+| build, cold | **28.8 s** end to end; a rebuild with only a source change reuses the `npm ci` layer |
+| pull size | **69.7 MB** (`node:24-alpine` is 62.4 MB, so the app adds ~7 MB) |
+| on disk | **315 MB**, of which the base image is 238 MB |
+| the build stage | 106 MB pull / 454 MB disk — the devDependencies, left behind in it |
+| boot | **1.28 s** from `docker run` to the first `200` on `/healthz` |
+| runtime contents | `dist/` 340 KB, `server/` 80 KB, `db/` 160 KB, `node_modules` 63.3 MB across 101 packages |
+| the bundle | 1712 modules, `index-DLKzlqb6.js` **306.29 kB**, css 23.26 kB — the same hash a local build with no environment file in scope produces, and `localhost:5001` appears **0** times in it |
+
+**`docker image ls` reports 315 MB and that is not the figure to judge it by** —
+it is disk usage including the base image's shared layers. The question the
+readiness card meant is "did anything from the build stage come along", and the
+answer is checked directly: no `vite`, `tailwindcss`, `postcss` or `autoprefixer`
+in the runtime `node_modules`, and no `src/`, `scripts/`, `docs/`, `baseline/`,
+`README.md` or environment file anywhere in the image.
+
+**The health check's timeout can be short.** 1.28 s to first healthy, against
+Render's default grace period, means a failing health check on the first deploy is
+a real failure and not a slow start — do not lengthen it to make one pass.
+
+### Running it locally
+
+```sh
+docker build -t fanclub:local .
+docker run -p 5001:5001 \
+  -e DATABASE_URL='postgres://fanclub:fanclub@host.docker.internal:5433/fanclub' \
+  -e SESSION_SECRET='<32+ random characters>' \
+  fanclub:local
+```
+
+**`host.docker.internal`, not `localhost`.** The container's `localhost` is the
+container, so the local URL fails with
+`connect ECONNREFUSED ::1:5433; connect ECONNREFUSED 127.0.0.1:5433` — which is
+the right error, printed legibly, and worth causing once.
+
+**For the unlock, add `-e NODE_ENV=development`.** The image sets
+`NODE_ENV=production`, which makes the session cookie `Secure`, and a browser
+discards a `Secure` cookie delivered over plain `http://localhost:5001`: the
+unlock appears to succeed and nothing persists. That is the failure `trust proxy`
+prevents in production, seen locally, and it is not the image being broken.
+
+### The three ways it refuses to start, each naming itself
+
+- no `SESSION_SECRET` → `Refusing to start: SESSION_SECRET is not set.`, exit 1
+- a short one in production → `Refusing to start: SESSION_SECRET must be at least 32 characters in production.`, exit 1
+- an unreachable database → `Cannot reach the database at <host>:<port>/<db>: <cause>`, exit 1
+
+A first deploy that exits is one of these three, and the log says which. None of
+them is a reason to add a retry loop.
 
 ## The declines, in one place
 
