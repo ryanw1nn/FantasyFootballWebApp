@@ -762,11 +762,35 @@ start**. That is the number (j) decided to accept, and it is easier to accept on
 that has been measured. The local baseline to compare it against is the 1.47 s
 above — which is the container starting, not a host allocating one.
 
-| Measured on the real URL | |
+| Measured on the real URL, 2026-09-25 | |
 | --- | --- |
-| service URL | *to be recorded* |
-| first deploy, build duration | *to be recorded* |
-| cold start after 15 minutes idle | *to be recorded* |
+| service URL | `https://fantasyfootballwebapp.onrender.com` |
+| port | Render injects `PORT=10000`, so no `PORT` variable was set. `index.js:130` reads it; the log line's `http://localhost:10000` is a hardcoded string and not something the server discovered. |
+| `DATABASE_URL` host in the log | `ep-shiny-moon-aysjdm4c.c-5.us-east-2.aws.neon.tech:5432/neondb` — **no `-pooler`**, read by eye, which is the one check on this list that a green health check cannot make for you |
+| first deploy, build duration | *not captured — the log viewer would not scroll back that far. Taken instead at 7.9's redeploy.* |
+| **cold start after idle** | **12.51 s** to a 200 on `/healthz`. DNS 0.08 s, connect 0.16 s, TLS 0.27 s, **first byte 12.51 s** — so Render's edge was awake throughout and the whole wait was the container booting plus Neon's compute waking behind it. *Better than the budget:* (j) accepted Render's documented "about one minute" plus Neon's own wake on top. One measurement, from a Mac on home broadband. |
+| warm | `/healthz` **0.32 s**, the shell **0.33 s**, the whole-league read **0.83 s** at 11,221 bytes gzipped |
+| auto-deploy | **on**, set after the first deploy succeeded. From here a commit to `main` is a deploy. |
+
+### The live surface, read off the public URL on 2026-09-25
+
+Every row measured against `https://fantasyfootballwebapp.onrender.com`, not against a container:
+
+| Check | Read |
+| --- | --- |
+| `/healthz` | `200 {"ok":true}` |
+| `GET /api/leagues` | `The Fan Club`, `season_years` **2020–2026**, `latest_year` 2026 — off Neon, seven seasons |
+| seasons payload | keyed 2020…2026, **113,308** bytes plain, **11,221** gzipped |
+| the shipped bundle | `/assets/index-DLKzlqb6.js`, **306,291 bytes**, `localhost:5001` → **0** — *the same content hash and byte count as the clean-clone image built on the laptop*, so the artefact a stranger downloads from Ohio is byte-identical to the one that was smoke-tested here |
+| `/l/fan-club/season` | `200 text/html` over HTTP/2 |
+| `/api/leagues/nope/seasons` | `404` JSON, not HTML |
+| anonymous `PUT .../2026/weeks/1` | **401** |
+| CORS with `Origin: http://localhost:5173` | no `Access-Control-Allow-Origin` |
+| `http://` | `301` → `https://`, by the host |
+
+### The spin-down, seen
+
+The free instance's idle shutdown logged **`SIGTERM received, shutting down.`** — `index.js:147`, 7.4's handler, on a real host for the first time. Render's own idle notice varies by UI version; that line is the one to trust, and the gap between it and the next `Server running` pair is the spin-down window. *7.9's "watch the old instance take `SIGTERM` and exit cleanly" is therefore already observed once, before 7.9 starts.*
 
 **Do not send the link to anyone yet.** 7.9 proves a write survives a redeploy
 and 7.10 makes losing the database survivable; those are what make a link safe to
