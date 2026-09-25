@@ -20,8 +20,15 @@ if (!connectionString) {
 // TLS is driven by sslmode in the connection string, never relaxed here. Neon's
 // certificates are publicly trusted, so verify-full connects as-is; the local
 // container carries no sslmode and connects in the clear.
+// pg defaults to ten connections per process, which one small web service in
+// front of a free-tier Postgres does not need and a free-tier Postgres would
+// rather not hold. Five is generous for sixteen readers, and the idle timeout
+// means a service nobody is visiting stops holding connections open against a
+// database that also idles.
 export const pool = new pg.Pool({
   connectionString: pinTlsVerification(connectionString),
+  max: 5,
+  idleTimeoutMillis: 30_000,
 });
 
 /** Where this connection points, safe to log — no credentials. */

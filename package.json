@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -34,12 +37,14 @@
     "vite": "^7.1.2"
   },
   "dependencies": {
+    "compression": "^1.8.2",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "express-rate-limit": "^8.7.0",
     "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
     "lucide-react": "^0.552.0",
     "pg": "^8.23.0",
     "react": "^19.1.1",
