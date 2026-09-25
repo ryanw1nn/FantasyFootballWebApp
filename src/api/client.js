@@ -8,7 +8,13 @@
 // exist and still pass their gate, they just have no caller. A slug other than
 // the default is now something this module can address rather than refuse.
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+// Empty in a production build: the server serves this bundle and the API from
+// one origin, so every path below is already same-origin as it stands. `??`
+// rather than `||` because an explicit empty value is falsy and `||` would reach
+// past it to localhost, shipping a bundle that works only on the machine that
+// built it. DEV is true under `vite dev` and false under `vite build`, so the
+// two-server development setup keeps its cross-origin address either way.
+const BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:5001' : '');
 
 /**
  * A response the server refused. `status` is its code and `message` is the
