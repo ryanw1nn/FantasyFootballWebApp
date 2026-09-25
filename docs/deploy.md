@@ -903,26 +903,192 @@ working database is the copy**, which is (e)'s recorded consequence arriving.
 7.10 turns this dump into a schedule, so the schedule automates something that
 has been watched to work rather than something assumed.
 
-### Fill in when performed
+### Performed 2026-09-25
 
-| Check | Read |
+**Two kinds of evidence, kept apart on purpose.** The rows marked *measured* were
+read off a file or the wire and can be re-read. The rows marked *reported* were
+observed by the operator in a browser and at the Render dashboard, and are
+recorded as testimony rather than as measurement — which is what a browser check
+always is, and 7.13's rounds will be the same.
+
+| Check | Read | Source |
+| --- | --- | --- |
+| the write landed | 2026 went from **12 scored to 13** — matchup `id 1109`, **week 3**, team 120 **50.00**, team 118 **100.00** | *measured*, off `prod.sql` |
+| nothing else moved | that matchup is the **sole** difference in 2026 between 7.1's pre-ship dump and this one — no row vanished | *measured*, diff of both dumps |
+| the dump | `~/fantasy-football-backups/phase7-post-write-20260925-155645/` — `prod.dump` 35,854 B, `prod.sql` 65,834 B, `SHA256SUMS.txt` written and re-checked **OK** on both | *measured* |
+| the redeploy | commit **`c8d26cc`** pushed to `origin/main` at **15:55:04**; the dump was written at **15:57:08**, so the push preceded it | *measured*, git and file mtime |
+| anonymous `PUT`, all three shapes | **401 / 401 / 401** | *measured*, against the live host |
+| `db:check` after | `DATABASE_URL` still `localhost:5433` [local] | *measured* |
+| cookie `Secure` / `HttpOnly` / `SameSite=Lax` | as expected | *reported* |
+| the score visible after the deploy | yes | *reported* |
+| session survived the deploy | yes | *reported* |
+| `SIGTERM received, shutting down.` | seen | *reported* |
+| **build duration** | **still not captured** | — |
+
+**Build duration is owed a third time.** 7.8 could not scroll back to it and
+handed it here; this redeploy did not capture it either. *Stop carrying it as a
+debt:* it is a curiosity, not a gate — the cold start (12.51 s) is the number
+that affects a reader, and it is measured. **If it is wanted, take it at
+7.11's deliberate deploy** and not before.
+
+### The scores were removed afterwards, and the dump is one write ahead of production
+
+**Recorded because it inverts the usual direction.** After the dump was taken,
+the test score on matchup 1109 was removed through the editor — so **production
+holds 12 scored 2026 matchups and the dump holds 13**. The dump is a *recovery
+point*, not a mirror, and this is the normal state of one: it is a photograph of
+a moment that has since moved on.
+
+*What this does not undo:* the gate's sentence was about a write surviving a
+redeploy, and that write was made, deployed across, and captured. Removing it
+afterwards is an ordinary edit, and the fact that it could be made at all is the
+same capability the gate was proving.
+
+**And it is the first time production has been ahead of the laptop in the other
+direction too** — (e)'s reversal is now live in both senses: production is
+upstream, and the only copy of the 13-scored state is a file in
+`~/fantasy-football-backups/`.
+
+### 7.9 closed
+
+**Done 2026-09-25.** A score was saved through the public URL, a push redeployed
+the service across it, the score and the session both survived, and a checksummed
+dump of production containing that score is on disk. An anonymous `PUT` is **401**
+on all three write shapes — the named route, a path naming no league, and a path
+naming a league that does not exist — measured against the live host rather than
+a scratch one. **The card's gate is met:** *you can redeploy mid-season and lose
+nothing.*
+
+*What is owed onward:* the build duration, deliberately dropped as a debt and
+available at 7.11 if wanted. **Next is 7.10**, which turns the by-hand dump above
+into a schedule and then restores one — because a link is not safe to hand out
+until losing the database is survivable.
+
+## 7.10 — Backups you have restored
+
+**The `backups/` folder was never a backup**, and neither is a scheduled dump
+nobody has read back. This step is not done when the job is scheduled; it is done
+when a restore has been performed and checked.
+
+Three artefacts, all in the tree and reviewable in a diff:
+`scripts/backup-prod.sh`, `scripts/com.ryanwinn.fanclub.backup.plist` (a template
+— the installed copy lives in `~/Library/LaunchAgents/`), and `docs/runbook.md`.
+
+### One correction to (k): a throwaway container, not `docker compose exec`
+
+(k) decided the job goes "through the container", meaning
+`docker compose exec -T db pg_dump …` as 7.1's dumps did. **Built, it is the
+wrong call by one step**, and the job runs
+
+```sh
+docker run --rm --pull=never --name fanclub-backup-$$ -e DBURL=… postgres:18-alpine \
+  sh -c 'pg_dump -Fc --no-owner --no-privileges "$DBURL"'
+```
+
+instead. Same image, therefore the same **18.6 client** — which was (k)'s whole
+argument and is untouched. What changes:
+
+- **`docker compose exec` needs a compose file, and therefore a working
+  directory.** 7.10's own brief says the job must not depend on one. A throwaway
+  container needs nothing but the daemon.
+- **It does not depend on `fanclub-db` being up at all.** The local database has
+  no part in dumping the production one; requiring it to be running was an
+  accident of how 7.1 happened to have a client handy.
+- **It removes the failure mode 7.7 found.** A *paused* container reports
+  `running` and makes `exec` hang rather than fail — and a backup that hangs is
+  worse than one that errors, because a dated directory listing cannot tell a
+  hung week from a week that has not happened. `docker run` on a paused sibling
+  is not a case that exists.
+
+`--pull=never` is deliberate: the job never silently acquires a different client
+version. If the image is ever pruned the run fails loudly rather than upgrading
+itself.
+
+### What the script does, and what it refuses to do
+
+| | |
 | --- | --- |
-| cookie `Secure` / `HttpOnly` / `SameSite=Lax` | |
-| the score written — year, week, matchup, both numbers | |
-| redeploy trigger | the commit carrying this section |
-| `SIGTERM received, shutting down.` seen | |
-| **build duration** — 7.8's missing figure | |
-| bundle after redeploy | expect `/assets/index-DLKzlqb6.js` **unchanged**: a docs-only commit must not move `dist/` |
-| still unlocked after the deploy | |
-| **the score, read back after the deploy** | |
-| anonymous `PUT` on all three write shapes | **401 / 401 / 401**, taken above |
-| production dump, checksummed, score present | |
+| Schedule | **Mondays 09:00**, `StartCalendarInterval`, `RunAtLoad` false. After the week's Sunday edits, not during them; launchd runs a missed occurrence when the Mac wakes |
+| Formats | both, as 7.1 took them — `prod.dump` (`-Fc`, what `pg_restore` wants) and `prod.sql` (what a human reads when the custom one will not load) |
+| Integrity | `SHA256SUMS.txt` written **and re-verified in the same run**; a mismatch is `FAIL(5)` and the directory is deleted |
+| Endpoint | strips `-pooler` itself, so it cannot be handed the endpoint that serves an empty `search_path` whatever `.env` holds |
+| Credential | `FANCLUB_BACKUP_URL_FILE` → `~/.config/fanclub/prod-url`, mode 600. **Not in the plist**, so `launchctl print` shows no secret and the template is committable |
+| Timeout | **300 s**, implemented in-script rather than with `timeout(1)` — that binary is at `/opt/homebrew/bin` and launchd's `PATH` does not include it. On expiry the container is removed by name, because killing `docker run` leaves its container running and hanging on Neon |
+| Retention | last **8** runs plus the **first run of each calendar month**, enforced in the script. It only ever considers directories matching its own `prod-weekly-*` prefix, so `phase7-pre-ship-20260924-184322` — the last state before the app was public — is not a candidate and cannot become one |
+| On failure | the half-written directory is deleted, so **every directory that exists is a complete, checksummed dump**. An empty week is an absence, never a corrupt file pretending to be a backup |
+| Log | one line per run to `~/fantasy-football-backups/backup.log`, with the client's own error text on a failure |
 
-**Done when:** a score saved through the public URL survives a redeploy, the
-session survives it too, the cookie is `Secure`/`HttpOnly`/`Lax`, an anonymous
-`PUT` is 401 on every write path, and a dump of production with that score in it
-is on disk with a checksum. **The card's gate is met at that line**; everything
-after it is what keeps it met.
+**Every exit path was exercised on 2026-09-25**, against the local database
+rather than Neon, because the script does not care which server it is pointed at:
+
+| Path | Forced by | Read |
+| --- | --- | --- |
+| ok | — | `ok prod-weekly-20260925-162220 dump=34684B sql=64074B checksums=verified pruned=1`, **exit 0** |
+| no credential | unset both variables | **exit 1** |
+| Docker unreachable | `DOCKER_HOST=unix:///nope.sock` | **exit 2**, `Docker is not reachable — no dump was taken` |
+| dump refused | wrong password | **exit 3**, and the log carries *pg_dump: error: … password authentication failed* |
+| dump hangs | a blackhole address, `FANCLUB_BACKUP_TIMEOUT=5` | **exit 4** after 8.5 s wall, and **no orphaned container** — checked with `docker ps -a` |
+
+**Retention was tested against twelve fabricated weeks** spanning four months
+plus a `phase7-pre-ship-*` directory and an unrelated one: it deleted **3** —
+mid-January, and two mid-February — and kept the first of each month, the newest
+eight, and both directories that were not its own.
+
+### The restore drill, performed
+
+**Against the newest production dump on disk** —
+`~/fantasy-football-backups/phase7-post-write-20260925-155645/prod.dump`, 35,854
+bytes, the one 7.9 took through the public URL.
+
+`shasum -c` → **OK, OK**. Restored into a throwaway local `fanclub_restoredrill`
+with `--exit-on-error`, no errors, **8 tables**.
+
+| Read | |
+| --- | --- |
+| seasons / teams / matchups | **7 / 84 / 618** |
+| players / standings / leagues | **16 / 84 / 1** |
+| migrations / sessions | **4 / 3** |
+| 2026 | **103 matchups, 13 scored** |
+| `db:migrate` | *Up to date — nothing to apply* |
+| `db:verify` | **72 team-seasons**, 2026 skipped as created after `seasons.json`, the nine whitelisted `prev_place` nulls named |
+| matchup `1109` | week 3, **50.00 / 100.00** — 7.9's write, present |
+| `players.id = 18` | **Patrick O'Donald**, present |
+| passphrase | `write_secret_hash` not null — *it survived the restore* |
+
+Throwaway dropped; `psql -l` shows `postgres` and `fanclub` and nothing else.
+
+**Timed, because the question during a failure is never "can it be restored" but
+"how long until it is":** checksum, create, restore, `db:migrate`, `db:verify`
+and a count is **2 seconds** of machine time end to end. The typing is the slow
+part, which is what the runbook is for.
+
+**13 scored, not 12** — the drill confirms 7.9's note from the other side. The
+dump holds the test score; production no longer does, because it was removed
+after the dump was taken. *A dump is a recovery point, not a mirror.*
+
+### Neon's restore window, re-read
+
+**6 hours of instant-restore history, capped at 1 GB-month of change history**,
+storage 0.5 GB/project, compute suspending after 5 minutes and not disableable —
+read off Neon's own plan page on **2026-09-25**, unchanged from 7.2(k)'s reading
+on 2026-09-24. **Written with the date, because a limit recorded without one is a
+limit nobody re-checks.** It remains an undo for a bad edit made this morning,
+never archival.
+
+### What is owed: the install, and the first real run
+
+**The job is written and proven; it is not yet installed, and it has never run
+against Neon.** Both remaining actions write a production credential to disk and
+open a connection to the production database, so they are typed by the
+commissioner rather than by an assistant. The block is in
+`docs/runbook.md` → *Installing it, once*: write `~/.config/fanclub/prod-url` at
+mode 600, copy the plist into `~/Library/LaunchAgents/`, `launchctl bootstrap`,
+then `launchctl kickstart -k` for the first run and read the log line.
+
+**Until that one line says `ok`, 7.10's gate is not met** — the gate asks for a
+dump the schedule produced and a restore of it, and only the restore half is
+done. Everything else the step asks for is in the tree: the retention rule is in
+the script, and the runbook has four procedures.
 
 ## The declines, in one place
 

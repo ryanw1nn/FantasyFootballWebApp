@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The weekly production backup.
+
+  This file is a template. Install it, do not run it from here:
+
+      cp scripts/com.ryanwinn.fanclub.backup.plist ~/Library/LaunchAgents/
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ryanwinn.fanclub.backup.plist
+
+  The connection string is NOT in this file. It lives in one mode-600 file that
+  the script reads through FANCLUB_BACKUP_URL_FILE, so `launchctl print` never
+  shows a credential and this template stays committable.
+
+  No WorkingDirectory: nothing the job does depends on a current directory. The
+  one path that ties it to the checkout is ProgramArguments below — if the repo
+  moves, that line is the only thing to change.
+
+  Monday 09:00 rather than Sunday night, so a dump lands after the week's edits
+  rather than during them. launchd runs a missed occurrence when the Mac wakes.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.ryanwinn.fanclub.backup</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/ryanwinn/fantasy-football-web/scripts/backup-prod.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>FANCLUB_BACKUP_URL_FILE</key>
+    <string>/Users/ryanwinn/.config/fanclub/prod-url</string>
+    <key>FANCLUB_BACKUP_DIR</key>
+    <string>/Users/ryanwinn/fantasy-football-backups</string>
+    <key>FANCLUB_BACKUP_TIMEOUT</key>
+    <string>300</string>
+  </dict>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key><integer>1</integer>
+    <key>Hour</key><integer>9</integer>
+    <key>Minute</key><integer>0</integer>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <!-- The script keeps its own one-line-per-run log; these two catch anything
+       that escapes it, which is how a broken job says so at all. -->
+  <key>StandardOutPath</key>
+  <string>/Users/ryanwinn/fantasy-football-backups/launchd.out</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/ryanwinn/fantasy-football-backups/launchd.err</string>
+</dict>
+</plist>
