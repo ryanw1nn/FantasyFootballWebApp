@@ -33,6 +33,9 @@ export default function Dashboard({ view }) {
     inactive: false,
     botted: false,
   });
+  // Seasons left out of the all-time totals. The hidden years are what is
+  // kept, not the shown ones, so a season added later starts out included.
+  const [hiddenYears, setHiddenYears] = useState(() => new Set());
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [seasonCols, toggleSeasonCol] = useColumnVisibility('ff_season_table_columns', SEASON_COLUMNS);
   const [alltimeCols, toggleAlltimeCol] = useColumnVisibility('ff_alltime_table_columns', ALLTIME_COLUMNS);
@@ -46,6 +49,15 @@ export default function Dashboard({ view }) {
   const filterTeams = (teamsArray) => {
     if (!Array.isArray(teamsArray)) return [];
     return teamsArray.filter((team) => filters[team.status]);
+  };
+
+  const toggleYear = (year) => {
+    setHiddenYears((prev) => {
+      const next = new Set(prev);
+      if (next.has(year)) next.delete(year);
+      else next.add(year);
+      return next;
+    });
   };
 
   const toggleFilter = (stateKey) => {
@@ -65,12 +77,29 @@ export default function Dashboard({ view }) {
     [selectedYear, data]
   );
 
-  const rankChange = useMemo(() => lastGameRankChange(data, filters), [data, filters]);
+  const allYears = useMemo(
+    () => Object.keys(data).filter((year) => !isNaN(Number(year))).sort((a, b) => b - a),
+    [data]
+  );
+
+  // Every all-time number — totals, awards and the rank change — is computed
+  // from the seasons left on, as if the hidden ones had never been played.
+  const shownSeasons = useMemo(
+    () => Object.fromEntries(Object.entries(data).filter(([year]) => !hiddenYears.has(year))),
+    [data, hiddenYears]
+  );
+
+  const rankChange = useMemo(
+    () => lastGameRankChange(shownSeasons, filters),
+    [shownSeasons, filters]
+  );
 
   // A league with no seasons used to print "null Season Rankings" — the year
   // interpolated before any season had arrived to set it.
   let heading = 'All-Time Player Rankings';
-  let subheading = 'Career statistics across all seasons';
+  let subheading = hiddenYears.size > 0
+    ? `Career statistics across ${allYears.length - hiddenYears.size} of ${allYears.length} seasons`
+    : 'Career statistics across all seasons';
   if (isSeason && selectedYear === null) {
     heading = 'No seasons to show';
     subheading = error
@@ -143,6 +172,33 @@ export default function Dashboard({ view }) {
                         <span className="text-sm text-slate-700 capitalize">{key}</span>
                     </label>
                   ))}
+
+                  {!isSeason && allYears.length > 0 && (
+                    <>
+                      <div className="flex items-center justify-between mt-3 mb-2">
+                        <h3 className="font-semibold text-slate-900 text-sm">Seasons</h3>
+                        {hiddenYears.size > 0 && (
+                          <button
+                            onClick={() => setHiddenYears(new Set())}
+                            className="text-xs text-accent-600 hover:underline"
+                          >
+                            All
+                          </button>
+                        )}
+                      </div>
+                      {allYears.map((year) => (
+                        <label key={year} className="flex items-center gap-2 py-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!hiddenYears.has(year)}
+                            onChange={() => toggleYear(year)}
+                            className="rounded border-slate-300 text-accent-600 focus:ring-accent-500"
+                          />
+                          <span className="text-sm text-slate-700">{year}</span>
+                        </label>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -171,7 +227,7 @@ export default function Dashboard({ view }) {
                normally. */
             <AllTimeTable
               allData={Object.fromEntries(
-                Object.entries(data).map(([year]) => [year, teamsFor(year)])
+                Object.keys(shownSeasons).map((year) => [year, teamsFor(year)])
               )}
               statusFilter={filters}
               rankChange={rankChange}
