@@ -14,6 +14,7 @@ export const SEASON_COLUMNS = [
 ];
 
 export const ALLTIME_COLUMNS = [
+  { key: 'change', label: 'Rank Change (Δ, last game)', group: 'stats', defaultVisible: false },
   { key: 'losses', label: 'Losses', group: 'stats' },
   { key: 'ties', label: 'Ties', group: 'stats' },
   { key: 'gp', label: 'Games Played', group: 'stats' },

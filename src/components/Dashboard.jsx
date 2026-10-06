@@ -11,6 +11,7 @@ import { SEASON_COLUMNS, ALLTIME_COLUMNS } from './tableColumns';
 import { useLeague } from '../context/LeagueContext';
 import { playerPath } from '../routes';
 import { getSeasonArray, seasonStatsCards } from '../stats/season';
+import { lastGameRankChange } from '../stats/allTime';
 
 /**
  * The season table and the all-time table. Two routes, one component: they
@@ -63,6 +64,8 @@ export default function Dashboard({ view }) {
     () => seasonStatsCards(data, selectedYear),
     [selectedYear, data]
   );
+
+  const rankChange = useMemo(() => lastGameRankChange(data, filters), [data, filters]);
 
   // A league with no seasons used to print "null Season Rankings" — the year
   // interpolated before any season had arrived to set it.
@@ -171,6 +174,7 @@ export default function Dashboard({ view }) {
                 Object.entries(data).map(([year]) => [year, teamsFor(year)])
               )}
               statusFilter={filters}
+              rankChange={rankChange}
               onPlayerClick={handlePlayerClick}
               visibleColumns={alltimeCols}
             />

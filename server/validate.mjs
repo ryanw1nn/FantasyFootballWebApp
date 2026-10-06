@@ -45,9 +45,10 @@ export function parseWeek(value) {
 // this name resolve to a team in this season — belong with the query that has
 // the teams to hand; these are the parts that need nothing but the value.
 //
-// Both dialects share these. The aliases send display names and the league
-// routes send ids, but a status is a status and an unknown key is a typo in
-// either of them.
+// These were shared by both dialects: the aliases sent display names where the
+// league routes send ids, but a status is a status and an unknown key is a typo
+// in either of them. Only the league routes are left, and the rules did not
+// depend on which was calling.
 
 /**
  * More positions than any real week: twelve teams make six games, and week 15

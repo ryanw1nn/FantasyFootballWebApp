@@ -9,7 +9,7 @@
  * nothing else, so no total here can span two leagues.
  */
 
-import { isPlayerTeam, ownerLabel } from './league';
+import { isPlayerTeam, joinStandings, ownerLabel, teamsById } from './league';
 
 /**
  * Each season's points-for leader, points-against leader and last place.
@@ -215,4 +215,141 @@ export function allTimePlayers(allData, searchQuery, statusFilter) {
   }
 
   return players;
+}
+
+// ==================================
+// Rank change since the last game
+// ==================================
+
+/**
+ * A week counts as played when some game in it has both scores above zero —
+ * the same rule db/standings.mjs uses, so an unplayed week is never "the last
+ * game".
+ */
+function weekIsScored(matchups) {
+  return matchups.some((m) => m.team1_score > 0 && m.team2_score > 0);
+}
+
+/**
+ * The most recent scored regular-season week across the league, newest season
+ * first. Playoff weeks are skipped: the all-time record is regular season
+ * only, so a playoff game cannot move anyone.
+ *
+ * @param {Object} seasons - one league's payload, keyed by year
+ * @returns {{year: string, week: number, matchups: Array, teams: Map}|null}
+ */
+function latestScoredWeek(seasons) {
+  const years = Object.keys(seasons ?? {})
+    .filter((year) => !isNaN(Number(year)))
+    .sort((a, b) => Number(b) - Number(a));
+
+  for (const year of years) {
+    const season = seasons[year];
+    const playoffStart = season?.season?.playoff_start_week ?? Infinity;
+
+    const played = Object.entries(season?.weeks ?? {})
+      .filter(([week, { matchups }]) => Number(week) < playoffStart && weekIsScored(matchups))
+      .map(([week, { matchups }]) => ({ week: Number(week), matchups }))
+      .sort((a, b) => b.week - a.week);
+
+    if (played.length > 0) {
+      return { year, ...played[0], teams: teamsById(season) };
+    }
+  }
+  return null;
+}
+
+/** Career wins, losses, ties and points for, per player, from the standings. */
+function careerRecords(seasons) {
+  const records = new Map();
+  for (const year of Object.keys(seasons ?? {})) {
+    if (isNaN(Number(year))) continue;
+    for (const row of joinStandings(seasons[year])) {
+      if (!isPlayerTeam(row)) continue;
+      const name = ownerLabel(row);
+      const record = records.get(name) ?? { wins: 0, losses: 0, ties: 0, pf: 0 };
+      record.wins += row.wins || 0;
+      record.losses += row.losses || 0;
+      record.ties += row.ties || 0;
+      record.pf += row.pf || 0;
+      records.set(name, record);
+    }
+  }
+  return records;
+}
+
+/** Takes one game back out of both sides' records, as standings booked it. */
+function removeGame(records, matchup, teams) {
+  const team1 = teams.get(matchup.team1_id);
+  const team2 = teams.get(matchup.team2_id);
+  // A BYE books nothing, so there is nothing to take back.
+  if (!team1 || !team2) return;
+
+  const sides = [
+    [team1, matchup.team1_score || 0, matchup.team2_score || 0],
+    [team2, matchup.team2_score || 0, matchup.team1_score || 0],
+  ];
+  const counted = sides[0][1] > 0 && sides[0][2] > 0;
+
+  for (const [team, scored, allowed] of sides) {
+    if (!isPlayerTeam(team)) continue;
+    const record = records.get(ownerLabel(team));
+    if (!record) continue;
+    record.pf -= scored;
+    if (!counted) continue;
+    if (scored > allowed) record.wins--;
+    else if (scored < allowed) record.losses--;
+    else record.ties--;
+  }
+}
+
+/** Place per player by the table's default order: win % first, then points for. */
+function placesByWinPct(records, listed) {
+  const ranked = [...records.entries()]
+    .filter(([name]) => listed.has(name))
+    .map(([name, r]) => {
+      const games = r.wins + r.losses + r.ties;
+      return { name, games, winPct: games ? (r.wins + 0.5 * r.ties) / games : 0, pf: r.pf };
+    })
+    .filter((r) => r.games > 0)
+    .sort((a, b) => b.winPct - a.winPct || b.pf - a.pf);
+
+  return new Map(ranked.map((r, index) => [r.name, index + 1]));
+}
+
+/**
+ * How many places each player moved in the all-time order because of the
+ * league's most recent game week: positive is up.
+ *
+ * Ranked among the players the status filter lists, so a place is a place on
+ * the table as shown: passing a hidden player is not a move. Each player's
+ * record is still their whole career, whatever their status was each season —
+ * the filter chooses who is ranked, not what their numbers are (6.2(g)). A
+ * player whose first game was that week has no previous place and so no entry.
+ *
+ * @param {Object} seasons - one league's payload, keyed by year
+ * @param {Object} [statusFilter] - status -> shown; absent ranks everyone
+ * @returns {{year: string|null, week: number|null, changes: Map<string, number>}}
+ */
+export function lastGameRankChange(seasons, statusFilter) {
+  const latest = latestScoredWeek(seasons);
+  if (!latest) return { year: null, week: null, changes: new Map() };
+
+  const current = careerRecords(seasons);
+  const previous = new Map([...current].map(([name, r]) => [name, { ...r }]));
+  for (const matchup of latest.matchups) removeGame(previous, matchup, latest.teams);
+
+  const joined = Object.fromEntries(
+    Object.keys(seasons).map((year) => [year, joinStandings(seasons[year])])
+  );
+  const listed = playersIn(onlyShown(joined, statusFilter));
+
+  const now = placesByWinPct(current, listed);
+  const before = placesByWinPct(previous, listed);
+
+  const changes = new Map();
+  for (const [name, place] of now) {
+    if (before.has(name)) changes.set(name, before.get(name) - place);
+  }
+  return { year: latest.year, week: latest.week, changes };
 }

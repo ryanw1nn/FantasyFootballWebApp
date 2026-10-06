@@ -4,9 +4,9 @@
 //
 // Every function takes a slug, and every URL now carries it. The read path moved
 // onto the league-scoped routes first and the editor's load and write followed,
-// so nothing here reaches a compatibility alias any more — the aliases still
-// exist and still pass their gate, they just have no caller. A slug other than
-// the default is now something this module can address rather than refuse.
+// so nothing here reaches a compatibility alias any more — and since Phase 7 the
+// aliases are gone, so there is nothing left to reach. A slug other than the
+// default is now something this module can address rather than refuse.
 
 // Empty in a production build: the server serves this bundle and the API from
 // one origin, so every path below is already same-origin as it stands. `??`

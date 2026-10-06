@@ -187,10 +187,12 @@ export async function loadSeason(client, slug, year) {
  * Replaces one week's matchups and recomputes the standings they changed, in a
  * single transaction. Returns the season's bundle as it stands after the write.
  *
- * `toRow` reads one matchup out of the request body. It is the only thing the
- * two dialects differ by: the aliases send display names and "BYE", the league
- * routes send team ids and null, and both end in the same transaction rather
- * than in two implementations of it.
+ * `toRow` reads one matchup out of the request body. It is the seam the two
+ * dialects used to differ by: the aliases sent display names and "BYE" where the
+ * league routes send team ids and null, and both ended in the same transaction
+ * rather than in two implementations of it. Since Phase 7 deleted the aliases
+ * there is one caller and one dialect, and the parameter is what keeps the
+ * transaction from knowing which.
  *
  * The season row is locked first: two editors saving different weeks both
  * recompute the same standings table, and without the lock the second recompute

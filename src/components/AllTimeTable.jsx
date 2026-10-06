@@ -25,11 +25,13 @@ import { allTimePlayers } from '../stats/allTime';
  *  @param {string} props.searchQuery - Search query to filter players by name
  *  @param {Object} props.statusFilter - Team States: status -> shown. It decides who is
  *    listed and nothing else — every number here is computed before it is applied (6.2(g)).
+ *  @param {Object} props.rankChange - lastGameRankChange's result: places moved per player
+ *    since the league's most recent game week
  *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
  *  @param {Object} props.visibleColumns - Map of optional column key -> shown/hidden
  */
 
-export default function AllTimeTable({ allData, searchQuery, statusFilter, onPlayerClick, visibleColumns = {} }) {
+export default function AllTimeTable({ allData, searchQuery, statusFilter, rankChange, onPlayerClick, visibleColumns = {} }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -47,8 +49,11 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, onPla
     // ==================================
 
     const allTimeStats = useMemo(
-        () => allTimePlayers(allData, searchQuery, statusFilter),
-        [allData, searchQuery, statusFilter]
+        () => allTimePlayers(allData, searchQuery, statusFilter).map((player) => ({
+            ...player,
+            change: rankChange?.changes.get(player.name) ?? 0,
+        })),
+        [allData, searchQuery, statusFilter, rankChange]
     );
 
     // ==================================
@@ -94,6 +99,7 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, onPla
     const dividerCell = "border-l-2 border-slate-200";
 
     // Visibility per optional column, used both for rendering and for group colSpans/dividers.
+    const showChange = cols.change === true;
     const showL = cols.losses !== false;
     const showT = cols.ties !== false;
     const showGP = cols.gp !== false;
@@ -124,7 +130,7 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, onPla
                     <thead className="sticky top-0 bg-slate-900 text-white z-10">
                         {/* Group band: separates raw stats from regular-season and postseason awards */}
                         <tr>
-                            <th colSpan={1} className="bg-slate-900"></th>
+                            <th colSpan={showChange ? 2 : 1} className="bg-slate-900"></th>
                             <th colSpan={statsSpan} className={`${groupTh} ${divider}`}>Regular Season</th>
                             {regAwardsSpan > 0 && (
                                 <th colSpan={regAwardsSpan} className={`${groupTh} ${divider} bg-accent-950/40`}>Reg. Season Awards</th>
@@ -140,6 +146,17 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, onPla
                         >
                             Player {getSortIcon("name")}
                         </th>
+                        {showChange && (
+                            <th
+                                className={th}
+                                onClick={() => requestSort("change")}
+                                title={rankChange?.week != null
+                                    ? `Places moved in the all-time order after ${rankChange.year} week ${rankChange.week}`
+                                    : "Places moved in the all-time order after the most recent game"}
+                            >
+                                Δ {getSortIcon("change")}
+                            </th>
+                        )}
                         <th className={`${th} ${divider}`} onClick={() => requestSort("winPct")}>
                             WIN% {getSortIcon("winPct")}
                         </th>
@@ -254,6 +271,20 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, onPla
                                 {player.name}
                             </button>
                         </td>
+
+                        {showChange && (
+                            <td className="px-4 py-3 text-center">
+                                {player.change > 0 && (
+                                    <span className="text-green-700 font-bold">+{player.change}</span>
+                                )}
+                                {player.change < 0 && (
+                                    <span className="text-red-700 font-bold">{player.change}</span>
+                                )}
+                                {player.change === 0 && (
+                                    <span className="text-slate-400">-</span>
+                                )}
+                            </td>
+                        )}
 
                         <td className={`px-4 py-3 text-center ${dividerCell}`}>
                             <span className={`font-semibold ${

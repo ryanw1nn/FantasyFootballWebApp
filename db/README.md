@@ -273,6 +273,7 @@ against Neon.
 | 2026 preseason | `npm run db:season -- --year 2026 --drop "Max Strater" --add "Patrick O'Donald:Patrick's Perfect Team"` |
 | 2026 preseason | `npm run db:player -- --player "Max Strater" --status inactive` |
 | 2026 week 1 | `npm run db:team -- --year 2026 --rename "Josh Whelan:Fat Stafford" --rename "Jake Strater:Bear Force One" --rename "Jimmy Beer:CMC and friends" --rename "TJ Cairney:Tonathan Jaylor"` |
+| 2026 week 4 | `npm run db:team -- --year 2026 --rename "Jimmy Beer:Bistro Beverages" --rename "Patrick O'Donald:JackinGoff in the LaportaPotty"` |
 
 The scores themselves are **not** in this table and cannot be — they are entered
 through the app and exist only in the database. Replaying this ledger after an
