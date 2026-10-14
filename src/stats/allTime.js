@@ -9,15 +9,19 @@
  * nothing else, so no total here can span two leagues.
  */
 
-import { isPlayerTeam, joinStandings, ownerLabel, teamsById } from './league';
+import { isPlayerTeam, joinStandings, ownerLabel, teamsById, weekIsScored } from './league';
 
 /**
  * Each season's points-for leader, points-against leader and last place.
  *
+ * The points-for title is only handed out once a season's regular season is
+ * over, so a leader part way through the year is not yet a scoring champion.
+ *
  * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
+ * @param {Set<string>} [finishedYears] - years whose regular season is over; absent counts every year
  * @returns {{pfLeadersByYear: Object, paLeadersByYear: Object, lastPlaceByYear: Object}}
  */
-export function seasonLeaders(allData) {
+export function seasonLeaders(allData, finishedYears) {
   const pfLeadersByYear = {};
   const paLeadersByYear = {};
   const lastPlaceByYear = {};
@@ -52,7 +56,7 @@ export function seasonLeaders(allData) {
           lastPlace = ownerLabel(row);
         }
       });
-      if (pfLeader) {
+      if (pfLeader && (!finishedYears || finishedYears.has(seasonYear))) {
         pfLeadersByYear[seasonYear] = pfLeader;
       }
       if (paLeader) {
@@ -111,13 +115,14 @@ function playersIn(allData) {
  * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
  * @param {string} [searchQuery] - matches a player name
  * @param {Object} [statusFilter] - status -> shown, deciding who is listed
+ * @param {Set<string>} [finishedYears] - years whose regular season is over, passed to seasonLeaders
  * @returns {Array} a row per listed player, unsorted
  */
-export function allTimePlayers(allData, searchQuery, statusFilter) {
+export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears) {
   const stats = {};
 
   const listed = playersIn(onlyShown(allData, statusFilter));
-  const { pfLeadersByYear, paLeadersByYear, lastPlaceByYear } = seasonLeaders(allData);
+  const { pfLeadersByYear, paLeadersByYear, lastPlaceByYear } = seasonLeaders(allData, finishedYears);
 
   Object.entries(allData)
     .filter(([year]) => !isNaN(Number(year)))
@@ -220,15 +225,6 @@ export function allTimePlayers(allData, searchQuery, statusFilter) {
 // ==================================
 // Rank change since the last game
 // ==================================
-
-/**
- * A week counts as played when some game in it has both scores above zero —
- * the same rule db/standings.mjs uses, so an unplayed week is never "the last
- * game".
- */
-function weekIsScored(matchups) {
-  return matchups.some((m) => m.team1_score > 0 && m.team2_score > 0);
-}
 
 /**
  * The most recent scored regular-season week across the league, newest season

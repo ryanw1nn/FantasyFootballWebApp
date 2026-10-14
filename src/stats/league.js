@@ -87,3 +87,30 @@ export function joinStandings(seasonData) {
     return team === undefined ? [] : [{ ...team, ...row }];
   });
 }
+
+/**
+ * A week counts as played when some game in it has both scores above zero —
+ * the same rule db/standings.mjs uses, so an unplayed week is never "the last
+ * game".
+ */
+export function weekIsScored(matchups) {
+  return matchups.some((m) => m.team1_score > 0 && m.team2_score > 0);
+}
+
+/**
+ * Whether a season's regular season is over: its final regular-season week, or
+ * any playoff week, has been scored. An imported season is a finished one.
+ *
+ * @param {Object} seasonData - one season of the league payload
+ * @returns {boolean}
+ */
+export function regularSeasonIsOver(seasonData) {
+  const shape = seasonData?.season;
+  if (!shape) return false;
+  if (shape.standings_are_imported) return true;
+
+  return Object.entries(seasonData.weeks ?? {}).some(
+    ([week, { matchups }]) =>
+      Number(week) >= shape.regular_season_weeks && weekIsScored(matchups)
+  );
+}

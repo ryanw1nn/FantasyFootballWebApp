@@ -28,10 +28,11 @@ import { allTimePlayers } from '../stats/allTime';
  *  @param {Object} props.rankChange - lastGameRankChange's result: places moved per player
  *    since the league's most recent game week
  *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
+ *  @param {Set<string>} props.finishedYears - Years whose regular season is over
  *  @param {Object} props.visibleColumns - Map of optional column key -> shown/hidden
  */
 
-export default function AllTimeTable({ allData, searchQuery, statusFilter, rankChange, onPlayerClick, visibleColumns = {} }) {
+export default function AllTimeTable({ allData, searchQuery, statusFilter, finishedYears, rankChange, onPlayerClick, visibleColumns = {} }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -49,11 +50,11 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, rankC
     // ==================================
 
     const allTimeStats = useMemo(
-        () => allTimePlayers(allData, searchQuery, statusFilter).map((player) => ({
+        () => allTimePlayers(allData, searchQuery, statusFilter, finishedYears).map((player) => ({
             ...player,
             change: rankChange?.changes.get(player.name) ?? 0,
         })),
-        [allData, searchQuery, statusFilter, rankChange]
+        [allData, searchQuery, statusFilter, finishedYears, rankChange]
     );
 
     // ==================================

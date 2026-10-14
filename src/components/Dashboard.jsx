@@ -12,6 +12,7 @@ import { useLeague } from '../context/LeagueContext';
 import { playerPath } from '../routes';
 import { getSeasonArray, seasonStatsCards } from '../stats/season';
 import { lastGameRankChange } from '../stats/allTime';
+import { regularSeasonIsOver } from '../stats/league';
 
 /**
  * The season table and the all-time table. Two routes, one component: they
@@ -87,6 +88,12 @@ export default function Dashboard({ view }) {
   const shownSeasons = useMemo(
     () => Object.fromEntries(Object.entries(data).filter(([year]) => !hiddenYears.has(year))),
     [data, hiddenYears]
+  );
+
+  // A season's PF title waits for its regular season to end.
+  const finishedYears = useMemo(
+    () => new Set(Object.keys(shownSeasons).filter((year) => regularSeasonIsOver(shownSeasons[year]))),
+    [shownSeasons]
   );
 
   const rankChange = useMemo(
@@ -230,6 +237,7 @@ export default function Dashboard({ view }) {
                 Object.keys(shownSeasons).map((year) => [year, teamsFor(year)])
               )}
               statusFilter={filters}
+              finishedYears={finishedYears}
               rankChange={rankChange}
               onPlayerClick={handlePlayerClick}
               visibleColumns={alltimeCols}

@@ -9,7 +9,7 @@
  * the component, and read only the games this module emits.
  */
 
-import { isBye, joinStandings, ownerLabel, teamsById } from './league';
+import { isBye, joinStandings, ownerLabel, regularSeasonIsOver, teamsById } from './league';
 
 /**
  * The ids a player owned in one season. A team id belongs to a season, not to
@@ -123,6 +123,9 @@ export function playerAwards(allData, playerName) {
   Object.entries(allData)
   .filter(([year]) => !isNaN(Number(year)))
   .forEach(([year, seasonData]) => {
+    // No PF title until the regular season is over.
+    if (!regularSeasonIsOver(seasonData)) return;
+
     const standings = joinStandings(seasonData);
     let maxPF = -1;
     let pfLeader = null;
