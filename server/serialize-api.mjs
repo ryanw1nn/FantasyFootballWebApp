@@ -42,12 +42,16 @@ export function apiLeague(league, seasons) {
   };
 }
 
-/** display_name is null for a botted slot, which is a team without a person. */
+/**
+ * managers is the people who ran the team, in the league's order: one name, two
+ * for a co-managed team, and none for a botted slot, which is a team without a
+ * person.
+ */
 function apiTeam(team) {
   return {
     id: team.id,
     team_name: team.team_name,
-    display_name: team.display_name,
+    managers: team.managers,
     status: team.status,
     playoff_rounds: team.playoff_rounds,
     made_playoffs: team.made_playoffs,

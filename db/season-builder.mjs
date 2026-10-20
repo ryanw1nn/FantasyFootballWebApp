@@ -41,6 +41,27 @@
  */
 export class SeasonBuildError extends Error {}
 
+/** The most people one team can be managed by. 005 has no limit; the league does. */
+export const MAX_MANAGERS = 2;
+
+/**
+ * A team's managers, as a column of a query over `teams t`: their display names
+ * in the league's order, empty for a botted slot. Shared so every read lists a
+ * co-managed team's people the same way round.
+ */
+export const MANAGERS_OF_TEAM = `(
+  SELECT COALESCE(array_agg(p.display_name ORDER BY m.position), '{}')
+    FROM team_managers m JOIN players p ON p.id = m.player_id
+   WHERE m.team_id = t.id
+) AS managers`;
+
+/** The same, as player ids, for the writers that need to know who is who. */
+export const MANAGER_IDS_OF_TEAM = `(
+  SELECT COALESCE(array_agg(m.player_id ORDER BY m.position), '{}')
+    FROM team_managers m
+   WHERE m.team_id = t.id
+) AS manager_ids`;
+
 function fail(message) {
   throw new SeasonBuildError(message);
 }
@@ -91,9 +112,8 @@ export function nearestSeason(seasons, year) {
 
 export async function rosterOf(client, seasonId) {
   const { rows } = await client.query(
-    `SELECT t.player_id, t.team_name, t.status, p.display_name
+    `SELECT t.team_name, t.status, ${MANAGERS_OF_TEAM}
        FROM teams t
-       LEFT JOIN players p ON p.id = t.player_id
       WHERE t.season_id = $1
       ORDER BY t.id`,
     [seasonId]
@@ -126,6 +146,12 @@ export async function playoffLayout(client, seasonId, playoffStartWeek) {
  * will be inserted. Order is not cosmetic: db/standings.mjs ranks by team id as
  * its final tiebreak, so it is the order the season lists its teams in forever.
  *
+ * `drop` and `rename` name a team by any one of its managers — a person manages
+ * one team a season, so one name is enough. A co-managed team is carried with
+ * both of its people; changing who manages it is the roster panel's job, once
+ * the season exists. `add` entries are `{ player, team }`, or `{ players, team }`
+ * for a team that starts out co-managed.
+ *
  * A dropped player keeps every row they ever had — a season is a record of who
  * played that year, and leaving the league does not unplay it. Only this year's
  * row goes away. Marking their history inactive is db/player-status.mjs's job.
@@ -133,33 +159,39 @@ export async function playoffLayout(client, seasonId, playoffStartWeek) {
 export function nextRoster(previous, { drop, add, rename }) {
   const dropped = new Set(drop);
   const renamed = new Map(rename.map(({ player, team }) => [player, team]));
+  const teamOf = (name) => previous.find((team) => team.managers.includes(name));
 
   for (const name of dropped) {
-    if (!previous.some((team) => team.display_name === name)) {
-      fail(`cannot drop "${name}": not on the source season's roster`);
-    }
+    if (teamOf(name) === undefined) fail(`cannot drop "${name}": not on the source season's roster`);
   }
   for (const [name] of renamed) {
-    if (!previous.some((team) => team.display_name === name)) {
-      fail(`cannot rename "${name}": not on the source season's roster`);
-    }
+    if (teamOf(name) === undefined) fail(`cannot rename "${name}": not on the source season's roster`);
     if (dropped.has(name)) fail(`"${name}" is both dropped and renamed`);
+  }
+
+  const droppedTeams = new Set([...dropped].map(teamOf));
+  const renamedTeams = new Map();
+  for (const [name, teamName] of renamed) {
+    const team = teamOf(name);
+    if (droppedTeams.has(team)) fail(`"${name}"'s team is both dropped and renamed`);
+    if (renamedTeams.has(team)) fail(`"${team.team_name}" is renamed twice`);
+    renamedTeams.set(team, teamName);
   }
 
   // A botted slot is last season's abandonment, not this season's roster. It
   // has no player to carry forward, so it is never inherited.
   const carried = previous
-    .filter((team) => team.player_id !== null && !dropped.has(team.display_name))
+    .filter((team) => team.managers.length > 0 && !droppedTeams.has(team))
     .map((team) => ({
-      display_name: team.display_name,
-      team_name: renamed.get(team.display_name) ?? team.team_name,
+      managers: [...team.managers],
+      team_name: renamedTeams.get(team) ?? team.team_name,
       // Status is this season's, not last season's: somebody marked inactive in
       // their final year is active again the year they come back.
       status: "active",
     }));
 
-  const added = add.map(({ player, team }) => ({
-    display_name: player,
+  const added = add.map(({ player, players, team }) => ({
+    managers: players ?? [player],
     team_name: team,
     status: "active",
   }));
@@ -168,8 +200,14 @@ export function nextRoster(previous, { drop, add, rename }) {
 
   const names = new Set();
   for (const team of roster) {
-    if (names.has(team.display_name)) fail(`"${team.display_name}" appears twice on the roster`);
-    names.add(team.display_name);
+    if (team.managers.length === 0) fail(`"${team.team_name}" has no manager`);
+    if (team.managers.length > MAX_MANAGERS) {
+      fail(`"${team.team_name}" has ${team.managers.length} managers; a team can have ${MAX_MANAGERS}`);
+    }
+    for (const name of team.managers) {
+      if (names.has(name)) fail(`"${name}" appears twice on the roster`);
+      names.add(name);
+    }
   }
 
   const teamNames = new Set();
@@ -183,25 +221,30 @@ export function nextRoster(previous, { drop, add, rename }) {
   return roster;
 }
 
+/** How a roster entry reads in a report: its managers, the way every screen joins them. */
+export function managersLabel(team) {
+  return team.managers.join(" & ");
+}
+
 // ---------------------------------------------------------------------------
 // Writing
 // ---------------------------------------------------------------------------
 
 /**
- * A player id per roster name, creating a row for anyone new.
+ * A player id per name, creating a row for anyone new.
  *
  * display_name is not globally unique — the table is shared across leagues and
  * two different people may share a name — so a lookup is scoped to the league
- * by only ever considering players who already have a team in it. Someone who
+ * by only ever considering players who already manage a team in it. Someone who
  * appears nowhere in this league is new *to this league* and gets a row, which
  * is exactly what the import's per-league rule does.
  */
-export async function playerIds(client, leagueId, roster) {
+export async function playerIds(client, leagueId, names) {
   const { rows: known } = await client.query(
     `SELECT DISTINCT p.id, p.display_name
        FROM players p
-       JOIN teams t ON t.player_id = p.id
-       JOIN seasons s ON s.id = t.season_id
+       JOIN team_managers m ON m.player_id = p.id
+       JOIN seasons s ON s.id = m.season_id
       WHERE s.league_id = $1`,
     [leagueId]
   );
@@ -209,8 +252,8 @@ export async function playerIds(client, leagueId, roster) {
   const ids = new Map(known.map((row) => [row.display_name, row.id]));
   const created = [];
 
-  for (const team of roster) {
-    if (ids.has(team.display_name)) continue;
+  for (const name of names) {
+    if (ids.has(name)) continue;
 
     // A player row attached to no team in any league is left over from a
     // --replace that deleted the only season they had, and reusing it is both
@@ -220,27 +263,54 @@ export async function playerIds(client, leagueId, roster) {
     const { rows: orphans } = await client.query(
       `SELECT p.id FROM players p
         WHERE p.display_name = $1
-          AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.player_id = p.id)
+          AND NOT EXISTS (SELECT 1 FROM team_managers m WHERE m.player_id = p.id)
         ORDER BY p.id
         LIMIT 1`,
-      [team.display_name]
+      [name]
     );
 
     if (orphans.length > 0) {
-      ids.set(team.display_name, orphans[0].id);
-      created.push(team.display_name);
+      ids.set(name, orphans[0].id);
+      created.push(name);
       continue;
     }
 
     const { rows } = await client.query(
       `INSERT INTO players (display_name, real_name) VALUES ($1, $2) RETURNING id`,
-      [team.display_name, team.display_name]
+      [name, name]
     );
-    ids.set(team.display_name, rows[0].id);
-    created.push(team.display_name);
+    ids.set(name, rows[0].id);
+    created.push(name);
   }
 
   return { ids, created };
+}
+
+/**
+ * Writes who manages a team, replacing whoever did. teams.player_id is kept as
+ * the first of them until a migration drops it (see 005), so the code before
+ * co-managers still reads a correct roster after a rollback.
+ */
+export async function setManagers(client, team, playerIdList) {
+  await client.query(`DELETE FROM team_managers WHERE team_id = $1`, [team.id]);
+  for (const [position, playerId] of playerIdList.entries()) {
+    await client.query(
+      `INSERT INTO team_managers (team_id, season_id, player_id, position) VALUES ($1, $2, $3, $4)`,
+      [team.id, team.season_id, playerId, position]
+    );
+  }
+  await client.query(`UPDATE teams SET player_id = $2 WHERE id = $1`, [team.id, playerIdList[0] ?? null]);
+}
+
+/** The given players' rows, if nobody manages a team with them any more. */
+export async function deleteOrphanedPlayers(client, playerIdList) {
+  const { rowCount } = await client.query(
+    `DELETE FROM players p
+      WHERE p.id = ANY($1::int[])
+        AND NOT EXISTS (SELECT 1 FROM team_managers m WHERE m.player_id = p.id)`,
+    [playerIdList]
+  );
+  return rowCount;
 }
 
 async function insertSeason(client, league, year) {
@@ -262,10 +332,11 @@ async function insertTeams(client, seasonId, roster, ids) {
     // playoff_rounds and the two champion flags are the season's results and
     // stay at their defaults. made_playoffs is generated and cannot be written.
     const { rows } = await client.query(
-      `INSERT INTO teams (season_id, player_id, team_name, status)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [seasonId, ids.get(team.display_name), team.team_name, team.status]
+      `INSERT INTO teams (season_id, team_name, status)
+       VALUES ($1, $2, $3) RETURNING id, season_id`,
+      [seasonId, team.team_name, team.status]
     );
+    await setManagers(client, rows[0], team.managers.map((name) => ids.get(name)));
     teamIds.push(rows[0].id);
   }
 
@@ -359,7 +430,7 @@ async function replaceSeason(client, existing) {
  * plus the playoff layout, and a zero standings row per team.
  *
  *   league     a leagueBySlug row; the weeks come from its template columns
- *   roster     [{ display_name, team_name, status }], in insertion order
+ *   roster     [{ managers, team_name, status }], in insertion order
  *   layout     playoff rows to copy, [{ week, position, status, label }]
  *   replacing  optional: an existing season of this year to delete first.
  *              Only db:season --replace passes it; the web never replaces.
@@ -389,7 +460,11 @@ export async function buildSeason(client, league, { year, roster, layout, replac
   // season somebody was added in would otherwise drop their only team first,
   // leaving the lookup — which scopes a name by the league's teams — unable to
   // see them, and inserting a second row for the same person.
-  const { ids, created } = await playerIds(client, league.id, roster);
+  const { ids, created } = await playerIds(
+    client,
+    league.id,
+    roster.flatMap((team) => team.managers)
+  );
 
   if (replacing !== undefined) await replaceSeason(client, replacing);
 

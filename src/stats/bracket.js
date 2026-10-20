@@ -11,7 +11,7 @@
  * or an earlier start render with no code of its own.
  */
 
-import { isBye, isPlayerTeam, ownerLabel, teamsById } from './league';
+import { isBye, isPlayerTeam, managersOf, teamsById } from './league';
 
 /**
  * The column each matchup status belongs to.
@@ -138,7 +138,7 @@ export function getWinner(matchup) {
  * season whose final is still unplayed has no champion yet.
  *
  * @param {Object} seasons - one league's payload, keyed by year
- * @returns {Object} year -> owner label of the champion
+ * @returns {Object} year -> the champion's managers
  */
 export function toiletBowlChampions(seasons) {
   const championsByYear = {};
@@ -160,7 +160,7 @@ export function toiletBowlChampions(seasons) {
     if (!winner) continue;
 
     const team = teamsById(seasonData).get(finals[0][`${winner}_id`]);
-    if (isPlayerTeam(team)) championsByYear[year] = ownerLabel(team);
+    if (isPlayerTeam(team)) championsByYear[year] = managersOf(team);
   }
 
   return championsByYear;

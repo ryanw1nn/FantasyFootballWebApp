@@ -26,6 +26,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { pool, describeTarget } from "./pool.mjs";
+import { setManagers } from "./season-builder.mjs";
 
 const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SEASONS_JSON = path.join(repoRoot, "src", "data", "seasons.json");
@@ -291,18 +292,23 @@ async function insertTeams(client, seasonId, teams, playerIds) {
     // made_playoffs is generated from playoff_rounds and cannot be written.
     const { rows } = await client.query(
       `INSERT INTO teams
-         (season_id, player_id, team_name, status,
+         (season_id, team_name, status,
           playoff_rounds, is_playoff_champ, is_regular_champ)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, season_id`,
       [
         seasonId,
-        team.player_name === null ? null : playerIds.get(team.player_name),
         team.team_name,
         team.status,
         team.playoff_rounds,
         team.is_playoff_champ,
         team.is_regular_champ,
       ]
+    );
+    // The file has one person per team; a botted slot has none (see 005).
+    await setManagers(
+      client,
+      rows[0],
+      team.player_name === null ? [] : [playerIds.get(team.player_name)]
     );
     ids.set(team.team_name, rows[0].id);
   }
@@ -385,7 +391,8 @@ async function counts(client) {
       (SELECT count(*) FROM matchups)  AS matchups,
       (SELECT count(*) FROM standings) AS standings,
       (SELECT count(*) FROM matchups WHERE team1_id IS NULL OR team2_id IS NULL) AS byes,
-      (SELECT count(*) FROM teams WHERE player_id IS NULL) AS "teamsWithoutPlayer"
+      (SELECT count(*) FROM teams t
+        WHERE NOT EXISTS (SELECT 1 FROM team_managers m WHERE m.team_id = t.id)) AS "teamsWithoutPlayer"
   `);
 
   return Object.fromEntries(Object.entries(rows[0]).map(([key, value]) => [key, Number(value)]));

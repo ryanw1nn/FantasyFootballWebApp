@@ -11,7 +11,7 @@ import {
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import { editPath, seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
-import { BYE_LABEL, isBye, ownerLabel } from '../stats/league';
+import { BYE_LABEL, isBye, managersOf, ownerLabel } from '../stats/league';
 import CreateSeasonPanel from './CreateSeasonPanel';
 import ImportScoresPanel from './ImportScoresPanel';
 import RosterPanel from './RosterPanel';
@@ -941,7 +941,7 @@ function playerNames(seasons) {
 
   for (const season of Object.values(seasons ?? {})) {
     for (const team of season.teams ?? []) {
-      if (team.display_name != null) names.add(team.display_name);
+      for (const name of managersOf(team)) names.add(name);
     }
   }
 

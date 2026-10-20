@@ -25,11 +25,27 @@ export const BOTTED_LABEL = 'Botted Season';
 export const BYE_LABEL = 'BYE';
 
 /**
- * The person behind a team, or the words for the slot nobody owned.
+ * The people who ran a team, in the league's order: one name, two for a
+ * co-managed team, none for a botted slot.
  *
- * A botted season has no player: `display_name` is null and `status` is
- * 'botted'. Every screen still reads "Botted Season", but it is a presentation
- * choice made once, here, rather than a player the server invents.
+ * This is who a team's results are credited to. Every manager of a co-managed
+ * team gets all of it, the same as if they had run it alone, so every career
+ * total, award and player page asks this rather than reading the label.
+ *
+ * @param {Object} team - a team row, or a row joined from one
+ * @returns {string[]}
+ */
+export function managersOf(team) {
+  return team?.managers ?? [];
+}
+
+/**
+ * The people behind a team, as one label, or the words for the slot nobody
+ * owned: "Alex", "Alex & Blake", or "Botted Season".
+ *
+ * A botted season has no player: `managers` is empty and `status` is 'botted'.
+ * Every screen still reads "Botted Season", but it is a presentation choice
+ * made once, here, rather than a player the server invents.
  *
  * @param {Object} team - a team row, or a row joined from one
  * @returns {string|null}
@@ -37,12 +53,13 @@ export const BYE_LABEL = 'BYE';
 export function ownerLabel(team) {
   if (!team) return null;
   if (team.status === 'botted') return BOTTED_LABEL;
-  return team.display_name ?? null;
+  const managers = managersOf(team);
+  return managers.length > 0 ? managers.join(' & ') : null;
 }
 
 /** Whether a team row stands for a person at all. */
 export function isPlayerTeam(team) {
-  return Boolean(team) && team.display_name != null;
+  return managersOf(team).length > 0;
 }
 
 /**

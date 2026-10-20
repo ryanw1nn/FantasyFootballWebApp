@@ -12,6 +12,7 @@ import express from "express";
 import {
   addTeam,
   allLeagues,
+  changeTeam,
   createSeason,
   importSeason,
   leagueBySlug,
@@ -21,7 +22,6 @@ import {
   pool,
   previewSeason,
   removeTeam,
-  renameTeam,
   replaceWeek,
   seasonsOfLeague,
 } from "../queries.mjs";
@@ -118,13 +118,15 @@ router.post("/api/leagues/:slug/seasons", async (req, res) => {
 // unlock; each answers with the whole season, since an add or a remove changes
 // its weeks and standings too. :teamId must be a team of that season, or 404.
 
-// RENAME a team in this season only. The body is { teamName }.
+// CHANGE a team in this season only: rename it, set who manages it, or both.
+// The body is { teamName?, players?: [{ id } | { name }] }.
 router.patch("/api/leagues/:slug/seasons/:year/teams/:teamId", async (req, res) => {
-  const bundle = await renameTeam(req.params.slug, req.params.year, req.params.teamId, req.body);
+  const bundle = await changeTeam(req.params.slug, req.params.year, req.params.teamId, req.body);
   res.json(apiSeason(bundle));
 });
 
-// ADD a team. The body is { teamName, player: { id } | { name } }.
+// ADD a team. The body is { teamName, players: [{ id } | { name }] }, one
+// player or two for a co-managed team.
 router.post("/api/leagues/:slug/seasons/:year/teams", async (req, res) => {
   const bundle = await addTeam(req.params.slug, req.params.year, req.body);
   res.status(201).json(apiSeason(bundle));

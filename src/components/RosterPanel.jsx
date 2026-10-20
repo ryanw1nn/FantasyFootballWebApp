@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Plus, Trash2, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Plus, Trash2, UserPlus, X } from 'lucide-react';
 
-import { ApiError, addTeam, removeTeam, renameTeam } from '../api/client';
-import { ownerLabel } from '../stats/league';
+import { ApiError, addTeam, removeTeam, renameTeam, setTeamManagers } from '../api/client';
+import { managersOf, ownerLabel } from '../stats/league';
+
+/** A team can be run by one person, or by two together. The server's limit too. */
+const MAX_MANAGERS = 2;
 
 /**
  * RosterPanel Component
  *
- * The roster of the season open in the editor: rename a team, remove one, or
- * add one for a player the league already has or a new name. Every change is
- * to this season only.
+ * The roster of the season open in the editor: rename a team, give it a
+ * co-manager or take one off, remove it, or add one for players the league
+ * already has or new names. Every change is to this season only, and each
+ * manager of a co-managed team is credited with all of it.
  *
  * A team with a scored matchup cannot be removed, so its button is disabled
  * with the reason beside it. That is a convenience read from the saved season;
@@ -17,8 +21,9 @@ import { ownerLabel } from '../stats/league';
  * server's own words.
  *
  * Drawn only when canWrite is true. `onChanged(season, { weeks })` hands back
- * the season the server answered with; `weeks` is false for a rename, which
- * changes no week, so the editor can keep what is typed into them.
+ * the season the server answered with; `weeks` is false for a rename or a
+ * change of managers, which changes no week, so the editor can keep what is
+ * typed into them.
  * `onSessionEnded()` runs when a change is refused for want of an unlock.
  */
 export default function RosterPanel({
@@ -34,7 +39,10 @@ export default function RosterPanel({
   const [names, setNames] = useState({});
   const [confirming, setConfirming] = useState(null);
   const [newPlayer, setNewPlayer] = useState('');
+  const [newCoManager, setNewCoManager] = useState('');
   const [newTeam, setNewTeam] = useState('');
+  const [coManaging, setCoManaging] = useState(null);
+  const [coManager, setCoManager] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,17 +50,20 @@ export default function RosterPanel({
   useEffect(() => {
     setNames(Object.fromEntries(teams.map((team) => [team.id, team.team_name])));
     setConfirming(null);
+    setCoManaging(null);
+    setCoManager('');
   }, [teams]);
 
   useEffect(() => {
     setError('');
     setNewPlayer('');
+    setNewCoManager('');
     setNewTeam('');
   }, [year]);
 
   // Who could be added without creating anyone: the league's players with no
   // team this season. A botted slot has no player and offers nobody.
-  const onRoster = new Set(teams.map((team) => team.display_name).filter(Boolean));
+  const onRoster = new Set(teams.flatMap(managersOf));
   const available = leaguePlayers.filter((name) => !onRoster.has(name));
 
   async function change(request, { weeks }) {
@@ -80,18 +91,36 @@ export default function RosterPanel({
     return change(() => renameTeam(slug, year, team.id, names[team.id].trim()), { weeks: false });
   }
 
+  /** A team's managers by name, which the league's player rule resolves to who they are. */
+  function setManagers(team, names) {
+    return change(
+      () => setTeamManagers(slug, year, team.id, names.map((name) => ({ name }))),
+      { weeks: false }
+    );
+  }
+
+  function addCoManager(team) {
+    return setManagers(team, [...managersOf(team), coManager.trim()]);
+  }
+
+  function dropManager(team, name) {
+    return setManagers(team, managersOf(team).filter((other) => other !== name));
+  }
+
   function remove(team) {
     setConfirming(null);
     return change(() => removeTeam(slug, year, team.id), { weeks: true });
   }
 
   async function add() {
-    const added = await change(
-      () => addTeam(slug, year, newTeam.trim(), { name: newPlayer.trim() }),
-      { weeks: true }
-    );
+    const players = [newPlayer, newCoManager]
+      .map((name) => name.trim())
+      .filter((name) => name !== '')
+      .map((name) => ({ name }));
+    const added = await change(() => addTeam(slug, year, newTeam.trim(), players), { weeks: true });
     if (added) {
       setNewPlayer('');
+      setNewCoManager('');
       setNewTeam('');
     }
   }
@@ -128,58 +157,119 @@ export default function RosterPanel({
               const name = names[team.id] ?? team.team_name;
               const renamed = name.trim() !== '' && name.trim() !== team.team_name;
               const hasScores = scoredTeamIds.has(team.id);
+              const managers = managersOf(team);
 
               return (
-                <div
-                  key={team.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 rounded-lg border bg-gray-50 border-gray-200"
-                >
-                  <span className="sm:w-48 font-medium text-gray-900">{ownerLabel(team)}</span>
-                  <input
-                    value={name}
-                    onChange={(e) => setNames((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                    maxLength={120}
-                    aria-label={`${ownerLabel(team)}'s team name`}
-                    className={`${inputClass} sm:flex-1`}
-                  />
-                  {renamed && (
-                    <button
-                      onClick={() => rename(team)}
-                      disabled={busy}
-                      className="text-sm flex items-center gap-1 px-2 py-1 text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
-                    >
-                      <Check size={14} />
-                      Rename
-                    </button>
-                  )}
-                  {confirming === team.id ? (
-                    <span className="flex items-center gap-1">
+                <div key={team.id} className="p-3 rounded-lg border bg-gray-50 border-gray-200 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    {managers.length < 2 ? (
+                      <span className="sm:w-48 font-medium text-gray-900">{ownerLabel(team)}</span>
+                    ) : (
+                      <span className="sm:w-48 font-medium text-gray-900 flex flex-wrap items-center gap-x-1">
+                        {managers.map((manager, index) => (
+                          <span key={manager} className="flex items-center">
+                            {index > 0 && <span className="mr-1">&amp;</span>}
+                            {manager}
+                            <button
+                              onClick={() => dropManager(team, manager)}
+                              disabled={busy}
+                              aria-label={`Take ${manager} off ${team.team_name}`}
+                              title={`Take ${manager} off ${team.team_name}`}
+                              className="ml-0.5 text-gray-400 hover:text-red-600 disabled:text-gray-300"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    <input
+                      value={name}
+                      onChange={(e) => setNames((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                      maxLength={120}
+                      aria-label={`${ownerLabel(team)}'s team name`}
+                      className={`${inputClass} sm:flex-1`}
+                    />
+                    {renamed && (
                       <button
-                        onClick={() => remove(team)}
+                        onClick={() => rename(team)}
                         disabled={busy}
-                        className="text-sm flex items-center gap-1 px-2 py-1 text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400"
+                        className="text-sm flex items-center gap-1 px-2 py-1 text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+                      >
+                        <Check size={14} />
+                        Rename
+                      </button>
+                    )}
+                    {managers.length > 0 && managers.length < MAX_MANAGERS && coManaging !== team.id && (
+                      <button
+                        onClick={() => {
+                          setCoManaging(team.id);
+                          setCoManager('');
+                        }}
+                        disabled={busy}
+                        className="text-sm flex items-center gap-1 px-2 py-1 text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+                      >
+                        <UserPlus size={14} />
+                        Co-manager
+                      </button>
+                    )}
+                    {confirming === team.id ? (
+                      <span className="flex items-center gap-1">
+                        <button
+                          onClick={() => remove(team)}
+                          disabled={busy}
+                          className="text-sm flex items-center gap-1 px-2 py-1 text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-400"
+                        >
+                          <Trash2 size={14} />
+                          Remove {team.team_name}
+                        </button>
+                        <button
+                          onClick={() => setConfirming(null)}
+                          aria-label="Keep this team"
+                          className="text-sm px-2 py-1 text-gray-600 hover:text-gray-800"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirming(team.id)}
+                        disabled={busy || hasScores}
+                        title={hasScores ? `Has scores in ${year}; rename it instead` : undefined}
+                        className="text-sm flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-800 disabled:text-gray-400"
                       >
                         <Trash2 size={14} />
-                        Remove {team.team_name}
+                        {hasScores ? 'Has scores' : 'Remove'}
+                      </button>
+                    )}
+                  </div>
+                  {coManaging === team.id && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:pl-48">
+                      <input
+                        value={coManager}
+                        onChange={(e) => setCoManager(e.target.value)}
+                        list={`roster-players-${year}`}
+                        placeholder={`Co-manager with ${managers[0]}`}
+                        maxLength={120}
+                        aria-label={`${team.team_name}'s co-manager`}
+                        className={`${inputClass} sm:flex-1`}
+                      />
+                      <button
+                        onClick={() => addCoManager(team)}
+                        disabled={busy || coManager.trim() === ''}
+                        className="text-sm flex items-center gap-1 px-2 py-1 text-indigo-600 hover:text-indigo-800 disabled:text-gray-400"
+                      >
+                        <Check size={14} />
+                        Add co-manager
                       </button>
                       <button
-                        onClick={() => setConfirming(null)}
-                        aria-label="Keep this team"
+                        onClick={() => setCoManaging(null)}
+                        aria-label="Cancel"
                         className="text-sm px-2 py-1 text-gray-600 hover:text-gray-800"
                       >
                         <X size={14} />
                       </button>
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setConfirming(team.id)}
-                      disabled={busy || hasScores}
-                      title={hasScores ? `Has scores in ${year}; rename it instead` : undefined}
-                      className="text-sm flex items-center gap-1 px-2 py-1 text-red-600 hover:text-red-800 disabled:text-gray-400"
-                    >
-                      <Trash2 size={14} />
-                      {hasScores ? 'Has scores' : 'Remove'}
-                    </button>
+                    </div>
                   )}
                 </div>
               );
@@ -194,6 +284,14 @@ export default function RosterPanel({
               placeholder="Player (pick or type a new name)"
               maxLength={120}
               className={`${inputClass} sm:w-64`}
+            />
+            <input
+              value={newCoManager}
+              onChange={(e) => setNewCoManager(e.target.value)}
+              list={`roster-players-${year}`}
+              placeholder="Co-manager (optional)"
+              maxLength={120}
+              className={`${inputClass} sm:w-48`}
             />
             <datalist id={`roster-players-${year}`}>
               {available.map((name) => (
@@ -217,8 +315,9 @@ export default function RosterPanel({
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            A name this league has seen before reuses that player; a new name creates one. A new
-            team has no opponents until a week is edited.
+            A name this league has seen before reuses that player; a new name creates one. Both
+            managers of a co-managed team are credited with its whole record, each on their own
+            player page. A new team has no opponents until a week is edited.
           </p>
 
           {teams.length % 2 !== 0 && (

@@ -5,6 +5,7 @@
 // 400, not a 500 from "invalid input syntax for type integer". Every parser
 // below takes what the URL gives — a string — and returns the typed value the
 // queries bind, so a caller cannot forget the conversion.
+import { MAX_MANAGERS } from "../db/season-builder.mjs";
 import { RequestError } from "./errors.mjs";
 
 /** League slugs are lowercase, hyphenated and short; "fan-club" is the only one. */
@@ -262,22 +263,8 @@ function requireBodyKeys(body, allowed) {
   }
 }
 
-/** `{ teamName }` and nothing else. */
-export function parseRenameTeamBody(body) {
-  requireBodyKeys(body, ["teamName"]);
-  return { teamName: parseName(body.teamName, "Team name") };
-}
-
-/**
- * `{ teamName, player }`, where player is `{ id }` for someone the league
- * already has, or `{ name }` for a name the league's player rule resolves —
- * reusing the league's player of that name, or creating one.
- */
-export function parseNewTeamBody(body) {
-  requireBodyKeys(body, ["teamName", "player"]);
-  const teamName = parseName(body.teamName, "Team name");
-
-  const { player } = body;
+/** One person a body names: `{ id }` the league already has, or `{ name }`. */
+function parsePlayerRef(player) {
   if (player === null || typeof player !== "object" || Array.isArray(player)) {
     throw new RequestError(400, "Invalid player");
   }
@@ -289,10 +276,54 @@ export function parseNewTeamBody(body) {
 
   if (keys[0] === "id") {
     if (!Number.isInteger(player.id) || player.id < 1) throw new RequestError(400, "Invalid player id");
-    return { teamName, player: { id: player.id } };
+    return { id: player.id };
   }
 
-  return { teamName, player: { name: parseName(player.name, "Player name") } };
+  return { name: parseName(player.name, "Player name") };
+}
+
+/**
+ * A team's managers: one person, or up to MAX_MANAGERS for a co-managed team,
+ * in the order they are listed. Whether two refs are the same person needs the
+ * league, so that is the query's check.
+ */
+function parsePlayers(value) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new RequestError(400, "players must be a list of one or more players");
+  }
+  if (value.length > MAX_MANAGERS) {
+    throw new RequestError(400, `A team can have ${MAX_MANAGERS} managers, not ${value.length}`);
+  }
+  return value.map(parsePlayerRef);
+}
+
+/**
+ * `{ teamName?, players? }`, at least one of them: a rename, a change of who
+ * manages the team, or both at once.
+ */
+export function parseTeamChangeBody(body) {
+  requireBodyKeys(body, ["teamName", "players"]);
+  if (body.teamName === undefined && body.players === undefined) {
+    throw new RequestError(400, "Nothing to change: send teamName, players or both");
+  }
+
+  return {
+    teamName: body.teamName === undefined ? undefined : parseName(body.teamName, "Team name"),
+    players: body.players === undefined ? undefined : parsePlayers(body.players),
+  };
+}
+
+/**
+ * `{ teamName, players }`, where each player is `{ id }` for someone the league
+ * already has, or `{ name }` for a name the league's player rule resolves —
+ * reusing the league's player of that name, or creating one.
+ */
+export function parseNewTeamBody(body) {
+  requireBodyKeys(body, ["teamName", "players"]);
+  return {
+    teamName: parseName(body.teamName, "Team name"),
+    players: parsePlayers(body.players),
+  };
 }
 
 // ---------------------------------------------------------------------------

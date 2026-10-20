@@ -21,7 +21,13 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { pool, describeTarget } from "./pool.mjs";
-import { buildSeason, nextRoster } from "./season-builder.mjs";
+import {
+  MAX_MANAGERS,
+  buildSeason,
+  deleteOrphanedPlayers,
+  managersLabel,
+  nextRoster,
+} from "./season-builder.mjs";
 
 // The one league no script may remove. Its history is the reason any of this
 // exists, and a slug typed wrong should not be able to reach it.
@@ -175,24 +181,60 @@ function parseLayout(weeks, playoffStartWeek) {
 }
 
 /**
+ * One manager in a roster entry: a name, or `{ name, real_name }`. real_name
+ * defaults to the display name, which is what the builder writes.
+ */
+function parseOwner(owner, where) {
+  if (typeof owner === "string") return { name: text(owner, where), realName: null };
+  if (!isObject(owner)) fail(`${where} must be a name or { "name": ..., "real_name": ... }`);
+
+  checkKeys(owner, ["name"], where, ["real_name"]);
+  return {
+    name: text(owner.name, `${where} name`),
+    realName: owner.real_name === undefined ? null : text(owner.real_name, `${where} real_name`),
+  };
+}
+
+/**
  * The roster as the builder wants it, in file order — which is the order the
  * season lists its teams forever, since standings break a final tie by team id.
  * Duplicates are refused by nextRoster, the same check db:season runs.
+ *
+ * An entry has `owner` (one manager, with an optional `real_name` beside it) or
+ * `owners` (a co-managed team, each a name or `{ name, real_name }`), not both.
+ * Every manager of a team is credited with all of it.
  */
 function parseRoster(entries) {
   if (!Array.isArray(entries) || entries.length === 0) fail(`"roster" must be a non-empty array`);
 
-  const realNames = [];
+  const realNames = new Map();
   const add = entries.map((entry, index) => {
     const where = `roster[${index}]`;
     if (!isObject(entry)) fail(`${where} must be { "owner": ..., "team": ... }`);
 
-    checkKeys(entry, ["owner", "team"], where, ["real_name"]);
+    let owners;
+    if (entry.owners !== undefined) {
+      if (entry.owner !== undefined) fail(`${where} has both "owner" and "owners" — use one`);
+      if (entry.real_name !== undefined) {
+        fail(`${where} real_name goes on each owner: "owners": [{ "name": ..., "real_name": ... }]`);
+      }
+      checkKeys(entry, ["owners", "team"], where);
+      if (!Array.isArray(entry.owners) || entry.owners.length === 0) {
+        fail(`${where} owners must be a non-empty array`);
+      }
+      if (entry.owners.length > MAX_MANAGERS) {
+        fail(`${where} has ${entry.owners.length} owners; a team can have ${MAX_MANAGERS}`);
+      }
+      owners = entry.owners.map((owner, i) => parseOwner(owner, `${where} owners[${i}]`));
+    } else {
+      checkKeys(entry, ["owner", "team"], where, ["real_name"]);
+      owners = [parseOwner({ name: entry.owner, real_name: entry.real_name }, where)];
+    }
 
-    // real_name defaults to the display name, which is what the builder writes.
-    const realName = entry.real_name;
-    realNames.push(realName === undefined ? null : text(realName, `${where} real_name`));
-    return { player: text(entry.owner, `${where} owner`), team: text(entry.team, `${where} team`) };
+    for (const owner of owners) {
+      if (owner.realName !== null) realNames.set(owner.name, owner.realName);
+    }
+    return { players: owners.map((owner) => owner.name), team: text(entry.team, `${where} team`) };
   });
 
   const roster = nextRoster([], { drop: [], add, rename: [] });
@@ -267,19 +309,20 @@ async function createLeague(client, spec) {
   );
   const [league] = rows;
 
-  const { teamIds, created, matchups, warnings } = await buildSeason(client, league, {
+  const { seasonId, created, matchups, warnings } = await buildSeason(client, league, {
     year: spec.year,
     roster: spec.roster,
     layout: spec.layout,
   });
 
   // The builder writes real_name as the display name. Where the file gave one,
-  // set it on the player row the team now points at.
-  for (const [index, realName] of spec.realNames.entries()) {
-    if (realName === null) continue;
+  // set it on the player row that manager now is.
+  for (const [name, realName] of spec.realNames) {
     await client.query(
-      `UPDATE players p SET real_name = $1 FROM teams t WHERE t.id = $2 AND p.id = t.player_id`,
-      [realName, teamIds[index]]
+      `UPDATE players p SET real_name = $1
+         FROM team_managers m
+        WHERE m.season_id = $2 AND m.player_id = p.id AND p.display_name = $3`,
+      [realName, seasonId, name]
     );
   }
 
@@ -297,10 +340,10 @@ function reportCreated(spec, { league, created, matchups, warnings }) {
 
   console.log(`\n  ${league.name} (${league.slug}) — first season ${spec.year}\n`);
   for (const [index, team] of spec.roster.entries()) {
-    const isNew = created.includes(team.display_name);
+    const reused = team.managers.filter((name) => !created.includes(name));
     console.log(
-      `    ${String(index + 1).padStart(2)}. ${team.display_name.padEnd(20)} ` +
-        `${team.team_name}${isNew ? "" : "   (existing player row)"}`
+      `    ${String(index + 1).padStart(2)}. ${managersLabel(team).padEnd(20)} ` +
+        `${team.team_name}${reused.length > 0 ? `   (existing player row: ${reused.join(", ")})` : ""}`
     );
   }
 
@@ -350,8 +393,8 @@ async function removeLeague(client, slug, { includingScores }) {
   }
 
   const { rows: playerRows } = await client.query(
-    `SELECT DISTINCT t.player_id FROM teams t JOIN seasons s ON s.id = t.season_id
-      WHERE s.league_id = $1 AND t.player_id IS NOT NULL`,
+    `SELECT DISTINCT m.player_id FROM team_managers m JOIN seasons s ON s.id = m.season_id
+      WHERE s.league_id = $1`,
     [league.id]
   );
   const playerIds = playerRows.map((row) => row.player_id);
@@ -364,19 +407,13 @@ async function removeLeague(client, slug, { includingScores }) {
   deleted.standings = (
     await client.query(`DELETE FROM standings WHERE season_id IN (${seasonsOfLeague})`, [league.id])
   ).rowCount;
+  // team_managers goes with its teams, by cascade.
   deleted.teams = (
     await client.query(`DELETE FROM teams WHERE season_id IN (${seasonsOfLeague})`, [league.id])
   ).rowCount;
   deleted.seasons = (await client.query(`DELETE FROM seasons WHERE league_id = $1`, [league.id])).rowCount;
   deleted.leagues = (await client.query(`DELETE FROM leagues WHERE id = $1`, [league.id])).rowCount;
-  deleted.players = (
-    await client.query(
-      `DELETE FROM players p
-        WHERE p.id = ANY($1::int[])
-          AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.player_id = p.id)`,
-      [playerIds]
-    )
-  ).rowCount;
+  deleted.players = await deleteOrphanedPlayers(client, playerIds);
 
   return { league, scored, deleted, kept: playerIds.length - deleted.players };
 }

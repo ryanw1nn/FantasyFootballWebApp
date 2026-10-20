@@ -9,20 +9,20 @@
  * the component, and read only the games this module emits.
  */
 
-import { isBye, joinStandings, ownerLabel, regularSeasonIsOver, teamsById } from './league';
+import { isBye, joinStandings, managersOf, ownerLabel, regularSeasonIsOver, teamsById } from './league';
 
 /**
- * The ids a player owned in one season. A team id belongs to a season, not to
- * a person, so this is asked again for every year — and a player who owned two
- * teams in a season is two ids, not the first one found.
+ * The ids a player managed in one season, alone or with a co-manager. A team id
+ * belongs to a season, not to a person, so this is asked again for every year.
  *
- * The match is on `display_name`, never on the label: a botted slot is not a
- * person, so `/players/Botted Season` finds nothing and gets the empty state.
+ * The match is on the team's managers, never on the label: a botted slot is not
+ * a person, so `/players/Botted Season` finds nothing and gets the empty state,
+ * and "Alex & Blake" is two people's page, not a third.
  */
 function teamIdsFor(seasonData, playerName) {
   const ids = new Set();
   for (const team of seasonData?.teams ?? []) {
-    if (team.display_name === playerName) ids.add(team.id);
+    if (managersOf(team).includes(playerName)) ids.add(team.id);
   }
   return ids;
 }
@@ -133,7 +133,7 @@ export function playerAwards(allData, playerName) {
     standings.forEach(team => {
       if((team.pf || 0) > maxPF) {
         maxPF = team.pf || 0;
-        pfLeader = team.display_name;
+        pfLeader = managersOf(team);
       }
     });
 
@@ -144,10 +144,10 @@ export function playerAwards(allData, playerName) {
   .filter(([year]) => !isNaN(Number(year)))
   .forEach(([year, seasonData]) => {
     const teams = seasonData?.teams || [];
-    const playerSeasonData = teams.find(t => t.display_name === playerName);
+    const playerSeasonData = teams.find(t => managersOf(t).includes(playerName));
     if (!playerSeasonData) return;
 
-    if(pfLeadersByYear[year] === playerName) {
+    if(pfLeadersByYear[year]?.includes(playerName)) {
       awards.pfTitles.push(Number(year));
     }
 

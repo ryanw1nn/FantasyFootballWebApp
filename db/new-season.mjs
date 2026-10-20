@@ -14,6 +14,7 @@ import { pool, describeTarget } from "./pool.mjs";
 import {
   buildSeason,
   leagueBySlug,
+  managersLabel,
   nearestSeason,
   nextRoster,
   playoffLayout,
@@ -158,10 +159,10 @@ function report(result) {
 
   console.log(`\n  ${league.name} (${league.slug}) — ${year}, from ${from.year}\n`);
   for (const [index, team] of roster.entries()) {
-    const isNew = created.includes(team.display_name);
+    const fresh = team.managers.filter((name) => created.includes(name));
     console.log(
-      `    ${String(index + 1).padStart(2)}. ${team.display_name.padEnd(20)} ` +
-        `${team.team_name}${isNew ? "   (new player)" : ""}`
+      `    ${String(index + 1).padStart(2)}. ${managersLabel(team).padEnd(20)} ` +
+        `${team.team_name}${fresh.length > 0 ? `   (new player: ${fresh.join(", ")})` : ""}`
     );
   }
 

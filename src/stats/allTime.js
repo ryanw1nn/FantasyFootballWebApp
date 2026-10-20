@@ -9,10 +9,11 @@
  * nothing else, so no total here can span two leagues.
  */
 
-import { isPlayerTeam, joinStandings, ownerLabel, teamsById, weekIsScored } from './league';
+import { isPlayerTeam, joinStandings, managersOf, teamsById, weekIsScored } from './league';
 
 /**
- * Each season's points-for leader, points-against leader and last place.
+ * Each season's points-for leader, points-against leader and last place, each
+ * as the team's managers: a co-managed team's title is both of theirs.
  *
  * Every one of them is only handed out once a season's regular season is over,
  * so a leader part way through the year does not yet hold the title and the
@@ -46,15 +47,15 @@ export function seasonLeaders(allData, finishedYears) {
 
         if ((row.pf || 0) > maxPF) {
           maxPF = row.pf || 0;
-          pfLeader = ownerLabel(row);
+          pfLeader = managersOf(row);
         }
         if ((row.pa || 0) > maxPA) {
           maxPA = row.pa || 0;
-          paLeader = ownerLabel(row);
+          paLeader = managersOf(row);
         }
         if (row.place != null && row.place > maxPlace) {
           maxPlace = row.place;
-          lastPlace = ownerLabel(row);
+          lastPlace = managersOf(row);
         }
       });
       if (pfLeader && (!finishedYears || finishedYears.has(seasonYear))) {
@@ -98,7 +99,7 @@ function playersIn(allData) {
   for (const season of Object.values(allData)) {
     if (!Array.isArray(season)) continue;
     for (const row of season) {
-      if (isPlayerTeam(row)) names.add(ownerLabel(row));
+      for (const name of managersOf(row)) names.add(name);
     }
   }
   return names;
@@ -106,6 +107,10 @@ function playersIn(allData) {
 
 /**
  * One row per player: career record, points, championships and award years.
+ *
+ * A co-managed team's season counts in full toward each of its managers, so two
+ * people who ran a team together each carry its record, and keep their own
+ * careers when they later run teams apart.
  *
  * The filter chooses rows; it does not change what a row says (6.2(g)). Every
  * award and every total here is computed over the whole league — each season's
@@ -117,7 +122,7 @@ function playersIn(allData) {
  * @param {string} [searchQuery] - matches a player name
  * @param {Object} [statusFilter] - status -> shown, deciding who is listed
  * @param {Set<string>} [finishedYears] - years whose regular season is over, passed to seasonLeaders
- * @param {Object} [toiletChampionsByYear] - year -> toilet bowl champion, from toiletBowlChampions
+ * @param {Object} [toiletChampionsByYear] - year -> toilet bowl champion's managers, from toiletBowlChampions
  * @returns {Array} a row per listed player, unsorted
  */
 export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears, toiletChampionsByYear = {}) {
@@ -135,66 +140,66 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
       // so it has no career to total (6.2(d)).
       if (!isPlayerTeam(row)) return;
 
-      const name = ownerLabel(row);
+      for (const name of managersOf(row)) {
+        if (!stats[name]) {
+          stats[name] = {
+            wins: 0,
+            losses: 0,
+            ties: 0,
+            PF: 0,
+            PA: 0,
+            rChampionYears: [],
+            playoffRounds: 0,
+            pChampionYears: [],
+            toiletChampionYears: [],
+            pfLeaderYears: [],
+            paLeaderYears: [],
+            regLoserYears: []
+          };
+        }
 
-      if (!stats[name]) {
-        stats[name] = {
-          wins: 0,
-          losses: 0,
-          ties: 0,
-          PF: 0,
-          PA: 0,
-          rChampionYears: [],
-          playoffRounds: 0,
-          pChampionYears: [],
-          toiletChampionYears: [],
-          pfLeaderYears: [],
-          paLeaderYears: [],
-          regLoserYears: []
-        };
-      }
+        stats[name].wins += row.wins || 0;
+        stats[name].losses += row.losses || 0;
+        stats[name].ties += row.ties || 0;
+        stats[name].PF += row.pf || 0;
+        stats[name].PA += row.pa || 0;
 
-      stats[name].wins += row.wins || 0;
-      stats[name].losses += row.losses || 0;
-      stats[name].ties += row.ties || 0;
-      stats[name].PF += row.pf || 0;
-      stats[name].PA += row.pa || 0;
+        if (row.is_regular_champ) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].rChampionYears.push(shortYear);
+        }
 
-      if (row.is_regular_champ) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].rChampionYears.push(shortYear);
-      }
+        if (pfLeadersByYear[seasonYear]?.includes(name)) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].pfLeaderYears.push(shortYear);
+        }
 
-      if (pfLeadersByYear[seasonYear] === name) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].pfLeaderYears.push(shortYear);
-      }
+        if (paLeadersByYear[seasonYear]?.includes(name)) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].paLeaderYears.push(shortYear);
+        }
 
-      if (paLeadersByYear[seasonYear] === name) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].paLeaderYears.push(shortYear);
-      }
+        if (lastPlaceByYear[seasonYear]?.includes(name)) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].regLoserYears.push(shortYear);
+        }
 
-      if (lastPlaceByYear[seasonYear] === name) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].regLoserYears.push(shortYear);
-      }
+        // playoff_rounds is the rung actually reached, so the champion's own
+        // final is already in it: the +1 the file's dialect needed comes out in
+        // the same change that puts this key in. And made_playoffs is generated
+        // from playoff_rounds >= 1, so the gate it used to stand behind adds
+        // nothing to a sum.
+        stats[name].playoffRounds += row.playoff_rounds || 0;
 
-      // playoff_rounds is the rung actually reached, so the champion's own
-      // final is already in it: the +1 the file's dialect needed comes out in
-      // the same change that puts this key in. And made_playoffs is generated
-      // from playoff_rounds >= 1, so the gate it used to stand behind adds
-      // nothing to a sum.
-      stats[name].playoffRounds += row.playoff_rounds || 0;
+        if (row.is_playoff_champ) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].pChampionYears.push(shortYear);
+        }
 
-      if (row.is_playoff_champ) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].pChampionYears.push(shortYear);
-      }
-
-      if (toiletChampionsByYear[seasonYear] === name) {
-        const shortYear = "'" + seasonYear.toString().slice(-2);
-        stats[name].toiletChampionYears.push(shortYear);
+        if (toiletChampionsByYear[seasonYear]?.includes(name)) {
+          const shortYear = "'" + seasonYear.toString().slice(-2);
+          stats[name].toiletChampionYears.push(shortYear);
+        }
       }
     });
   });
@@ -270,14 +275,14 @@ function careerRecords(seasons) {
   for (const year of Object.keys(seasons ?? {})) {
     if (isNaN(Number(year))) continue;
     for (const row of joinStandings(seasons[year])) {
-      if (!isPlayerTeam(row)) continue;
-      const name = ownerLabel(row);
-      const record = records.get(name) ?? { wins: 0, losses: 0, ties: 0, pf: 0 };
-      record.wins += row.wins || 0;
-      record.losses += row.losses || 0;
-      record.ties += row.ties || 0;
-      record.pf += row.pf || 0;
-      records.set(name, record);
+      for (const name of managersOf(row)) {
+        const record = records.get(name) ?? { wins: 0, losses: 0, ties: 0, pf: 0 };
+        record.wins += row.wins || 0;
+        record.losses += row.losses || 0;
+        record.ties += row.ties || 0;
+        record.pf += row.pf || 0;
+        records.set(name, record);
+      }
     }
   }
   return records;
@@ -297,14 +302,15 @@ function removeGame(records, matchup, teams) {
   const counted = sides[0][1] > 0 && sides[0][2] > 0;
 
   for (const [team, scored, allowed] of sides) {
-    if (!isPlayerTeam(team)) continue;
-    const record = records.get(ownerLabel(team));
-    if (!record) continue;
-    record.pf -= scored;
-    if (!counted) continue;
-    if (scored > allowed) record.wins--;
-    else if (scored < allowed) record.losses--;
-    else record.ties--;
+    for (const name of managersOf(team)) {
+      const record = records.get(name);
+      if (!record) continue;
+      record.pf -= scored;
+      if (!counted) continue;
+      if (scored > allowed) record.wins--;
+      else if (scored < allowed) record.losses--;
+      else record.ties--;
+    }
   }
 }
 

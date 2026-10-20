@@ -125,7 +125,7 @@ export function createSeason(slug, body) {
 // ============================================
 // A SEASON'S ROSTER
 // ============================================
-// Three guarded writes, each answering with the whole season as it stands
+// Guarded writes, each answering with the whole season as it stands
 // afterwards — an add or a remove changes the weeks and standings, not only
 // the teams.
 
@@ -146,12 +146,26 @@ export function renameTeam(slug, year, teamId, teamName) {
 }
 
 /**
- * Add a team. `player` is `{ id }` or `{ name }`; a name the league has seen
- * before is that player, and a new one creates them.
+ * Set who manages a team in that season only: one player, or two for a
+ * co-managed team, each `{ id }` or `{ name }`. Whoever is left off stops
+ * managing it; the team, its name and its scores stay.
  */
-export function addTeam(slug, year, teamName, player) {
+export function setTeamManagers(slug, year, teamId, players) {
+  return request('PATCH', `${teamsPath(slug, year)}/${encodeURIComponent(teamId)}`, {
+    body: { players },
+    withCookie: true,
+    guarded: true,
+  });
+}
+
+/**
+ * Add a team. `players` is one player, or two for a co-managed team, each
+ * `{ id }` or `{ name }`; a name the league has seen before is that player, and
+ * a new one creates them.
+ */
+export function addTeam(slug, year, teamName, players) {
   return request('POST', teamsPath(slug, year), {
-    body: { teamName, player },
+    body: { teamName, players },
     withCookie: true,
     guarded: true,
   });

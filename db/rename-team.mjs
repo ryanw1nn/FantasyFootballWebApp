@@ -24,6 +24,7 @@
 // shared across every season they played. That is a different change with a
 // different blast radius, and it is not this script.
 import { pool, describeTarget } from "./pool.mjs";
+import { MANAGERS_OF_TEAM } from "./season-builder.mjs";
 
 const DEFAULT_LEAGUE = "fan-club";
 
@@ -82,11 +83,10 @@ function parsePair(value) {
  */
 async function teamsOf(client, slug, year) {
   const { rows } = await client.query(
-    `SELECT t.id, t.team_name, p.display_name
+    `SELECT t.id, t.team_name, ${MANAGERS_OF_TEAM}
        FROM teams t
        JOIN seasons s ON s.id = t.season_id
        JOIN leagues l ON l.id = s.league_id
-       LEFT JOIN players p ON p.id = t.player_id
       WHERE l.slug = $1 AND s.year = $2
       ORDER BY t.id`,
     [slug, year]
@@ -111,7 +111,8 @@ async function renameTeams(client, args) {
   const taken = new Map(teams.map((team) => [team.team_name, team.id]));
 
   for (const { player, team: newName } of pairs) {
-    const row = teams.find((candidate) => candidate.display_name === player);
+    // Any one manager of a co-managed team names it.
+    const row = teams.find((candidate) => candidate.managers.includes(player));
     if (row === undefined) {
       fail(`"${player}" has no team in ${slug} ${year}`);
     }
@@ -124,7 +125,7 @@ async function renameTeams(client, args) {
     const holder = taken.get(newName);
     if (holder !== undefined && holder !== row.id) {
       const other = teams.find((candidate) => candidate.id === holder);
-      fail(`${year} already has a team called "${newName}" — ${other.display_name}'s`);
+      fail(`${year} already has a team called "${newName}" — ${other.managers.join(" & ")}'s`);
     }
 
     taken.delete(row.team_name);

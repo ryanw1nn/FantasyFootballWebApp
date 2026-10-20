@@ -5,6 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trophy, Medal } from 'lucide-react';
 import Badge from './ui/Badge';
+import { managersOf } from '../stats/league';
 import { prepareSeasonRows } from '../stats/season';
 
 /**
@@ -211,16 +212,31 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                   <td className="px-2.5 py-3 font-medium text-slate-900 max-w-[140px] truncate">
                     {/* A botted season belongs to nobody, so there is no player
                         page to send the reader to: the label is text, not a
-                        button that opens an empty page. */}
-                    {row.display_name == null ? (
+                        button that opens an empty page. A co-managed team is
+                        two people, each with their own page. */}
+                    {managersOf(row).length === 0 ? (
                       <span className="truncate block">{row.ownerName}</span>
-                    ) : (
+                    ) : managersOf(row).length === 1 ? (
                       <button
                         onClick={() => onPlayerClick && onPlayerClick(row.ownerName)}
                         className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer truncate block"
                       >
                         {row.ownerName}
                       </button>
+                    ) : (
+                      <span className="truncate block" title={row.ownerName}>
+                        {managersOf(row).map((name, index) => (
+                          <React.Fragment key={name}>
+                            {index > 0 && ' & '}
+                            <button
+                              onClick={() => onPlayerClick && onPlayerClick(name)}
+                              className="text-left hover:text-accent-600 transition-colors cursor-pointer"
+                            >
+                              {name}
+                            </button>
+                          </React.Fragment>
+                        ))}
+                      </span>
                     )}
                   </td>
 

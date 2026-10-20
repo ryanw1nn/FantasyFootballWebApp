@@ -18,8 +18,11 @@
 import { pool } from "../db/pool.mjs";
 import { writeStandings } from "../db/standings.mjs";
 import {
+  MANAGERS_OF_TEAM,
+  MANAGER_IDS_OF_TEAM,
   SeasonBuildError,
   buildSeason,
+  deleteOrphanedPlayers,
   leagueBySlug as leagueTemplateBySlug,
   nearestSeason,
   nextRoster,
@@ -27,6 +30,7 @@ import {
   playoffLayout,
   rosterOf,
   seasonsOf,
+  setManagers,
 } from "../db/season-builder.mjs";
 import { RequestError } from "./errors.mjs";
 import { parseSchedule } from "./espn-schedule.mjs";
@@ -37,7 +41,7 @@ import {
   parseMatchups,
   parseNewSeasonBody,
   parseNewTeamBody,
-  parseRenameTeamBody,
+  parseTeamChangeBody,
   parseSlug,
   parseStatus,
   parseTeamId,
@@ -132,9 +136,8 @@ export async function teamsForSeasons(client, seasonIds) {
   const { rows } = await client.query(
     `SELECT t.id, t.season_id, t.team_name, t.status, t.playoff_rounds,
             t.made_playoffs, t.is_playoff_champ, t.is_regular_champ,
-            p.display_name
+            ${MANAGERS_OF_TEAM}
        FROM teams t
-       LEFT JOIN players p ON p.id = t.player_id
       WHERE t.season_id = ANY($1)
       ORDER BY t.season_id, t.id`,
     [seasonIds]
@@ -417,9 +420,17 @@ async function draftWarnings(client, draft, year) {
   return warnings;
 }
 
-/** The roster as the editor shows it: who, and under which team name. */
+/**
+ * The roster as the editor shows it: who, and under which team name. `player`
+ * is the name a drop or rename names the team by — its first manager, since
+ * any one of them is enough.
+ */
 function draftRoster(roster) {
-  return roster.map((team) => ({ player: team.display_name, team: team.team_name }));
+  return roster.map((team) => ({
+    player: team.managers[0],
+    managers: team.managers,
+    team: team.team_name,
+  }));
 }
 
 /** A builder refusal is the caller's mistake, said in the builder's words. */
@@ -506,7 +517,8 @@ export async function createSeason(slug, body) {
 // ---------------------------------------------------------------------------
 // Editing a season's roster
 // ---------------------------------------------------------------------------
-// Rename a team, add one, remove one — in that season only. Each runs in one
+// Rename a team or change who manages it, add one, remove one — in that season
+// only. Each runs in one
 // transaction with the season row locked, the same lock replaceWeek takes, so a
 // roster change and a week save cannot recompute the standings over each other.
 // Each answers with the whole season as it stands afterwards: an add or a remove
@@ -553,7 +565,10 @@ function asRosterError(err) {
   if (err.code === "23505" && err.constraint === "teams_season_name_unique") {
     return new RequestError(409, "Another team this season already has that name");
   }
-  if (err.code === "23505" && err.constraint === "teams_season_player_unique") {
+  if (
+    err.code === "23505" &&
+    ["teams_season_player_unique", "team_managers_season_player_unique"].includes(err.constraint)
+  ) {
     return new RequestError(409, "That player already has a team this season");
   }
   return err;
@@ -561,9 +576,8 @@ function asRosterError(err) {
 
 async function rosterTeams(client, seasonId) {
   const { rows } = await client.query(
-    `SELECT t.id, t.player_id, t.team_name, p.display_name
+    `SELECT t.id, t.season_id, t.team_name, ${MANAGERS_OF_TEAM}, ${MANAGER_IDS_OF_TEAM}
        FROM teams t
-       LEFT JOIN players p ON p.id = t.player_id
       WHERE t.season_id = $1
       ORDER BY t.id`,
     [seasonId]
@@ -588,10 +602,10 @@ function requireFreeName(teams, teamName, year, exceptId = null) {
 }
 
 /**
- * The player an add names. `{ id }` must be someone with a team in this league
- * already, so an id cannot borrow a player from another league. `{ name }` goes
- * through the season builder's rule: the league's player of that name, an
- * orphaned row of it, or a new row.
+ * A player a body names. `{ id }` must be someone who has managed a team in
+ * this league already, so an id cannot borrow a player from another league.
+ * `{ name }` goes through the season builder's rule: the league's player of that
+ * name, an orphaned row of it, or a new row.
  */
 async function resolvePlayer(client, leagueId, player) {
   if (player.id !== undefined) {
@@ -599,16 +613,40 @@ async function resolvePlayer(client, leagueId, player) {
       `SELECT p.id, p.display_name
          FROM players p
         WHERE p.id = $2
-          AND EXISTS (SELECT 1 FROM teams t JOIN seasons s ON s.id = t.season_id
-                       WHERE t.player_id = p.id AND s.league_id = $1)`,
+          AND EXISTS (SELECT 1 FROM team_managers m JOIN seasons s ON s.id = m.season_id
+                       WHERE m.player_id = p.id AND s.league_id = $1)`,
       [leagueId, player.id]
     );
     if (rows.length === 0) throw new RequestError(400, `Player ${player.id} is not in this league`);
     return rows[0];
   }
 
-  const { ids } = await playerIds(client, leagueId, [{ display_name: player.name }]);
+  const { ids } = await playerIds(client, leagueId, [player.name]);
   return { id: ids.get(player.name), display_name: player.name };
+}
+
+/**
+ * The people a body names as a team's managers, in order, each of whom must be
+ * free this season — managing no team, or only `exceptTeam`, the one being
+ * changed. The same person twice is one mistake, said once.
+ */
+async function resolveManagers(client, season, teams, players, exceptTeam = null) {
+  const resolved = [];
+  for (const player of players) {
+    const person = await resolvePlayer(client, season.league_id, player);
+    if (resolved.some((other) => other.id === person.id)) {
+      throw new RequestError(400, `${person.display_name} is named twice`);
+    }
+    const holder = teams.find((team) => team.manager_ids.includes(person.id));
+    if (holder !== undefined && holder !== exceptTeam) {
+      throw new RequestError(
+        409,
+        `${person.display_name} already manages "${holder.team_name}" in ${season.year}`
+      );
+    }
+    resolved.push(person);
+  }
+  return resolved;
 }
 
 /**
@@ -678,17 +716,39 @@ async function settleStandings(client, seasonId) {
   );
 }
 
-/** Renames a team in one season. Every other season keeps the name it had. */
-export async function renameTeam(slug, year, teamId, body) {
+/**
+ * Changes a team in one season: its name, who manages it, or both. Every other
+ * season keeps the name and the managers it had. A manager taken off the team
+ * whose player row then manages nothing anywhere is deleted, as removeTeam does.
+ *
+ * Who manages a team that has played is allowed to change: it corrects whose
+ * career the season counts toward, and no score moves.
+ */
+export async function changeTeam(slug, year, teamId, body) {
   const id = parseTeamId(teamId);
-  const { teamName } = parseRenameTeamBody(body);
+  const { teamName, players } = parseTeamChangeBody(body);
 
   return inSeasonTransaction(slug, year, async (client, season) => {
     const teams = await rosterTeams(client, season.id);
-    teamOf(teams, id);
-    requireFreeName(teams, teamName, season.year, id);
+    const team = teamOf(teams, id);
 
-    await client.query(`UPDATE teams SET team_name = $1 WHERE id = $2`, [teamName, id]);
+    if (teamName !== undefined) {
+      requireFreeName(teams, teamName, season.year, id);
+      await client.query(`UPDATE teams SET team_name = $1 WHERE id = $2`, [teamName, id]);
+    }
+
+    if (players !== undefined) {
+      if (team.manager_ids.length === 0) {
+        throw new RequestError(409, `"${team.team_name}" is a botted slot and has no managers`);
+      }
+      const managers = await resolveManagers(client, season, teams, players, team);
+      const ids = managers.map((person) => person.id);
+      await setManagers(client, team, ids);
+      await deleteOrphanedPlayers(
+        client,
+        team.manager_ids.filter((previous) => !ids.includes(previous))
+      );
+    }
   });
 }
 
@@ -698,7 +758,7 @@ export async function renameTeam(slug, year, teamId, body) {
  * opponents until a week is edited.
  */
 export async function addTeam(slug, year, body) {
-  const { teamName, player } = parseNewTeamBody(body);
+  const { teamName, players } = parseNewTeamBody(body);
 
   return inSeasonTransaction(slug, year, async (client, season) => {
     const teams = await rosterTeams(client, season.id);
@@ -707,16 +767,14 @@ export async function addTeam(slug, year, body) {
     }
     requireFreeName(teams, teamName, season.year);
 
-    const resolved = await resolvePlayer(client, season.league_id, player);
-    if (teams.some((team) => team.player_id === resolved.id)) {
-      throw new RequestError(409, `${resolved.display_name} already has a team in ${season.year}`);
-    }
+    const managers = await resolveManagers(client, season, teams, players);
 
     const { rows } = await client.query(
-      `INSERT INTO teams (season_id, player_id, team_name, status)
-       VALUES ($1, $2, $3, 'active') RETURNING id`,
-      [season.id, resolved.id, teamName]
+      `INSERT INTO teams (season_id, team_name, status)
+       VALUES ($1, $2, 'active') RETURNING id, season_id`,
+      [season.id, teamName]
     );
+    await setManagers(client, rows[0], managers.map((person) => person.id));
     const place = teams.length + 1;
     await client.query(
       `INSERT INTO standings (season_id, team_id, place, prev_place) VALUES ($1, $2, $3, $4)`,
@@ -733,8 +791,8 @@ export async function addTeam(slug, year, body) {
  * matchup is a 409 and nothing changes. Otherwise every game it was in is
  * emptied — both sides, since its opponent was paired with a team that no
  * longer exists and one empty side would read as a BYE nobody chose — then the
- * team and its standings row go, and so does its player if this was their only
- * team anywhere.
+ * team and its standings row go, and so does any of its players for whom this
+ * was their only team anywhere.
  */
 export async function removeTeam(slug, year, teamId) {
   const id = parseTeamId(teamId);
@@ -763,15 +821,9 @@ export async function removeTeam(slug, year, teamId) {
         WHERE season_id = $1 AND (team1_id = $2 OR team2_id = $2)`,
       [season.id, id]
     );
+    // team_managers goes with the team, by cascade.
     await client.query(`DELETE FROM teams WHERE id = $1`, [id]);
-
-    if (team.player_id !== null) {
-      await client.query(
-        `DELETE FROM players p
-          WHERE p.id = $1 AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.player_id = p.id)`,
-        [team.player_id]
-      );
-    }
+    await deleteOrphanedPlayers(client, team.manager_ids);
 
     await fitRegularWeeks(client, season, teams.length - 1);
     await settleStandings(client, season.id);
@@ -831,6 +883,24 @@ function closest(name, candidates) {
   return close[0]?.candidate ?? null;
 }
 
+/** What every screen calls a team's people: "Alex", or "Alex & Blake". */
+function managersOf(team) {
+  return team.managers.length > 0 ? team.managers.join(" & ") : null;
+}
+
+/**
+ * Whether ESPN's manager column names this team's people: one of its managers,
+ * or a co-managed team's names joined by "," or "&" in any order. How ESPN
+ * prints a co-managed team has not been seen yet; anything else is a problem
+ * with its line, not a guess.
+ */
+function managedBy(team, manager) {
+  if (team.managers.includes(manager)) return true;
+
+  const names = manager.split(/\s*[,&]\s*/).filter((name) => name !== "");
+  return names.length > 1 && names.every((name) => team.managers.includes(name));
+}
+
 /**
  * The roster team an ESPN side stands for: the manager must be the team's
  * player and the team name must be its name this season. Both, because a
@@ -839,7 +909,7 @@ function closest(name, candidates) {
  */
 function sideResolver(teams, year, problems) {
   const reported = new Set();
-  const players = teams.filter((team) => team.display_name !== null);
+  const players = teams.filter((team) => team.managers.length > 0);
 
   function report(key, line, message) {
     if (reported.has(key)) return;
@@ -848,7 +918,7 @@ function sideResolver(teams, year, problems) {
   }
 
   return (side, line) => {
-    const byPlayer = players.find((team) => team.display_name === side.manager);
+    const byPlayer = players.find((team) => managedBy(team, side.manager));
     const byName = teams.find((team) => team.team_name === side.team);
 
     if (byPlayer !== undefined && byPlayer.team_name === side.team) return byPlayer;
@@ -866,10 +936,10 @@ function sideResolver(teams, year, problems) {
         key,
         line,
         `Player not found: ESPN has "${side.manager}" managing "${side.team}", but in ${year} ` +
-          `that team belongs to ${byName.display_name ?? "a botted slot"}.`
+          `that team belongs to ${managersOf(byName) ?? "a botted slot"}.`
       );
     } else {
-      const player = closest(side.manager, players.map((team) => team.display_name));
+      const player = closest(side.manager, players.flatMap((team) => team.managers));
       const team = closest(side.team, teams.map((row) => row.team_name));
       const hints = [
         player && `player "${player}"`,
@@ -894,7 +964,7 @@ const twoPlaces = (value) => Number(value).toFixed(2);
 function siteSide(teams, teamId, score) {
   if (teamId === null) return "nobody";
   const team = teams.find((row) => row.id === teamId);
-  const who = team?.display_name ?? team?.team_name ?? `team ${teamId}`;
+  const who = (team && managersOf(team)) ?? team?.team_name ?? `team ${teamId}`;
   return score === null ? `${who} (no score)` : `${who} ${twoPlaces(score)}`;
 }
 
@@ -930,7 +1000,7 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
       if (seen.has(team.id)) {
         problems.push({
           line: game.line,
-          message: `Week ${week.week}: ${team.display_name} plays twice (lines ${seen.get(team.id)} and ${game.line}).`,
+          message: `Week ${week.week}: ${managersOf(team)} plays twice (lines ${seen.get(team.id)} and ${game.line}).`,
         });
       }
       seen.set(team.id, game.line);
@@ -1026,7 +1096,7 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
       if (games.some((game) => game.action === null)) break;
       problems.push({
         line: week.line,
-        message: `Week ${week.week}: ${team.display_name} ("${team.team_name}") is on the ${year} roster but not in ESPN's week.`,
+        message: `Week ${week.week}: ${managersOf(team)} ("${team.team_name}") is on the ${year} roster but not in ESPN's week.`,
       });
     }
   }
@@ -1077,8 +1147,8 @@ export async function importSeason(slug, year, body) {
     }
 
     const teams = await client.query(
-      `SELECT t.id, t.team_name, t.status, p.display_name
-         FROM teams t LEFT JOIN players p ON p.id = t.player_id
+      `SELECT t.id, t.team_name, t.status, ${MANAGERS_OF_TEAM}
+         FROM teams t
         WHERE t.season_id = $1 ORDER BY t.id`,
       [season.id]
     ).then((result) => result.rows);

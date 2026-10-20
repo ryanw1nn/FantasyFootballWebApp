@@ -9,7 +9,9 @@ import { ApiError, createSeason, previewSeason } from '../api/client';
  * Creates a season of any year the league does not have yet, past or next.
  * It is a roster to confirm, not a form to fill: picking a year loads the
  * nearest season's roster from the server's preview, and each team is kept,
- * renamed or dropped, with new players added below.
+ * renamed or dropped, with new players added below. A co-managed team carries
+ * over with both managers; `player` is the one name that identifies it to the
+ * server, and the roster panel changes who manages it once the season exists.
  *
  * The preview and the create run the same server code, so the roster shown
  * here is the one the POST builds from. The client never works out "nearest"
@@ -201,14 +203,14 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
                     <span
                       className={`sm:w-48 font-medium ${team.dropped ? 'text-gray-400 line-through' : 'text-gray-900'}`}
                     >
-                      {team.player}
+                      {team.managers.join(' & ')}
                     </span>
                     <input
                       value={team.newTeam}
                       onChange={(e) => updateTeam(index, { newTeam: e.target.value })}
                       disabled={team.dropped}
                       maxLength={120}
-                      aria-label={`${team.player}'s team name`}
+                      aria-label={`${team.managers.join(' & ')}'s team name`}
                       className={`${inputClass} sm:flex-1 disabled:bg-gray-100 disabled:text-gray-400`}
                     />
                     <button

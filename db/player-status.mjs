@@ -74,7 +74,8 @@ async function rowsFor(client, slug, player, year) {
        FROM teams t
        JOIN seasons s ON s.id = t.season_id
        JOIN leagues l ON l.id = s.league_id
-       JOIN players p ON p.id = t.player_id
+       JOIN team_managers m ON m.team_id = t.id
+       JOIN players p ON p.id = m.player_id
       WHERE l.slug = $1 AND p.display_name = $2 AND ($3::smallint IS NULL OR s.year = $3)
       ORDER BY s.year`,
     [slug, player, year ?? null]
@@ -87,8 +88,8 @@ async function requireOnePerson(client, slug, player) {
   const { rows } = await client.query(
     `SELECT count(DISTINCT p.id) AS people
        FROM players p
-       JOIN teams t ON t.player_id = p.id
-       JOIN seasons s ON s.id = t.season_id
+       JOIN team_managers m ON m.player_id = p.id
+       JOIN seasons s ON s.id = m.season_id
        JOIN leagues l ON l.id = s.league_id
       WHERE l.slug = $1 AND p.display_name = $2`,
     [slug, player]

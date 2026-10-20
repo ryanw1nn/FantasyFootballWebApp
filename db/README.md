@@ -308,7 +308,8 @@ one.
   ],
   "roster": [
     { "owner": "Alex", "team": "Alpha", "real_name": "Alex Example" },
-    { "owner": "Blake", "team": "Bravo" }
+    { "owner": "Blake", "team": "Bravo" },
+    { "owners": ["Casey", { "name": "Dana", "real_name": "Dana Example" }], "team": "Charlie" }
   ]
 }
 ```
@@ -334,6 +335,11 @@ after the first is created on the website.
   and warned about.
 - **The slug is permanent** — it is the URL, `/l/<slug>`. Lowercase letters,
   digits and single hyphens, up to 40.
+- **A team can have two managers**: `owners` instead of `owner`, each a name or
+  `{ "name", "real_name" }`. Both are credited with the team's whole record, each
+  on their own player page, and their careers stay separate when they later play
+  apart (005, `team_managers`). On the website the roster panel adds or takes off
+  a co-manager, and a new season carries a co-managed team over with both.
 - **`team_count`** starts as the first roster's size. **`real_name`** defaults to
   the display name.
 - **A player is looked up only inside the league**, the rule `db:season` uses, so
