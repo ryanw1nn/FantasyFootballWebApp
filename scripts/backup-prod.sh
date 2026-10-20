@@ -20,6 +20,12 @@
 #                           owns; retention touches nothing else.
 #   FANCLUB_BACKUP_TIMEOUT  default 300 seconds, per pg_dump.
 #
+#   --if-due   exit quietly unless no `ok` run has been logged since the most
+#              recent Monday 09:00. The launchd job passes it and fires at
+#              login and hourly as well as on Monday, so a week the Mac was
+#              shut down is caught up the next time it is used, not skipped.
+#              Run by hand without it to take a dump regardless.
+#
 # Exit codes: 0 ok, 1 misconfigured, 2 Docker unreachable, 3 dump failed,
 # 4 dump timed out, 5 checksum verify failed.
 
@@ -85,11 +91,28 @@ why() {
 
 ERRFILE="$(mktemp -t fanclub-backup)"
 CNAME="fanclub-backup-$$"
+started=""
 # Killing `docker run` leaves its container running, so the name is the handle
 # that lets a timed-out dump be cleaned up rather than left hanging on Neon.
-trap 'rm -f "$ERRFILE"; docker rm -f "$CNAME" >/dev/null 2>&1' EXIT
+# Docker Desktop is stopped again only if this run was the one that started it.
+# Through its own CLI, not osascript: under launchd, macOS silently refuses
+# the Apple Event that `quit app` sends (seen 2026-10-20), since there is no
+# one to answer the Automation prompt.
+trap 'rm -f "$ERRFILE"; docker rm -f "$CNAME" >/dev/null 2>&1; [ -n "$started" ] && docker desktop stop --timeout 60 >/dev/null 2>&1' EXIT
 
 mkdir -p "$BACKUP_DIR" || { echo "cannot create $BACKUP_DIR" >&2; exit 1; }
+
+# A skipped check writes nothing to the log: it runs hourly, and a line in the
+# log still means a finished run.
+if [ "${1:-}" = "--if-due" ]; then
+  week_start=$(date -v-mon -v9H -v0M -v0S '+%s')
+  [ "$week_start" -gt "$(date '+%s')" ] && week_start=$((week_start - 7 * 86400))
+  last_ok=$(grep '  ok ' "$LOG" 2>/dev/null | tail -1 | cut -c1-19)
+  if [ -n "$last_ok" ]; then
+    last_ok_at=$(date -j -f '%Y-%m-%d %H:%M:%S' "$last_ok" '+%s' 2>/dev/null || echo 0)
+    [ "$last_ok_at" -ge "$week_start" ] && exit 0
+  fi
+fi
 
 if [ -z "${FANCLUB_BACKUP_URL:-}" ] && [ -n "${FANCLUB_BACKUP_URL_FILE:-}" ]; then
   [ -r "$FANCLUB_BACKUP_URL_FILE" ] || die 1 "cannot read $FANCLUB_BACKUP_URL_FILE"
@@ -103,7 +126,23 @@ fi
 DBURL="${FANCLUB_BACKUP_URL//-pooler/}"
 export DBURL
 
-docker info >/dev/null 2>&1 || die 2 "Docker is not reachable — no dump was taken"
+# Docker Desktop does not start at login on this Mac, and 2026-10-12 and
+# 2026-10-19 were both lost to that. So start it rather than fail, and give it
+# DOCKER_START_WAIT seconds to come up; FAIL(2) now means it would not start.
+# A wedged engine makes `docker info` hang rather than fail (seen 2026-10-20,
+# every API call answering 500), so each probe gets its own limit.
+DOCKER_START_WAIT=180
+docker_up() { run_limited 15 docker info >/dev/null 2>&1; }
+if ! docker_up; then
+  open -ga Docker >/dev/null 2>&1 || die 2 "Docker is not reachable and Docker Desktop would not open — no dump was taken"
+  waited=0
+  until docker_up; do
+    [ "$waited" -ge "$DOCKER_START_WAIT" ] && die 2 "Docker is not reachable — started Docker Desktop, still down after ${DOCKER_START_WAIT}s — no dump was taken"
+    sleep 5
+    waited=$((waited + 5))
+  done
+  started=" docker_started=${waited}s"
+fi
 
 STAMP="$(date '+%Y%m%d-%H%M%S')"
 DEST="$BACKUP_DIR/$PREFIX-$STAMP"
@@ -164,5 +203,5 @@ done <<EOF
 $listing
 EOF
 
-log "ok $(basename "$DEST") dump=${DUMP_BYTES}B sql=${SQL_BYTES}B checksums=verified pruned=${pruned}"
+log "ok $(basename "$DEST") dump=${DUMP_BYTES}B sql=${SQL_BYTES}B checksums=verified pruned=${pruned}${started}"
 exit 0

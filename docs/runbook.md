@@ -205,8 +205,8 @@ chmod 600 ~/.config/fanclub/prod-url
 
 cp ~/fantasy-football-web/scripts/com.ryanwinn.fanclub.backup.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ryanwinn.fanclub.backup.plist
-launchctl kickstart -k gui/$(id -u)/com.ryanwinn.fanclub.backup      # the first run, by hand
-sleep 30                                                             # kickstart returns at once; the run takes ~25 s
+                                                                     # RunAtLoad: the first run starts here, if one is due
+sleep 90                                                             # bootstrap returns at once; ~25 s, ~90 if Docker has to start
 tail -1 ~/fantasy-football-backups/backup.log                        # expect: ok prod-weekly-… checksums=verified
 ```
 
@@ -223,7 +223,9 @@ file alone does nothing.
 
 ```sh
 launchctl print gui/$(id -u)/com.ryanwinn.fanclub.backup | head -20   # is it loaded
-launchctl kickstart -k gui/$(id -u)/com.ryanwinn.fanclub.backup       # run it now
+launchctl kickstart -k gui/$(id -u)/com.ryanwinn.fanclub.backup       # run it now, if this week has no ok dump yet
+FANCLUB_BACKUP_URL_FILE=~/.config/fanclub/prod-url \
+  bash ~/fantasy-football-web/scripts/backup-prod.sh                  # run it now, regardless
 tail -5 ~/fantasy-football-backups/backup.log
 ls -t ~/fantasy-football-backups/ | head
 ```
@@ -240,7 +242,9 @@ anyone else could touch it*.
 | Symptom | What happened | Log line |
 | --- | --- | --- |
 | No new directory this week | The Mac was asleep or off at 09:00 and has not woken since | *nothing* — the directory listing is the monitor |
-| `FAIL(2)` | Docker was not running. **No dump was taken** | `Docker is not reachable — no dump was taken` |
+| `FAIL(2)` | Docker was not running, and the script's own `open -ga Docker` did not bring it up within 180 s (before 2026-10-20 the script did not try, and lost 10-12 and 10-19 that way). **No dump was taken** | `Docker is not reachable — started Docker Desktop, still down after 180s — no dump was taken` |
+| `ok … docker_started=Ns` | Not a failure: Docker was down, the script started it, took the dump, and stopped Docker Desktop again with `docker desktop stop` | the `ok` line, with the suffix |
+| A week the Mac was shut down | Not a failure either, since 2026-10-20: the job also fires at login and hourly with `--if-due`, and takes the week's dump the first time it finds none since Monday 09:00. Those checks log nothing | the `ok` line, on whatever day the Mac came back |
 | `FAIL(3)` | `pg_dump` refused; the client's own words are on the same line | `pg_dump -Fc failed — …` |
 | `FAIL(4)` | The dump hung and was killed at 300 s. **A backup that hangs is worse than one that errors**, which is why there is a timeout at all | `exceeded 300s and was killed` |
 | `FAIL(5)` | The files were written but did not checksum | `checksums did not verify` |

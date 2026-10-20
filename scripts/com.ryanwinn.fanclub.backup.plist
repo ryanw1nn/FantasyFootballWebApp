@@ -17,7 +17,11 @@
   moves, that line is the only thing to change.
 
   Monday 09:00 rather than Sunday night, so a dump lands after the week's edits
-  rather than during them. launchd runs a missed occurrence when the Mac wakes.
+  rather than during them. launchd runs a missed occurrence when the Mac wakes,
+  but not one missed while it was shut down. So the job also fires at login and
+  hourly, and passes the script dash-dash-if-due: those runs exit at once unless
+  the week since Monday 09:00 has no ok dump yet. The hourly one is also what
+  retries a catch-up that failed because the network was not up at login.
 -->
 <plist version="1.0">
 <dict>
@@ -28,6 +32,7 @@
   <array>
     <string>/bin/bash</string>
     <string>/Users/ryanwinn/fantasy-football-web/scripts/backup-prod.sh</string>
+    <string>--if-due</string>
   </array>
 
   <key>EnvironmentVariables</key>
@@ -47,8 +52,11 @@
     <key>Minute</key><integer>0</integer>
   </dict>
 
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
   <key>RunAtLoad</key>
-  <false/>
+  <true/>
 
   <!-- The script keeps its own one-line-per-run log; these two catch anything
        that escapes it, which is how a broken job says so at all. -->
