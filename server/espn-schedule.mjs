@@ -20,8 +20,14 @@
 //   (2-4-0)              its record
 //
 // Blank lines fall wherever the page's layout put them, so they are dropped and
-// carry no meaning. A playoff week not yet seeded reads "Matchups to be
-// determined" and nothing else.
+// carry no meaning. A week not yet seeded reads "Matchups to be determined" and
+// nothing else.
+//
+// A playoff week's games are not read. ESPN lists playoff and consolation games
+// in one list with nothing to tell them apart, plus a "Bye:" line for the top
+// seeds, and the site keeps them in different rows — so playoff weeks are
+// entered in the editor. The header is still recognised, so the week before it
+// ends there and the importer can say which weeks it left alone.
 //
 // Nothing here knows about the database. It turns the text into weeks of games
 // and reports what it could not read, with the line it was on; whether a name
@@ -128,7 +134,7 @@ function readWeek(section, problems) {
     complete: true,
     games: [],
   };
-  if (!week.determined) return week;
+  if (!week.determined || week.playoff) return week;
 
   let i = 0;
   while (i < body.length) {

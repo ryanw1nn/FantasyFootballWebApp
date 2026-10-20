@@ -14,7 +14,8 @@ import { ApiError, importScores } from '../api/client';
  * the same report if anything is wrong, so nothing is ever half imported.
  *
  * Scores already on the site are left alone when they agree and are a problem
- * when they don't. Weeks not played yet, or with a score of 0, are skipped.
+ * when they don't. Weeks not played yet, or with a score of 0, are skipped, and
+ * so are playoff weeks: those are entered in the editor.
  *
  * Drawn only when canWrite is true. `onImported()` runs after a write, so the
  * editor can reload the season; `onSessionEnded()` runs on a 401.

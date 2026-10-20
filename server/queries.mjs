@@ -846,8 +846,13 @@ export async function removeTeam(slug, year, teamId) {
 // writes only if the report has no problems, so what was previewed and what is
 // written cannot come from two readings of the season.
 
-/** Weeks a played-out paste carries that are not results yet. */
+/**
+ * Weeks a paste carries that the importer leaves alone: playoff weeks, which
+ * are entered in the editor (see server/espn-schedule.mjs), and weeks that are
+ * not results yet.
+ */
 function skippedBecause(week) {
+  if (week.playoff) return "playoffs, enter these in the editor";
   if (!week.determined) return "matchups to be determined";
   if (week.games.length === 0) return "no games";
   if (week.games.some((game) => game.away.score === null || game.home.score === null)) {
@@ -977,10 +982,9 @@ const espnSide = (side) => `${side.manager} ${twoPlaces(side.score)}`;
  * One played week: each game matched to the site's row for it. A row with the
  * same two teams is the game; its scores are entered if it has none, left alone
  * if they agree, and a problem if they differ. A pairing the site does not have
- * goes into an empty row of a regular-season week, unless either team is
- * already paired there with someone else — that is a disagreement, not a gap.
- * Playoff rows are the bracket's wiring, so a playoff game must already be
- * paired on the site.
+ * goes into an empty row of the week, unless either team is already paired
+ * there with someone else — that is a disagreement, not a gap. Only regular-
+ * season weeks get here; playoff weeks are skipped before matching.
  */
 function matchWeek(week, rows, teams, resolve, year, problems) {
   const games = [];
@@ -1056,16 +1060,6 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
       continue;
     }
 
-    if (week.playoff) {
-      problems.push({
-        line: game.line,
-        message:
-          `Week ${week.week}: ${game.away.manager} vs ${game.home.manager} is not in the site's ` +
-          `bracket. Set the playoff pairings in the editor first, then import.`,
-      });
-      continue;
-    }
-
     const empty = rows.find(
       (r) =>
         !claimed.has(r.id) &&
@@ -1091,7 +1085,7 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
     };
   }
 
-  if (!week.playoff && week.complete) {
+  if (week.complete) {
     for (const team of teams) {
       if (team.status === "botted" || seen.has(team.id)) continue;
       // Only a fully resolved week can say who is missing; otherwise the
