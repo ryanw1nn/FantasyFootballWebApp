@@ -175,10 +175,11 @@ as one word only against localhost. Any other host needs
 
 ## Seasons after the file
 
-`src/data/seasons.json` froze at 2025. Every season after it is created by
-`db/new-season.mjs`, because nothing else can make one: the four routes read and
-write matchups inside a season that already exists, and `EditSeasonPage` renders
-the weeks it is handed and offers no way to add one.
+`src/data/seasons.json` froze at 2025. Every season after it is built by
+`db/season-builder.mjs`, which takes a client inside the caller's transaction
+(like `standings.mjs`) and is shared by `db:season`, `db:league` and the web's
+create-season route. `db/new-season.mjs` is the terminal's way in: it parses the
+flags, picks the season to copy, and owns the transaction.
 
 ```
 npm run db:season -- --year 2026 \
@@ -186,13 +187,15 @@ npm run db:season -- --year 2026 \
       --add "Patrick O'Donald:Patrick's Perfect Team"
 ```
 
-It copies the previous season and writes four things:
+It copies the **nearest** season in either direction — the earlier one on a
+tie, or `--from` if given — so any year can be created, including one before the
+league's first. It writes four things:
 
 | Table | What it gets |
 | --- | --- |
 | `seasons` | One row. Weeks come from the **league** template — the one thing `002` left those columns for. |
-| `teams` | Last season's roster, minus `--drop`, plus `--add`, with `--rename`. Everyone `active`, no playoff rounds, no champion flags. A botted slot is never inherited. |
-| `matchups` | Every week of the season with every pairing empty — `regular_season_weeks` × half the roster, then the previous season's playoff rows. |
+| `teams` | The source season's roster, minus `--drop`, plus `--add`, with `--rename`. Everyone `active`, no playoff rounds, no champion flags. A botted slot is never inherited. |
+| `matchups` | Every week of the season with every pairing empty — `regular_season_weeks` × half the roster, then the source season's playoff rows. |
 | `standings` | A zero row per team, so the season renders a 0-0-0 table instead of an empty one until the first week is scored. |
 
 The matchups are the point. A week exists in a payload only because some row
