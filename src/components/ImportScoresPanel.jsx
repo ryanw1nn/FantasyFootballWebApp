@@ -86,7 +86,7 @@ export default function ImportScoresPanel({ slug, year, onImported, onSessionEnd
         <div className="px-6 py-4 border-t border-gray-200 space-y-4">
           <p className="text-sm text-gray-600">
             On ESPN, open <span className="font-medium">League → Schedule</span> with "All" selected,
-            select everything on the page (⌘A), copy, and paste it below. Nothing is saved until you
+            select everything on the page (Ctrl+A or Command+A), copy, and paste it below. Nothing is saved until you
             check the paste and then import it.
           </p>
 
