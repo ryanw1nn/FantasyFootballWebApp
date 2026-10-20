@@ -118,11 +118,11 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
     const showToilet = cols.toilet !== false;
 
     const statsSpan = 2 + [showL, showT, showGP, showPFPG, showPAPG, showPFTotal, showPATotal].filter(Boolean).length; // +2 for always-on WIN% and W
-    const regAwardsSpan = [showMPF, showRS, showPALdr, showRegLoser].filter(Boolean).length;
+    const regAwardsSpan = [showMPF, showPALdr, showRegLoser, showRS].filter(Boolean).length;
     const postAwardsSpan = [showRounds, showPO, showToilet].filter(Boolean).length;
 
     // First visible column in each toggleable group gets the divider so the border survives column toggling.
-    const regAwardsFirst = showMPF ? 'mpf' : showRS ? 'rs' : showPALdr ? 'paLdr' : showRegLoser ? 'regLoser' : null;
+    const regAwardsFirst = showMPF ? 'mpf' : showPALdr ? 'paLdr' : showRegLoser ? 'regLoser' : showRS ? 'rs' : null;
     const postAwardsFirst = showRounds ? 'rounds' : showPO ? 'po' : showToilet ? 'toilet' : null;
 
     return (
@@ -210,15 +210,6 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                                 PF LDR {getSortIcon("pfLeaderCount")}
                             </th>
                         )}
-                        {showRS && (
-                            <th
-                                className={`${th} ${regAwardsFirst === 'rs' ? divider : ''}`}
-                                onClick={() => requestSort("rChampionCount")}
-                                title="Regular Season Champion"
-                            >
-                                Champ {getSortIcon("rChampionCount")}
-                            </th>
-                        )}
                         {showPALdr && (
                             <th
                                 className={`${th} ${regAwardsFirst === 'paLdr' ? divider : ''}`}
@@ -235,6 +226,15 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                                 title="Regular Season Last Place"
                             >
                                 Last {getSortIcon("regLoserCount")}
+                            </th>
+                        )}
+                        {showRS && (
+                            <th
+                                className={`${th} ${regAwardsFirst === 'rs' ? divider : ''}`}
+                                onClick={() => requestSort("rChampionCount")}
+                                title="Regular Season Champion"
+                            >
+                                Champ {getSortIcon("rChampionCount")}
                             </th>
                         )}
                         {showRounds && (
@@ -362,14 +362,6 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                             </td>
                         )}
 
-                        {showRS && (
-                            <td className={`px-4 py-3 text-center ${regAwardsFirst === 'rs' ? dividerCell : ''}`}>
-                                {player.rChampionYears.length > 0 && (
-                                    <Badge icon={Medal}>{player.rChampionYears.join(', ')}</Badge>
-                                )}
-                            </td>
-                        )}
-
                         {showPALdr && (
                             <td className={`px-4 py-3 text-center ${regAwardsFirst === 'paLdr' ? dividerCell : ''}`}>
                                 {player.paLeaderCount > 0 && (
@@ -382,6 +374,14 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                             <td className={`px-4 py-3 text-center ${regAwardsFirst === 'regLoser' ? dividerCell : ''}`}>
                                 {player.regLoserCount > 0 && (
                                     <Badge>{player.regLoserYears.join(', ')}</Badge>
+                                )}
+                            </td>
+                        )}
+
+                        {showRS && (
+                            <td className={`px-4 py-3 text-center ${regAwardsFirst === 'rs' ? dividerCell : ''}`}>
+                                {player.rChampionYears.length > 0 && (
+                                    <Badge icon={Medal}>{player.rChampionYears.join(', ')}</Badge>
                                 )}
                             </td>
                         )}
