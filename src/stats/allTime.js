@@ -14,8 +14,9 @@ import { isPlayerTeam, joinStandings, ownerLabel, teamsById, weekIsScored } from
 /**
  * Each season's points-for leader, points-against leader and last place.
  *
- * The points-for title is only handed out once a season's regular season is
- * over, so a leader part way through the year is not yet a scoring champion.
+ * The points-for title and last place are only handed out once a season's
+ * regular season is over, so a leader part way through the year is not yet a
+ * scoring champion and the team at the bottom is not yet last.
  *
  * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
  * @param {Set<string>} [finishedYears] - years whose regular season is over; absent counts every year
@@ -62,7 +63,7 @@ export function seasonLeaders(allData, finishedYears) {
       if (paLeader) {
         paLeadersByYear[seasonYear] = paLeader;
       }
-      if (lastPlace) {
+      if (lastPlace && (!finishedYears || finishedYears.has(seasonYear))) {
         lastPlaceByYear[seasonYear] = lastPlace;
       }
     });
