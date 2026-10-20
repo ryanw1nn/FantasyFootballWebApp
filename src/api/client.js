@@ -82,9 +82,9 @@ export function getSeason(slug, year) {
 /**
  * Replace one week's matchups, and the standings behind them.
  *
- * The only call the server's write guard stands in front of, so the only one
- * whose 401 means "this session may not write" rather than "the server is
- * wrong". That is what `guarded` marks, and it is why it appears once.
+ * One of the two calls the server's write guard stands in front of — this and
+ * createSeason — so one of the two whose 401 means "this session may not write"
+ * rather than "the server is wrong". That is what `guarded` marks.
  */
 export function saveWeek(slug, year, week, matchups) {
   return request(
@@ -93,6 +93,31 @@ export function saveWeek(slug, year, week, matchups) {
       `/seasons/${encodeURIComponent(year)}/weeks/${encodeURIComponent(week)}`,
     { body: { matchups }, withCookie: true, guarded: true }
   );
+}
+
+/**
+ * What creating `year` would start from: the nearest season's roster, the
+ * weeks the league's template gives, and any warnings. A read, so it is public;
+ * an existing year comes back as a 409.
+ */
+export function previewSeason(slug, year) {
+  return request(
+    'GET',
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}` +
+      `/seasons/${encodeURIComponent(year)}/preview`
+  );
+}
+
+/**
+ * Create a season from `{ year, drop, add, rename }`. A guarded write like
+ * saveWeek, so a 401 here means the session ended, not that the server is wrong.
+ */
+export function createSeason(slug, body) {
+  return request('POST', `/api/leagues/${encodeURIComponent(requireSlug(slug))}/seasons`, {
+    body,
+    withCookie: true,
+    guarded: true,
+  });
 }
 
 // ============================================
@@ -133,7 +158,7 @@ let unauthorizedHandler = null;
  * still throws afterwards, so a caller that wants to say something about the
  * failure still can — and so the editor keeps the week that was typed into it.
  *
- * Only saveWeek reaches this. A 401 from a read is a defect in the server, not
+ * Only the guarded writes, saveWeek and createSeason, reach this. A 401 from a read is a defect in the server, not
  * a prompt: reads are public, so answering one with an unlock form would tell
  * the reader something untrue about the product. A 401 from unlock is the
  * passphrase being wrong, which the form the caller is already showing says in

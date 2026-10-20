@@ -17,10 +17,22 @@
 // pool.
 import { pool } from "../db/pool.mjs";
 import { writeStandings } from "../db/standings.mjs";
+import {
+  SeasonBuildError,
+  buildSeason,
+  leagueBySlug as leagueTemplateBySlug,
+  nearestSeason,
+  nextRoster,
+  playoffLayout,
+  rosterOf,
+  seasonsOf,
+} from "../db/season-builder.mjs";
 import { RequestError } from "./errors.mjs";
 import {
+  MAX_TEAMS,
   parseLabel,
   parseMatchups,
+  parseNewSeasonBody,
   parseSlug,
   parseStatus,
   parseWeek,
@@ -328,4 +340,159 @@ function score(value) {
     throw new RequestError(400, `Score out of range: ${number}`);
   }
   return number.toFixed(2);
+}
+
+// ---------------------------------------------------------------------------
+// Creating a season
+// ---------------------------------------------------------------------------
+// db/season-builder.mjs does the writing, the same builder db:season and
+// db:league call, so a season made on the web has the same shape as one made
+// in the terminal. What lives here is the web's half: which season to copy, the
+// 409 for a year that exists, and turning the builder's refusals into 400s.
+//
+// The preview and the create share draftSeason, so what the editor is shown is
+// exactly what the POST will build from — not a second guess at "nearest".
+
+const NO_EDITS = { drop: [], add: [], rename: [] };
+
+/**
+ * What creating `year` would start from: the nearest season's roster with the
+ * edits applied, the playoff rows it would copy, and the weeks the league's
+ * template gives. Throws the 409 for an existing year and a 400 for a roster
+ * the builder refuses.
+ */
+async function draftSeason(client, slug, year, edits) {
+  const league = await leagueTemplateBySlug(client, slug);
+  const seasons = await seasonsOf(client, league.id);
+
+  if (seasons.some((season) => season.year === year)) {
+    throw new RequestError(409, `${year} already exists in this league`);
+  }
+
+  const from = nearestSeason(seasons, year);
+  const roster = nextRoster(await rosterOf(client, from.id), edits);
+  if (roster.length > MAX_TEAMS) {
+    throw new RequestError(400, `${roster.length} teams is more than the ${MAX_TEAMS} allowed`);
+  }
+
+  const layout = await playoffLayout(client, from.id, from.playoff_start_week);
+  const latest = seasons.at(-1);
+
+  return { league, from, roster, layout, latest };
+}
+
+/**
+ * Warnings that do not block: the builder's own, a source with no bracket to
+ * copy, and a latest season whose final has not been scored — creating next
+ * year before this one is finished is allowed, but rarely meant.
+ */
+async function draftWarnings(client, draft, year) {
+  const warnings = [];
+
+  if (draft.layout.length === 0) {
+    warnings.push(
+      `${draft.from.year} has no playoff rows to copy, so ${year} gets regular-season weeks only.`
+    );
+  }
+
+  if (year > draft.latest.year) {
+    const { rows } = await client.query(
+      `SELECT count(*) AS unscored FROM matchups
+        WHERE season_id = $1 AND status = 'playoff'
+          AND week = (SELECT max(week) FROM matchups WHERE season_id = $1)
+          AND team1_score IS NULL AND team2_score IS NULL`,
+      [draft.latest.id]
+    );
+    if (Number(rows[0].unscored) > 0) {
+      warnings.push(`${draft.latest.year}'s final has no score yet.`);
+    }
+  }
+
+  return warnings;
+}
+
+/** The roster as the editor shows it: who, and under which team name. */
+function draftRoster(roster) {
+  return roster.map((team) => ({ player: team.display_name, team: team.team_name }));
+}
+
+/** A builder refusal is the caller's mistake, said in the builder's words. */
+function asRequestError(err) {
+  if (err instanceof SeasonBuildError) return new RequestError(400, err.message);
+  // Two creates of one year racing past the check: the second loses here.
+  if (err.code === "23505" && err.constraint === "seasons_league_year_unique") {
+    return new RequestError(409, "That season already exists in this league");
+  }
+  return err;
+}
+
+/**
+ * The roster a new season of `year` would start from, read-only. The editor's
+ * starting point; nothing is written and no transaction is held.
+ */
+export async function previewSeason(slug, year) {
+  const seasonYear = parseYear(year);
+  const client = await pool.connect();
+
+  try {
+    const draft = await draftSeason(client, parseSlug(slug), seasonYear, NO_EDITS);
+    const league = draft.league;
+
+    return {
+      year: seasonYear,
+      from: draft.from.year,
+      roster: draftRoster(draft.roster),
+      regular_season_weeks: league.regular_season_weeks,
+      playoff_start_week: league.playoff_start_week,
+      playoff_matchups: draft.layout.length,
+      warnings: await draftWarnings(client, draft, seasonYear),
+    };
+  } catch (err) {
+    throw asRequestError(err);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Creates a season from `{ year, drop, add, rename }` in one transaction. The
+ * league row is locked first, so two creates of the same year queue rather than
+ * both passing the existence check. There is no replace: deleting a season, or
+ * rebuilding one, stays db:season's.
+ */
+export async function createSeason(slug, body) {
+  const league = parseSlug(slug);
+  const { year, ...edits } = parseNewSeasonBody(body);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    await client.query(`SELECT id FROM leagues WHERE slug = $1 FOR UPDATE`, [league]);
+
+    const draft = await draftSeason(client, league, year, edits);
+    const warnings = await draftWarnings(client, draft, year);
+
+    const built = await buildSeason(client, draft.league, {
+      year,
+      roster: draft.roster,
+      layout: draft.layout,
+    });
+
+    await client.query("COMMIT");
+
+    return {
+      year,
+      from: draft.from.year,
+      teams: built.teamIds.length,
+      matchups: built.matchups,
+      created: built.created,
+      warnings: [...built.warnings, ...warnings],
+    };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw asRequestError(err);
+  } finally {
+    client.release();
+  }
 }

@@ -9,9 +9,10 @@ import {
   lock as lockLeague,
 } from '../api/client';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
-import { seasonPath } from '../routes';
+import { editPath, seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
 import { BYE_LABEL, isBye, ownerLabel } from '../stats/league';
+import CreateSeasonPanel from './CreateSeasonPanel';
 
 /**
  * EditSeasonPage Component
@@ -173,6 +174,24 @@ export default function EditSeasonPage() {
       await refreshSession();
       navigate(seasonPath(slug, urlYear));
     }
+  }
+
+  // ============================================
+  // CREATING A SEASON
+  // ============================================
+
+  /**
+   * A new season exists. The layout's payload is refetched first, so the year
+   * is in the list before the URL names it — otherwise useSeasonYear would
+   * rewrite an unknown ?year= to the latest. Then the editor opens it on week 1.
+   */
+  async function seasonCreated(year) {
+    await refreshSeasons();
+    setExpandedWeek(null);
+    setSelectedYear(String(year));
+    navigate(editPath(slug, year));
+    setMessage(`✅ ${year} created. Set each week's pairings as they happen.`);
+    setTimeout(() => setMessage(''), 5000);
   }
 
   // ============================================
@@ -690,6 +709,17 @@ export default function EditSeasonPage() {
           <p className="text-gray-600">Update matchups and scores week by week</p>
         </div>
         
+        {/* A new season, past or next. Above the year select because what it
+            creates is then opened there. */}
+        <CreateSeasonPanel
+          slug={slug}
+          years={availableYears}
+          onCreated={seasonCreated}
+          onSessionEnded={() =>
+            setUnlockError('That session has ended. Unlock again to create the season.')
+          }
+        />
+
         {/* Year Selector */}
         <div className="bg-white rounded-lg shadow-md p-4 mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">

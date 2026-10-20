@@ -11,11 +11,13 @@
 import express from "express";
 import {
   allLeagues,
+  createSeason,
   leagueBySlug,
   loadSeason,
   loadSeasons,
   matchupFromIds,
   pool,
+  previewSeason,
   replaceWeek,
   seasonsOfLeague,
 } from "../queries.mjs";
@@ -89,6 +91,23 @@ router.put("/api/leagues/:slug/seasons/:year/weeks/:week", async (req, res) => {
     matchupFromIds
   );
   res.json({ standings: apiStandings(bundle) });
+});
+
+// GET what creating a season of :year would start from: the nearest season's
+// roster, the weeks, and any warnings. A year that exists is a 409, so the
+// editor learns that before the commissioner has edited anything.
+router.get("/api/leagues/:slug/seasons/:year/preview", async (req, res) => {
+  const league = await leagueBySlug(pool, req.params.slug);
+  if (league === null) return res.status(404).json({ error: "League not found" });
+
+  res.json(await previewSeason(league.slug, req.params.year));
+});
+
+// CREATE a season, past or present. server/guard.mjs has already checked for
+// the unlock; the body is { year, drop, add, rename }, as db:season's flags.
+router.post("/api/leagues/:slug/seasons", async (req, res) => {
+  const created = await createSeason(req.params.slug, req.body);
+  res.status(201).json(created);
 });
 
 /**

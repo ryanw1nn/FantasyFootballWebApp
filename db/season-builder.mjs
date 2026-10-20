@@ -136,12 +136,12 @@ export function nextRoster(previous, { drop, add, rename }) {
 
   for (const name of dropped) {
     if (!previous.some((team) => team.display_name === name)) {
-      fail(`--drop "${name}" is not on the source season's roster`);
+      fail(`cannot drop "${name}": not on the source season's roster`);
     }
   }
   for (const [name] of renamed) {
     if (!previous.some((team) => team.display_name === name)) {
-      fail(`--rename "${name}" is not on the source season's roster`);
+      fail(`cannot rename "${name}": not on the source season's roster`);
     }
     if (dropped.has(name)) fail(`"${name}" is both dropped and renamed`);
   }
@@ -175,7 +175,7 @@ export function nextRoster(previous, { drop, add, rename }) {
   const teamNames = new Set();
   for (const team of roster) {
     if (teamNames.has(team.team_name)) {
-      fail(`two teams are both called "${team.team_name}" — teams_season_name_unique refuses that`);
+      fail(`two teams are both called "${team.team_name}"`);
     }
     teamNames.add(team.team_name);
   }
@@ -371,9 +371,9 @@ async function replaceSeason(client, existing) {
 export async function buildSeason(client, league, { year, roster, layout, replacing }) {
   if (roster.length % 2 !== 0) {
     fail(
-      `${roster.length} teams is an odd roster, so one team sits out every week. ` +
-        `This script only lays out a full week of games — adjust --add / --drop, or ` +
-        `create the season with an even roster and add the odd team afterwards.`
+      `${roster.length} teams is an odd roster, so one team would sit out every week. ` +
+        `Only a full week of games can be laid out — add or drop a team to make it ` +
+        `even, or create the season even and add the odd team afterwards.`
     );
   }
 

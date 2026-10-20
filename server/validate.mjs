@@ -138,3 +138,99 @@ export function parseUnlockBody(body) {
   }
   return passphrase;
 }
+
+// ---------------------------------------------------------------------------
+// The new-season body
+// ---------------------------------------------------------------------------
+// `{ year, drop, add, rename }`, in db:season's vocabulary: drop is a list of
+// display names, add and rename are `{ player, team }` pairs. Whether a drop or
+// a rename names someone on the source roster needs the roster, so that is the
+// builder's check, inside the transaction. Everything here needs only the value.
+
+/** The earliest season anyone could plausibly backfill. */
+const MIN_SEASON_YEAR = 2000;
+
+/** More teams than any league fields; a single week never exceeds MAX_MATCHUPS. */
+export const MAX_TEAMS = 32;
+
+/** Owner and team names, matching what db:league accepts. */
+const MAX_NAME = 120;
+
+const NEW_SEASON_KEYS = ["year", "drop", "add", "rename"];
+const PAIR_KEYS = ["player", "team"];
+
+/** A year from 2000 to next year, as a number. The body sends it unquoted. */
+export function parseSeasonYear(value, now = new Date()) {
+  const latest = now.getFullYear() + 1;
+  if (!Number.isInteger(value) || value < MIN_SEASON_YEAR || value > latest) {
+    throw new RequestError(400, `Year must be ${MIN_SEASON_YEAR}–${latest}`);
+  }
+  return value;
+}
+
+/** A trimmed name of 1–120 characters. */
+function parseName(value, what) {
+  if (typeof value !== "string") throw new RequestError(400, `Invalid ${what}`);
+
+  const name = value.trim();
+  const length = [...name].length;
+  if (length < 1 || length > MAX_NAME) {
+    throw new RequestError(400, `${what} must be 1–${MAX_NAME} characters`);
+  }
+  return name;
+}
+
+/** An optional array no longer than a roster, or an empty one when absent. */
+function parseList(value, what) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new RequestError(400, `${what} must be a list`);
+  if (value.length > MAX_TEAMS) {
+    throw new RequestError(400, `Too many in ${what}: ${value.length} (max ${MAX_TEAMS})`);
+  }
+  return value;
+}
+
+function parsePair(value, what) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new RequestError(400, `Invalid ${what} entry`);
+  }
+
+  const unknown = Object.keys(value).filter((key) => !PAIR_KEYS.includes(key));
+  if (unknown.length > 0) {
+    throw new RequestError(400, `Unknown ${what} key: ${unknown.join(", ")}`);
+  }
+
+  return { player: parseName(value.player, "Player name"), team: parseName(value.team, "Team name") };
+}
+
+/** No name twice in one list: a second drop of someone is a typo, not an intent. */
+function requireUnique(names, what) {
+  const seen = new Set();
+  for (const name of names) {
+    if (seen.has(name)) throw new RequestError(400, `"${name}" appears twice in ${what}`);
+    seen.add(name);
+  }
+}
+
+export function parseNewSeasonBody(body) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    throw new RequestError(400, "Invalid data");
+  }
+
+  const unknown = Object.keys(body).filter((key) => !NEW_SEASON_KEYS.includes(key));
+  if (unknown.length > 0) {
+    throw new RequestError(400, `Unknown key: ${unknown.join(", ")}`);
+  }
+
+  const year = parseSeasonYear(body.year);
+  const drop = parseList(body.drop, "drop").map((name) => parseName(name, "Player name"));
+  const add = parseList(body.add, "add").map((pair) => parsePair(pair, "add"));
+  const rename = parseList(body.rename, "rename").map((pair) => parsePair(pair, "rename"));
+
+  requireUnique(drop, "drop");
+  requireUnique(add.map((pair) => pair.player), "add");
+  requireUnique(add.map((pair) => pair.team), "add");
+  requireUnique(rename.map((pair) => pair.player), "rename");
+
+  return { year, drop, add, rename };
+}
