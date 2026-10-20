@@ -106,11 +106,53 @@ function playersIn(allData) {
 }
 
 /**
+ * Players whose whole careers are the same team-seasons, keyed by each name.
+ *
+ * Two people who have only ever run a team together have identical careers, so
+ * the all-time table lists them as one row. A player who has also run a team
+ * without the other has a career of their own and keeps their own row.
+ *
+ * @param {Object} allData - one league's seasons, keyed by year, each an array of joined rows
+ * @returns {Map<string, string[]>} name -> everyone sharing that career, the name included
+ */
+function sharedCareers(allData) {
+  const careers = new Map();
+  for (const [year, season] of Object.entries(allData)) {
+    if (isNaN(Number(year)) || !Array.isArray(season)) continue;
+    for (const row of season) {
+      for (const name of managersOf(row)) {
+        const career = careers.get(name) ?? [];
+        career.push(`${year}:${row.team_id}`);
+        careers.set(name, career);
+      }
+    }
+  }
+
+  const namesByCareer = new Map();
+  for (const [name, career] of careers) {
+    const key = career.sort().join('|');
+    namesByCareer.set(key, [...(namesByCareer.get(key) ?? []), name]);
+  }
+
+  const groups = new Map();
+  for (const names of namesByCareer.values()) {
+    for (const name of names) groups.set(name, names);
+  }
+  return groups;
+}
+
+/** The row label for a player: theirs alone, or "Alex & Blake" for a shared career. */
+function careerLabel(groups, name) {
+  return (groups.get(name) ?? [name]).join(' & ');
+}
+
+/**
  * One row per player: career record, points, championships and award years.
  *
  * A co-managed team's season counts in full toward each of its managers, so two
  * people who ran a team together each carry its record, and keep their own
- * careers when they later run teams apart.
+ * careers when they later run teams apart. Players who have only ever played
+ * together share one row, with every name in `names`.
  *
  * The filter chooses rows; it does not change what a row says (6.2(g)). Every
  * award and every total here is computed over the whole league — each season's
@@ -204,15 +246,21 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
     });
   });
 
+  const groups = sharedCareers(allData);
+
   let players = Object.entries(stats)
     .filter(([name]) => listed.has(name))
+    // A shared career is one row, so only its first name emits it: the others'
+    // totals are the same numbers.
+    .filter(([name]) => (groups.get(name) ?? [name])[0] === name)
     .map(([name, s]) => {
       const totalGames = s.wins + s.losses + s.ties;
 
       const winPct = totalGames ? (s.wins + 0.5 * s.ties) / totalGames : 0;
 
       return {
-        name,
+        name: careerLabel(groups, name),
+        names: groups.get(name) ?? [name],
         ...s,
         totalGames,
         winPct,
@@ -229,7 +277,7 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
 
   if (searchQuery) {
     players = players.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      p.names.some((name) => name.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   }
 
@@ -314,6 +362,16 @@ function removeGame(records, matchup, teams) {
   }
 }
 
+/** Records keyed by row label; a shared career's members hold the same record, so one stands for all. */
+function byCareerLabel(records, groups) {
+  const labelled = new Map();
+  for (const [name, record] of records) {
+    const label = careerLabel(groups, name);
+    if (!labelled.has(label)) labelled.set(label, record);
+  }
+  return labelled;
+}
+
 /** Place per player by the table's default order: win % first, then points for. */
 function placesByWinPct(records, listed) {
   const ranked = [...records.entries()]
@@ -353,10 +411,14 @@ export function lastGameRankChange(seasons, statusFilter) {
   const joined = Object.fromEntries(
     Object.keys(seasons).map((year) => [year, joinStandings(seasons[year])])
   );
-  const listed = playersIn(onlyShown(joined, statusFilter));
+  // Ranked by row, as the table lists them: a shared career is one place.
+  const groups = sharedCareers(joined);
+  const listed = new Set(
+    [...playersIn(onlyShown(joined, statusFilter))].map((name) => careerLabel(groups, name))
+  );
 
-  const now = placesByWinPct(current, listed);
-  const before = placesByWinPct(previous, listed);
+  const now = placesByWinPct(byCareerLabel(current, groups), listed);
+  const before = placesByWinPct(byCareerLabel(previous, groups), listed);
 
   const changes = new Map();
   for (const [name, place] of now) {

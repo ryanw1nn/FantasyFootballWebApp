@@ -270,18 +270,25 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                     <tbody>
                     {sortedPlayers.map((player, idx) => (
                         <tr
-                        key={idx}
+                        key={player.name}
                         className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
                             idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/60'
                         }`}
                         >
                         <td className="px-4 py-3 font-medium text-slate-900 whitespace-nowrap">
-                            <button
-                                onClick={() => onPlayerClick && onPlayerClick(player.name)}
-                                className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer"
-                            >
-                                {player.name}
-                            </button>
+                            {/* Players who have only ever played together share a
+                                row, one name per line, each opening their own page. */}
+                            <span className="flex flex-col leading-tight">
+                                {player.names.map((name) => (
+                                    <button
+                                        key={name}
+                                        onClick={() => onPlayerClick && onPlayerClick(name)}
+                                        className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer"
+                                    >
+                                        {name}
+                                    </button>
+                                ))}
+                            </span>
                         </td>
 
                         {showChange && (

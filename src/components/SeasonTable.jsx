@@ -213,7 +213,8 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                     {/* A botted season belongs to nobody, so there is no player
                         page to send the reader to: the label is text, not a
                         button that opens an empty page. A co-managed team is
-                        two people, each with their own page. */}
+                        two people, each with their own page, stacked one per
+                        line so the column stays narrow. */}
                     {managersOf(row).length === 0 ? (
                       <span className="truncate block">{row.ownerName}</span>
                     ) : managersOf(row).length === 1 ? (
@@ -224,17 +225,15 @@ export default function SeasonTable({ seasonData, year, searchQuery, onPlayerCli
                         {row.ownerName}
                       </button>
                     ) : (
-                      <span className="truncate block" title={row.ownerName}>
-                        {managersOf(row).map((name, index) => (
-                          <React.Fragment key={name}>
-                            {index > 0 && ' & '}
-                            <button
-                              onClick={() => onPlayerClick && onPlayerClick(name)}
-                              className="text-left hover:text-accent-600 transition-colors cursor-pointer"
-                            >
-                              {name}
-                            </button>
-                          </React.Fragment>
+                      <span className="flex flex-col leading-tight" title={row.ownerName}>
+                        {managersOf(row).map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => onPlayerClick && onPlayerClick(name)}
+                            className="text-left w-full hover:text-accent-600 transition-colors cursor-pointer truncate"
+                          >
+                            {name}
+                          </button>
                         ))}
                       </span>
                     )}
