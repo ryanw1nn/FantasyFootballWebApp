@@ -63,6 +63,9 @@ const PARAMS = {
   year: String(WRITE_YEAR),
   week: String(WRITE_WEEK),
   weekNum: String(WRITE_WEEK),
+  // No team has this id, so a DELETE sent past a broken guard is a 404 rather
+  // than a team gone from the scratch league.
+  teamId: "999999",
 };
 
 /** The two writes the guard lets through without an unlock, and nothing else. */

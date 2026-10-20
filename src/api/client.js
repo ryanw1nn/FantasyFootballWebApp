@@ -82,9 +82,8 @@ export function getSeason(slug, year) {
 /**
  * Replace one week's matchups, and the standings behind them.
  *
- * One of the two calls the server's write guard stands in front of — this and
- * createSeason — so one of the two whose 401 means "this session may not write"
- * rather than "the server is wrong". That is what `guarded` marks.
+ * One of the calls the server's write guard stands in front of, so one whose
+ * 401 means "this session may not write" rather than "the server is wrong". That is what `guarded` marks.
  */
 export function saveWeek(slug, year, week, matchups) {
   return request(
@@ -115,6 +114,49 @@ export function previewSeason(slug, year) {
 export function createSeason(slug, body) {
   return request('POST', `/api/leagues/${encodeURIComponent(requireSlug(slug))}/seasons`, {
     body,
+    withCookie: true,
+    guarded: true,
+  });
+}
+
+// ============================================
+// A SEASON'S ROSTER
+// ============================================
+// Three guarded writes, each answering with the whole season as it stands
+// afterwards — an add or a remove changes the weeks and standings, not only
+// the teams.
+
+function teamsPath(slug, year) {
+  return (
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}` +
+    `/seasons/${encodeURIComponent(year)}/teams`
+  );
+}
+
+/** Rename a team in that season only. */
+export function renameTeam(slug, year, teamId, teamName) {
+  return request('PATCH', `${teamsPath(slug, year)}/${encodeURIComponent(teamId)}`, {
+    body: { teamName },
+    withCookie: true,
+    guarded: true,
+  });
+}
+
+/**
+ * Add a team. `player` is `{ id }` or `{ name }`; a name the league has seen
+ * before is that player, and a new one creates them.
+ */
+export function addTeam(slug, year, teamName, player) {
+  return request('POST', teamsPath(slug, year), {
+    body: { teamName, player },
+    withCookie: true,
+    guarded: true,
+  });
+}
+
+/** Remove a team with no scored matchup that season; one with scores is a 409. */
+export function removeTeam(slug, year, teamId) {
+  return request('DELETE', `${teamsPath(slug, year)}/${encodeURIComponent(teamId)}`, {
     withCookie: true,
     guarded: true,
   });
@@ -158,9 +200,10 @@ let unauthorizedHandler = null;
  * still throws afterwards, so a caller that wants to say something about the
  * failure still can — and so the editor keeps the week that was typed into it.
  *
- * Only the guarded writes, saveWeek and createSeason, reach this. A 401 from a read is a defect in the server, not
- * a prompt: reads are public, so answering one with an unlock form would tell
- * the reader something untrue about the product. A 401 from unlock is the
+ * Only the guarded writes — saveWeek, createSeason and the three roster edits —
+ * reach this. A 401 from a read is a defect in the server, not a prompt: reads
+ * are public, so answering one with an unlock form would tell the reader
+ * something untrue about the product. A 401 from unlock is the
  * passphrase being wrong, which the form the caller is already showing says in
  * the server's own words. Neither calls the handler; both still throw.
  *

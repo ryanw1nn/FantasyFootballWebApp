@@ -10,6 +10,7 @@
 // one dialect becomes two behaviours.
 import express from "express";
 import {
+  addTeam,
   allLeagues,
   createSeason,
   leagueBySlug,
@@ -18,6 +19,8 @@ import {
   matchupFromIds,
   pool,
   previewSeason,
+  removeTeam,
+  renameTeam,
   replaceWeek,
   seasonsOfLeague,
 } from "../queries.mjs";
@@ -108,6 +111,28 @@ router.get("/api/leagues/:slug/seasons/:year/preview", async (req, res) => {
 router.post("/api/leagues/:slug/seasons", async (req, res) => {
   const created = await createSeason(req.params.slug, req.body);
   res.status(201).json(created);
+});
+
+// The roster of one season. server/guard.mjs has already checked for the
+// unlock; each answers with the whole season, since an add or a remove changes
+// its weeks and standings too. :teamId must be a team of that season, or 404.
+
+// RENAME a team in this season only. The body is { teamName }.
+router.patch("/api/leagues/:slug/seasons/:year/teams/:teamId", async (req, res) => {
+  const bundle = await renameTeam(req.params.slug, req.params.year, req.params.teamId, req.body);
+  res.json(apiSeason(bundle));
+});
+
+// ADD a team. The body is { teamName, player: { id } | { name } }.
+router.post("/api/leagues/:slug/seasons/:year/teams", async (req, res) => {
+  const bundle = await addTeam(req.params.slug, req.params.year, req.body);
+  res.status(201).json(apiSeason(bundle));
+});
+
+// REMOVE a team that has no scored matchup this season; one that has is a 409.
+router.delete("/api/leagues/:slug/seasons/:year/teams/:teamId", async (req, res) => {
+  const bundle = await removeTeam(req.params.slug, req.params.year, req.params.teamId);
+  res.json(apiSeason(bundle));
 });
 
 /**

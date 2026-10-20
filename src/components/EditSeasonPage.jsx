@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Save, ChevronDown, ChevronRight, ArrowLeft, Users, Trophy, Trash2, Lock } from 'lucide-react';
 
 import {
@@ -13,6 +13,7 @@ import { editPath, seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
 import { BYE_LABEL, isBye, ownerLabel } from '../stats/league';
 import CreateSeasonPanel from './CreateSeasonPanel';
+import RosterPanel from './RosterPanel';
 
 /**
  * EditSeasonPage Component
@@ -39,6 +40,7 @@ export default function EditSeasonPage() {
   // longer fetches a league-wide list of its own to find out.
   const {
     refresh: refreshSeasons,
+    seasons: savedSeasons,
     year: urlSeason,
     urlYear,
     years: availableYears,
@@ -192,6 +194,34 @@ export default function EditSeasonPage() {
     navigate(editPath(slug, year));
     setMessage(`✅ ${year} created. Set each week's pairings as they happen.`);
     setTimeout(() => setMessage(''), 5000);
+  }
+
+  // ============================================
+  // THE ROSTER
+  // ============================================
+
+  // Read from the saved payload rather than this page's weeks, which hold
+  // unsaved edits: a score typed and not saved does not stop a removal.
+  const scoredTeamIds = useMemo(
+    () => scoredTeams(savedSeasons?.[selectedYear]),
+    [savedSeasons, selectedYear]
+  );
+  const leaguePlayers = useMemo(() => playerNames(savedSeasons), [savedSeasons]);
+
+  /**
+   * The roster changed, and the server answered with the season as it now
+   * stands. A rename changes no week, so the weeks being typed into are kept;
+   * an add or a remove reshapes them, so they are replaced.
+   */
+  function rosterChanged(data, { weeks: weeksChanged }) {
+    setTeams(data.teams || []);
+    if (weeksChanged) {
+      setEditing(null);
+      setWeeks(editableWeeks(data.weeks));
+    }
+    setMessage('✅ Roster updated.');
+    setTimeout(() => setMessage(''), 3000);
+    return refreshSeasons();
   }
 
   // ============================================
@@ -744,6 +774,20 @@ export default function EditSeasonPage() {
           </select>
         </div>
         
+        {selectedYear && (
+          <RosterPanel
+            slug={slug}
+            year={selectedYear}
+            teams={teams}
+            scoredTeamIds={scoredTeamIds}
+            leaguePlayers={leaguePlayers}
+            onChanged={rosterChanged}
+            onSessionEnded={() =>
+              setUnlockError('That session has ended. Unlock again to change the roster.')
+            }
+          />
+        )}
+
         {/* Success/Error Message */}
         {message && (
           <div className={`mb-6 p-4 rounded-lg ${
@@ -848,4 +892,32 @@ function editableWeeks(weeks) {
   }
 
   return editable;
+}
+
+/** The ids of a season's teams that have a score in any matchup. */
+function scoredTeams(season) {
+  const ids = new Set();
+
+  for (const week of Object.values(season?.weeks ?? {})) {
+    for (const matchup of week.matchups ?? []) {
+      if (matchup.team1_score == null && matchup.team2_score == null) continue;
+      if (matchup.team1_id != null) ids.add(matchup.team1_id);
+      if (matchup.team2_id != null) ids.add(matchup.team2_id);
+    }
+  }
+
+  return ids;
+}
+
+/** Everyone the league has had a team for, by name, alphabetically. */
+function playerNames(seasons) {
+  const names = new Set();
+
+  for (const season of Object.values(seasons ?? {})) {
+    for (const team of season.teams ?? []) {
+      if (team.display_name != null) names.add(team.display_name);
+    }
+  }
+
+  return [...names].sort((a, b) => a.localeCompare(b));
 }

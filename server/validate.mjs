@@ -234,3 +234,63 @@ export function parseNewSeasonBody(body) {
 
   return { year, drop, add, rename };
 }
+
+// ---------------------------------------------------------------------------
+// The roster bodies
+// ---------------------------------------------------------------------------
+// A team in a season is renamed, added or removed. Whether a name is free, or a
+// player already plays that season, needs the season's teams, so those are the
+// query's checks inside the transaction. Everything here needs only the value.
+
+/** A team id from the URL: a positive integer, short enough to be an id. */
+const TEAM_ID = /^[1-9]\d{0,8}$/;
+
+export function parseTeamId(value) {
+  if (!TEAM_ID.test(String(value))) throw new RequestError(400, "Invalid team");
+  return Number(value);
+}
+
+/** A body that is an object with no key outside `allowed`. */
+function requireBodyKeys(body, allowed) {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    throw new RequestError(400, "Invalid data");
+  }
+
+  const unknown = Object.keys(body).filter((key) => !allowed.includes(key));
+  if (unknown.length > 0) {
+    throw new RequestError(400, `Unknown key: ${unknown.join(", ")}`);
+  }
+}
+
+/** `{ teamName }` and nothing else. */
+export function parseRenameTeamBody(body) {
+  requireBodyKeys(body, ["teamName"]);
+  return { teamName: parseName(body.teamName, "Team name") };
+}
+
+/**
+ * `{ teamName, player }`, where player is `{ id }` for someone the league
+ * already has, or `{ name }` for a name the league's player rule resolves —
+ * reusing the league's player of that name, or creating one.
+ */
+export function parseNewTeamBody(body) {
+  requireBodyKeys(body, ["teamName", "player"]);
+  const teamName = parseName(body.teamName, "Team name");
+
+  const { player } = body;
+  if (player === null || typeof player !== "object" || Array.isArray(player)) {
+    throw new RequestError(400, "Invalid player");
+  }
+
+  const keys = Object.keys(player);
+  if (keys.length !== 1 || !["id", "name"].includes(keys[0])) {
+    throw new RequestError(400, "Player must be { id } or { name }");
+  }
+
+  if (keys[0] === "id") {
+    if (!Number.isInteger(player.id) || player.id < 1) throw new RequestError(400, "Invalid player id");
+    return { teamName, player: { id: player.id } };
+  }
+
+  return { teamName, player: { name: parseName(player.name, "Player name") } };
+}

@@ -23,6 +23,7 @@ import {
   leagueBySlug as leagueTemplateBySlug,
   nearestSeason,
   nextRoster,
+  playerIds,
   playoffLayout,
   rosterOf,
   seasonsOf,
@@ -33,8 +34,11 @@ import {
   parseLabel,
   parseMatchups,
   parseNewSeasonBody,
+  parseNewTeamBody,
+  parseRenameTeamBody,
   parseSlug,
   parseStatus,
+  parseTeamId,
   parseWeek,
   parseYear,
   requireKnownKeys,
@@ -495,4 +499,279 @@ export async function createSeason(slug, body) {
   } finally {
     client.release();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Editing a season's roster
+// ---------------------------------------------------------------------------
+// Rename a team, add one, remove one — in that season only. Each runs in one
+// transaction with the season row locked, the same lock replaceWeek takes, so a
+// roster change and a week save cannot recompute the standings over each other.
+// Each answers with the whole season as it stands afterwards: an add or a remove
+// changes the weeks and the standings as well as the teams.
+
+/**
+ * Runs `work(client, season)` inside a transaction on the locked season, then
+ * reads the season back. :slug and :year are parsed before a connection is
+ * taken; an unknown season is a 404.
+ */
+async function inSeasonTransaction(slug, year, work) {
+  const league = parseSlug(slug);
+  const seasonYear = parseYear(year);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const { rows } = await client.query(
+      `SELECT s.id, s.year, s.league_id, s.playoff_start_week
+         FROM seasons s
+         JOIN leagues l ON l.id = s.league_id
+        WHERE l.slug = $1 AND s.year = $2
+        FOR UPDATE OF s`,
+      [league, seasonYear]
+    );
+    if (rows.length === 0) throw new RequestError(404, "Season not found");
+
+    await work(client, rows[0]);
+    await client.query("COMMIT");
+
+    return await loadSeason(client, league, seasonYear);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw asRosterError(err);
+  } finally {
+    client.release();
+  }
+}
+
+/** The constraints behind the checks below, should a race get past one. */
+function asRosterError(err) {
+  if (err.code === "23505" && err.constraint === "teams_season_name_unique") {
+    return new RequestError(409, "Another team this season already has that name");
+  }
+  if (err.code === "23505" && err.constraint === "teams_season_player_unique") {
+    return new RequestError(409, "That player already has a team this season");
+  }
+  return err;
+}
+
+async function rosterTeams(client, seasonId) {
+  const { rows } = await client.query(
+    `SELECT t.id, t.player_id, t.team_name, p.display_name
+       FROM teams t
+       LEFT JOIN players p ON p.id = t.player_id
+      WHERE t.season_id = $1
+      ORDER BY t.id`,
+    [seasonId]
+  );
+  return rows;
+}
+
+/**
+ * The team, if it belongs to this season. A team id from another season — or
+ * another league — is a 404 here, so no route below can reach past :slug.
+ */
+function teamOf(teams, teamId) {
+  const team = teams.find((row) => row.id === teamId);
+  if (team === undefined) throw new RequestError(404, "Team not found");
+  return team;
+}
+
+function requireFreeName(teams, teamName, year, exceptId = null) {
+  if (teams.some((team) => team.team_name === teamName && team.id !== exceptId)) {
+    throw new RequestError(409, `Another team in ${year} is already called "${teamName}"`);
+  }
+}
+
+/**
+ * The player an add names. `{ id }` must be someone with a team in this league
+ * already, so an id cannot borrow a player from another league. `{ name }` goes
+ * through the season builder's rule: the league's player of that name, an
+ * orphaned row of it, or a new row.
+ */
+async function resolvePlayer(client, leagueId, player) {
+  if (player.id !== undefined) {
+    const { rows } = await client.query(
+      `SELECT p.id, p.display_name
+         FROM players p
+        WHERE p.id = $2
+          AND EXISTS (SELECT 1 FROM teams t JOIN seasons s ON s.id = t.season_id
+                       WHERE t.player_id = p.id AND s.league_id = $1)`,
+      [leagueId, player.id]
+    );
+    if (rows.length === 0) throw new RequestError(400, `Player ${player.id} is not in this league`);
+    return rows[0];
+  }
+
+  const { ids } = await playerIds(client, leagueId, [{ display_name: player.name }]);
+  return { id: ids.get(player.name), display_name: player.name };
+}
+
+/**
+ * Keeps every regular-season week at one row per game: half the roster,
+ * rounded up, so an odd roster's spare team has a row to be paired or given a
+ * BYE in. Short weeks gain empty rows at the end; long ones lose empty rows from
+ * the end — only rows with no team, score, status or label, so nothing anyone
+ * entered is deleted. Only weeks that already have rows are touched: a week
+ * exists because some row carries its number, and this does not invent one.
+ * Playoff weeks are the bracket's wiring and are left alone.
+ */
+async function fitRegularWeeks(client, season, teamCount) {
+  const perWeek = Math.ceil(teamCount / 2);
+
+  const { rows } = await client.query(
+    `SELECT week, position,
+            (team1_id IS NULL AND team2_id IS NULL
+             AND team1_score IS NULL AND team2_score IS NULL
+             AND status IS NULL AND label IS NULL) AS is_empty
+       FROM matchups
+      WHERE season_id = $1 AND week < $2
+      ORDER BY week, position`,
+    [season.id, season.playoff_start_week]
+  );
+
+  const weeks = new Map();
+  for (const row of rows) {
+    if (!weeks.has(row.week)) weeks.set(row.week, []);
+    weeks.get(row.week).push(row);
+  }
+
+  for (const [week, matchups] of weeks) {
+    let next = matchups.at(-1).position + 1;
+    for (let count = matchups.length; count < perWeek; count++) {
+      await client.query(
+        `INSERT INTO matchups (season_id, week, position) VALUES ($1, $2, $3)`,
+        [season.id, week, next++]
+      );
+    }
+
+    const spare = matchups.filter((row) => row.is_empty).reverse();
+    for (let count = matchups.length; count > perWeek && spare.length > 0; count--) {
+      await client.query(
+        `DELETE FROM matchups WHERE season_id = $1 AND week = $2 AND position = $3`,
+        [season.id, week, spare.shift().position]
+      );
+    }
+  }
+}
+
+/**
+ * Recomputes the standings after the roster changed. A season with no scored
+ * week, or with imported standings, has nothing to recompute from, so its
+ * table keeps the order it had: a removed team's place closes up and a new team
+ * sits last.
+ */
+async function settleStandings(client, seasonId) {
+  if ((await writeStandings(client, seasonId)) !== null) return;
+
+  await client.query(
+    `UPDATE standings st
+        SET place = ranked.place
+       FROM (SELECT team_id, row_number() OVER (ORDER BY place, team_id) AS place
+               FROM standings WHERE season_id = $1) ranked
+      WHERE st.season_id = $1 AND st.team_id = ranked.team_id`,
+    [seasonId]
+  );
+}
+
+/** Renames a team in one season. Every other season keeps the name it had. */
+export async function renameTeam(slug, year, teamId, body) {
+  const id = parseTeamId(teamId);
+  const { teamName } = parseRenameTeamBody(body);
+
+  return inSeasonTransaction(slug, year, async (client, season) => {
+    const teams = await rosterTeams(client, season.id);
+    teamOf(teams, id);
+    requireFreeName(teams, teamName, season.year, id);
+
+    await client.query(`UPDATE teams SET team_name = $1 WHERE id = $2`, [teamName, id]);
+  });
+}
+
+/**
+ * Adds a team to a season: the team, a zero standings row, and — if the roster
+ * has outgrown the weeks — an empty row in each regular-season week. It has no
+ * opponents until a week is edited.
+ */
+export async function addTeam(slug, year, body) {
+  const { teamName, player } = parseNewTeamBody(body);
+
+  return inSeasonTransaction(slug, year, async (client, season) => {
+    const teams = await rosterTeams(client, season.id);
+    if (teams.length >= MAX_TEAMS) {
+      throw new RequestError(400, `${season.year} already has ${MAX_TEAMS} teams, the most allowed`);
+    }
+    requireFreeName(teams, teamName, season.year);
+
+    const resolved = await resolvePlayer(client, season.league_id, player);
+    if (teams.some((team) => team.player_id === resolved.id)) {
+      throw new RequestError(409, `${resolved.display_name} already has a team in ${season.year}`);
+    }
+
+    const { rows } = await client.query(
+      `INSERT INTO teams (season_id, player_id, team_name, status)
+       VALUES ($1, $2, $3, 'active') RETURNING id`,
+      [season.id, resolved.id, teamName]
+    );
+    const place = teams.length + 1;
+    await client.query(
+      `INSERT INTO standings (season_id, team_id, place, prev_place) VALUES ($1, $2, $3, $4)`,
+      [season.id, rows[0].id, place, place]
+    );
+
+    await fitRegularWeeks(client, season, teams.length + 1);
+    await settleStandings(client, season.id);
+  });
+}
+
+/**
+ * Removes a team from a season, but never one that has played: any scored
+ * matchup is a 409 and nothing changes. Otherwise every game it was in is
+ * emptied — both sides, since its opponent was paired with a team that no
+ * longer exists and one empty side would read as a BYE nobody chose — then the
+ * team and its standings row go, and so does its player if this was their only
+ * team anywhere.
+ */
+export async function removeTeam(slug, year, teamId) {
+  const id = parseTeamId(teamId);
+
+  return inSeasonTransaction(slug, year, async (client, season) => {
+    const teams = await rosterTeams(client, season.id);
+    const team = teamOf(teams, id);
+
+    const { rows } = await client.query(
+      `SELECT count(*) AS scored FROM matchups
+        WHERE season_id = $1 AND (team1_id = $2 OR team2_id = $2)
+          AND (team1_score IS NOT NULL OR team2_score IS NOT NULL)`,
+      [season.id, id]
+    );
+    const scored = Number(rows[0].scored);
+    if (scored > 0) {
+      throw new RequestError(
+        409,
+        `${team.team_name} has ${scored} scored matchup(s) in ${season.year} and cannot be ` +
+          `removed. Rename it instead.`
+      );
+    }
+
+    await client.query(
+      `UPDATE matchups SET team1_id = NULL, team2_id = NULL
+        WHERE season_id = $1 AND (team1_id = $2 OR team2_id = $2)`,
+      [season.id, id]
+    );
+    await client.query(`DELETE FROM teams WHERE id = $1`, [id]);
+
+    if (team.player_id !== null) {
+      await client.query(
+        `DELETE FROM players p
+          WHERE p.id = $1 AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.player_id = p.id)`,
+        [team.player_id]
+      );
+    }
+
+    await fitRegularWeeks(client, season, teams.length - 1);
+    await settleStandings(client, season.id);
+  });
 }
