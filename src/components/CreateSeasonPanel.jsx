@@ -99,7 +99,7 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
   }
 
   function addPlayer() {
-    setAdded((prev) => [...prev, { player: '', team: '' }]);
+    setAdded((prev) => [...prev, { player: '', coManager: '', team: '' }]);
   }
 
   function removeAdded(index) {
@@ -109,14 +109,21 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
   /**
    * The body, in db:season's vocabulary. A rename is only sent when the name
    * actually changed, and a half-typed new player is sent as typed, so the
-   * server says what is wrong with it rather than it vanishing.
+   * server says what is wrong with it rather than it vanishing. A new team
+   * with a co-manager is sent as `players`.
    */
   function requestBody() {
     const drop = teams.filter((team) => team.dropped).map((team) => team.player);
     const rename = teams
       .filter((team) => !team.dropped && team.newTeam.trim() !== team.team)
       .map((team) => ({ player: team.player, team: team.newTeam.trim() }));
-    const add = added.map((team) => ({ player: team.player.trim(), team: team.team.trim() }));
+    const add = added.map((team) => {
+      const player = team.player.trim();
+      const coManager = team.coManager.trim();
+      return coManager === ''
+        ? { player, team: team.team.trim() }
+        : { players: [player, coManager], team: team.team.trim() };
+    });
 
     return { year: Number(year), drop, add, rename };
   }
@@ -238,6 +245,13 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
                       className={`${inputClass} sm:w-48`}
                     />
                     <input
+                      value={team.coManager}
+                      onChange={(e) => updateAdded(index, { coManager: e.target.value })}
+                      placeholder="Co-manager (optional)"
+                      maxLength={120}
+                      className={`${inputClass} sm:w-48`}
+                    />
+                    <input
                       value={team.team}
                       onChange={(e) => updateAdded(index, { team: e.target.value })}
                       placeholder="Team name"
@@ -263,6 +277,7 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
                 </button>
                 <p className="text-xs text-gray-500">
                   A name this league has seen before reuses that player; a new name creates one.
+                  A team with a co-manager is credited to both.
                 </p>
               </div>
 

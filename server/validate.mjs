@@ -159,6 +159,7 @@ const MAX_NAME = 120;
 
 const NEW_SEASON_KEYS = ["year", "drop", "add", "rename"];
 const PAIR_KEYS = ["player", "team"];
+const ADD_KEYS = ["players", "team"];
 
 /** A year from 2000 to next year, as a number. The body sends it unquoted. */
 export function parseSeasonYear(value, now = new Date()) {
@@ -204,6 +205,32 @@ function parsePair(value, what) {
   return { player: parseName(value.player, "Player name"), team: parseName(value.team, "Team name") };
 }
 
+/**
+ * An added team: `{ player, team }`, or `{ players, team }` for a team that
+ * starts out co-managed, up to MAX_MANAGERS names.
+ */
+function parseAddEntry(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value) || value.players === undefined) {
+    return parsePair(value, "add");
+  }
+
+  const unknown = Object.keys(value).filter((key) => !ADD_KEYS.includes(key));
+  if (unknown.length > 0) {
+    throw new RequestError(400, `Unknown add key: ${unknown.join(", ")}`);
+  }
+  if (!Array.isArray(value.players) || value.players.length === 0) {
+    throw new RequestError(400, "players must be a list of one or more names");
+  }
+  if (value.players.length > MAX_MANAGERS) {
+    throw new RequestError(400, `A team can have ${MAX_MANAGERS} managers, not ${value.players.length}`);
+  }
+
+  return {
+    players: value.players.map((name) => parseName(name, "Player name")),
+    team: parseName(value.team, "Team name"),
+  };
+}
+
 /** No name twice in one list: a second drop of someone is a typo, not an intent. */
 function requireUnique(names, what) {
   const seen = new Set();
@@ -225,11 +252,11 @@ export function parseNewSeasonBody(body) {
 
   const year = parseSeasonYear(body.year);
   const drop = parseList(body.drop, "drop").map((name) => parseName(name, "Player name"));
-  const add = parseList(body.add, "add").map((pair) => parsePair(pair, "add"));
+  const add = parseList(body.add, "add").map(parseAddEntry);
   const rename = parseList(body.rename, "rename").map((pair) => parsePair(pair, "rename"));
 
   requireUnique(drop, "drop");
-  requireUnique(add.map((pair) => pair.player), "add");
+  requireUnique(add.flatMap((entry) => entry.players ?? [entry.player]), "add");
   requireUnique(add.map((pair) => pair.team), "add");
   requireUnique(rename.map((pair) => pair.player), "rename");
 

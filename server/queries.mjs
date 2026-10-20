@@ -892,13 +892,16 @@ function managersOf(team) {
  * Whether ESPN's manager column names this team's people: one of its managers,
  * or a co-managed team's names joined by "," or "&" in any order. How ESPN
  * prints a co-managed team has not been seen yet; anything else is a problem
- * with its line, not a guess.
+ * with its line, not a guess. Case is ignored: ESPN prints names as each
+ * manager typed them, so "dan mcknight" is Dan McKnight.
  */
 function managedBy(team, manager) {
-  if (team.managers.includes(manager)) return true;
+  const managers = team.managers.map((name) => name.toLowerCase());
+  const wanted = manager.toLowerCase();
+  if (managers.includes(wanted)) return true;
 
-  const names = manager.split(/\s*[,&]\s*/).filter((name) => name !== "");
-  return names.length > 1 && names.every((name) => team.managers.includes(name));
+  const names = wanted.split(/\s*[,&]\s*/).filter((name) => name !== "");
+  return names.length > 1 && names.every((name) => managers.includes(name));
 }
 
 /**
