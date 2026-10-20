@@ -13,6 +13,7 @@ import { editPath, seasonPath } from '../routes';
 import { useLeague } from '../context/LeagueContext';
 import { BYE_LABEL, isBye, ownerLabel } from '../stats/league';
 import CreateSeasonPanel from './CreateSeasonPanel';
+import ImportScoresPanel from './ImportScoresPanel';
 import RosterPanel from './RosterPanel';
 
 /**
@@ -108,8 +109,12 @@ export default function EditSeasonPage() {
     }
   }, [selectedYear]);
 
-  async function loadSeasonData() {
-    setLoading(true);
+  /**
+   * `quiet` skips the full-page spinner, which unmounts the panels: a reload
+   * after an import keeps the import's report and message on screen.
+   */
+  async function loadSeasonData({ quiet = false } = {}) {
+    if (!quiet) setLoading(true);
     try {
       const data = await getSeason(slug, selectedYear);
 
@@ -221,6 +226,16 @@ export default function EditSeasonPage() {
     }
     setMessage('✅ Roster updated.');
     setTimeout(() => setMessage(''), 3000);
+    return refreshSeasons();
+  }
+
+  /**
+   * Scores came in from an ESPN paste. The weeks and standings are reloaded from
+   * the server, which replaces anything typed into a week and not saved.
+   */
+  async function scoresImported() {
+    setEditing(null);
+    await loadSeasonData({ quiet: true });
     return refreshSeasons();
   }
 
@@ -784,6 +799,17 @@ export default function EditSeasonPage() {
             onChanged={rosterChanged}
             onSessionEnded={() =>
               setUnlockError('That session has ended. Unlock again to change the roster.')
+            }
+          />
+        )}
+
+        {selectedYear && (
+          <ImportScoresPanel
+            slug={slug}
+            year={selectedYear}
+            onImported={scoresImported}
+            onSessionEnded={() =>
+              setUnlockError('That session has ended. Unlock again to import scores.')
             }
           />
         )}

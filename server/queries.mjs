@@ -29,8 +29,10 @@ import {
   seasonsOf,
 } from "../db/season-builder.mjs";
 import { RequestError } from "./errors.mjs";
+import { parseSchedule } from "./espn-schedule.mjs";
 import {
   MAX_TEAMS,
+  parseImportBody,
   parseLabel,
   parseMatchups,
   parseNewSeasonBody,
@@ -774,4 +776,375 @@ export async function removeTeam(slug, year, teamId) {
     await fitRegularWeeks(client, season, teams.length - 1);
     await settleStandings(client, season.id);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Importing a season's scores from ESPN
+// ---------------------------------------------------------------------------
+// The commissioner pastes ESPN's League Schedule page; server/espn-schedule.mjs
+// reads it into weeks of games, and everything below decides what those games
+// mean for a season that already exists. The importer never creates a team or a
+// player, never moves a score that is already entered, and never guesses: every
+// name must match the roster, every pairing must agree with what the site
+// already has, and anything else is a problem that stops the whole import.
+//
+// The same request answers twice. Without `apply` it is the report — every week,
+// every game, what would happen to it, and every problem with its line in the
+// paste. With `apply` it builds the same report inside the transaction and
+// writes only if the report has no problems, so what was previewed and what is
+// written cannot come from two readings of the season.
+
+/** Weeks a played-out paste carries that are not results yet. */
+function skippedBecause(week) {
+  if (!week.determined) return "matchups to be determined";
+  if (week.games.length === 0) return "no games";
+  if (week.games.some((game) => game.away.score === null || game.home.score === null)) {
+    return "not played yet";
+  }
+  if (week.games.some((game) => game.away.score === 0 || game.home.score === 0)) {
+    return "has a score of 0";
+  }
+  return null;
+}
+
+/** Edit distance, for "did you mean". Names are short, so the plain table is fine. */
+function distance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const above = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
+      diagonal = above;
+    }
+  }
+  return row[b.length];
+}
+
+/** The closest candidate within three edits, or null. */
+function closest(name, candidates) {
+  const close = candidates
+    .map((candidate) => ({ candidate, d: distance(name.toLowerCase(), candidate.toLowerCase()) }))
+    .filter(({ d }) => d > 0 && d <= 3)
+    .sort((x, y) => x.d - y.d);
+  return close[0]?.candidate ?? null;
+}
+
+/**
+ * The roster team an ESPN side stands for: the manager must be the team's
+ * player and the team name must be its name this season. Both, because a
+ * manager's name is the stable half and the team name is the half a mistake
+ * hides behind. A mismatch is reported once per name, at its first line.
+ */
+function sideResolver(teams, year, problems) {
+  const reported = new Set();
+  const players = teams.filter((team) => team.display_name !== null);
+
+  function report(key, line, message) {
+    if (reported.has(key)) return;
+    reported.add(key);
+    problems.push({ line, message });
+  }
+
+  return (side, line) => {
+    const byPlayer = players.find((team) => team.display_name === side.manager);
+    const byName = teams.find((team) => team.team_name === side.team);
+
+    if (byPlayer !== undefined && byPlayer.team_name === side.team) return byPlayer;
+
+    const key = `${side.manager}\u0000${side.team}`;
+    if (byPlayer !== undefined) {
+      report(
+        key,
+        line,
+        `Team name not valid: ESPN calls ${side.manager}'s team "${side.team}", but in ${year} ` +
+          `it is "${byPlayer.team_name}". Rename it in the roster panel if ESPN is right.`
+      );
+    } else if (byName !== undefined) {
+      report(
+        key,
+        line,
+        `Player not found: ESPN has "${side.manager}" managing "${side.team}", but in ${year} ` +
+          `that team belongs to ${byName.display_name ?? "a botted slot"}.`
+      );
+    } else {
+      const player = closest(side.manager, players.map((team) => team.display_name));
+      const team = closest(side.team, teams.map((row) => row.team_name));
+      const hints = [
+        player && `player "${player}"`,
+        team && `team "${team}"`,
+      ].filter(Boolean);
+
+      report(
+        key,
+        line,
+        `Player not found: "${side.manager}" (team "${side.team}") is not on the ${year} ` +
+          `roster, and no ${year} team has that name.` +
+          (hints.length > 0 ? ` Closest on the roster: ${hints.join(", ")}.` : "")
+      );
+    }
+    return null;
+  };
+}
+
+const twoPlaces = (value) => Number(value).toFixed(2);
+
+/** How a site row reads in a message: who, and their score or that there is none. */
+function siteSide(teams, teamId, score) {
+  if (teamId === null) return "nobody";
+  const team = teams.find((row) => row.id === teamId);
+  const who = team?.display_name ?? team?.team_name ?? `team ${teamId}`;
+  return score === null ? `${who} (no score)` : `${who} ${twoPlaces(score)}`;
+}
+
+const espnSide = (side) => `${side.manager} ${twoPlaces(side.score)}`;
+
+/**
+ * One played week: each game matched to the site's row for it. A row with the
+ * same two teams is the game; its scores are entered if it has none, left alone
+ * if they agree, and a problem if they differ. A pairing the site does not have
+ * goes into an empty row of a regular-season week, unless either team is
+ * already paired there with someone else — that is a disagreement, not a gap.
+ * Playoff rows are the bracket's wiring, so a playoff game must already be
+ * paired on the site.
+ */
+function matchWeek(week, rows, teams, resolve, year, problems) {
+  const games = [];
+  const claimed = new Set();
+  const seen = new Map();
+
+  for (const game of week.games) {
+    const away = resolve(game.away, game.line);
+    const home = resolve(game.home, game.line);
+    const entry = {
+      line: game.line,
+      away: { player: game.away.manager, team: game.away.team, score: game.away.score },
+      home: { player: game.home.manager, team: game.home.team, score: game.home.score },
+      action: null,
+    };
+    games.push(entry);
+    if (away === null || home === null) continue;
+
+    for (const team of [away, home]) {
+      if (seen.has(team.id)) {
+        problems.push({
+          line: game.line,
+          message: `Week ${week.week}: ${team.display_name} plays twice (lines ${seen.get(team.id)} and ${game.line}).`,
+        });
+      }
+      seen.set(team.id, game.line);
+    }
+
+    const row = rows.find(
+      (r) =>
+        (r.team1_id === away.id && r.team2_id === home.id) ||
+        (r.team1_id === home.id && r.team2_id === away.id)
+    );
+
+    if (row !== undefined) {
+      claimed.add(row.id);
+      const [score1, score2] =
+        row.team1_id === away.id ? [game.away.score, game.home.score] : [game.home.score, game.away.score];
+
+      if (row.team1_score === null && row.team2_score === null) {
+        entry.action = "enter";
+        entry.write = { id: row.id, team1_id: row.team1_id, team2_id: row.team2_id, score1, score2 };
+      } else if (
+        row.team1_score !== null &&
+        row.team2_score !== null &&
+        twoPlaces(row.team1_score) === twoPlaces(score1) &&
+        twoPlaces(row.team2_score) === twoPlaces(score2)
+      ) {
+        entry.action = "same";
+      } else {
+        problems.push({
+          line: game.line,
+          message:
+            `Score mismatch, week ${week.week}: ESPN has ${espnSide(game.away)} – ${espnSide(game.home)}, ` +
+            `the site has ${siteSide(teams, row.team1_id, row.team1_score)} – ` +
+            `${siteSide(teams, row.team2_id, row.team2_score)}. Fix whichever is wrong; nothing was imported.`,
+        });
+      }
+      continue;
+    }
+
+    const elsewhere = rows.find(
+      (r) => [away.id, home.id].includes(r.team1_id) || [away.id, home.id].includes(r.team2_id)
+    );
+    if (elsewhere !== undefined) {
+      problems.push({
+        line: game.line,
+        message:
+          `Pairing mismatch, week ${week.week}: ESPN has ${game.away.manager} vs ${game.home.manager}, ` +
+          `the site has ${siteSide(teams, elsewhere.team1_id, elsewhere.team1_score)} vs ` +
+          `${siteSide(teams, elsewhere.team2_id, elsewhere.team2_score)}.`,
+      });
+      continue;
+    }
+
+    if (week.playoff) {
+      problems.push({
+        line: game.line,
+        message:
+          `Week ${week.week}: ${game.away.manager} vs ${game.home.manager} is not in the site's ` +
+          `bracket. Set the playoff pairings in the editor first, then import.`,
+      });
+      continue;
+    }
+
+    const empty = rows.find(
+      (r) =>
+        !claimed.has(r.id) &&
+        r.team1_id === null && r.team2_id === null &&
+        r.team1_score === null && r.team2_score === null
+    );
+    if (empty === undefined) {
+      problems.push({
+        line: game.line,
+        message: `Week ${week.week}: no empty game left on the site for ${game.away.manager} vs ${game.home.manager}.`,
+      });
+      continue;
+    }
+
+    claimed.add(empty.id);
+    entry.action = "enter";
+    entry.write = {
+      id: empty.id,
+      team1_id: away.id,
+      team2_id: home.id,
+      score1: game.away.score,
+      score2: game.home.score,
+    };
+  }
+
+  if (!week.playoff && week.complete) {
+    for (const team of teams) {
+      if (team.status === "botted" || seen.has(team.id)) continue;
+      // Only a fully resolved week can say who is missing; otherwise the
+      // unmatched names above are the real problem and this would repeat them.
+      if (games.some((game) => game.action === null)) break;
+      problems.push({
+        line: week.line,
+        message: `Week ${week.week}: ${team.display_name} ("${team.team_name}") is on the ${year} roster but not in ESPN's week.`,
+      });
+    }
+  }
+
+  return games;
+}
+
+/**
+ * Reads a pasted ESPN schedule against a season and reports, or with `apply`
+ * also writes, in one transaction on the locked season. Returns
+ * `{ year, weeks, problems, entered, applied }`; the route answers a refused
+ * apply with a 409 carrying the same report.
+ */
+export async function importSeason(slug, year, body) {
+  const league = parseSlug(slug);
+  const seasonYear = parseYear(year);
+  const { text, apply } = parseImportBody(body);
+  const parsed = parseSchedule(text);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const { rows: seasons } = await client.query(
+      `SELECT s.id, s.year, s.standings_are_imported
+         FROM seasons s
+         JOIN leagues l ON l.id = s.league_id
+        WHERE l.slug = $1 AND s.year = $2
+        FOR UPDATE OF s`,
+      [league, seasonYear]
+    );
+    if (seasons.length === 0) throw new RequestError(404, "Season not found");
+    const season = seasons[0];
+
+    const problems = [...parsed.problems];
+    if (parsed.year !== null && parsed.year !== season.year) {
+      problems.push({
+        line: null,
+        message: `This paste is ESPN's ${parsed.year} season, but the editor is on ${season.year}.`,
+      });
+    }
+    if (season.standings_are_imported) {
+      problems.push({
+        line: null,
+        message: `${season.year}'s standings are imported and cannot be recomputed, so its scores cannot be imported.`,
+      });
+    }
+
+    const teams = await client.query(
+      `SELECT t.id, t.team_name, t.status, p.display_name
+         FROM teams t LEFT JOIN players p ON p.id = t.player_id
+        WHERE t.season_id = $1 ORDER BY t.id`,
+      [season.id]
+    ).then((result) => result.rows);
+
+    const { rows: matchups } = await client.query(
+      `SELECT id, week, position, team1_id, team1_score, team2_id, team2_score
+         FROM matchups WHERE season_id = $1 ORDER BY week, position`,
+      [season.id]
+    );
+
+    const resolve = sideResolver(teams, season.year, problems);
+    const weeks = [];
+
+    for (const week of parsed.weeks) {
+      const reason = skippedBecause(week);
+      if (reason !== null) {
+        weeks.push({ week: week.week, playoff: week.playoff, action: "skipped", reason, games: [] });
+        continue;
+      }
+
+      const rows = matchups.filter((row) => row.week === week.week);
+      if (rows.length === 0) {
+        problems.push({ line: week.line, message: `Week ${week.week}: ${season.year} has no week ${week.week} on the site.` });
+        continue;
+      }
+
+      const games = matchWeek(week, rows, teams, resolve, season.year, problems);
+      weeks.push({
+        week: week.week,
+        playoff: week.playoff,
+        action: games.some((game) => game.action === null)
+          ? "problem"
+          : games.some((game) => game.action === "enter")
+            ? "enter"
+            : "unchanged",
+        games,
+      });
+    }
+
+    const writes = weeks.flatMap((week) => week.games.filter((game) => game.action === "enter"));
+    const applied = apply && problems.length === 0 && writes.length > 0;
+
+    if (applied) {
+      for (const { write } of writes) {
+        await client.query(
+          `UPDATE matchups
+              SET team1_id = $2, team1_score = $3, team2_id = $4, team2_score = $5
+            WHERE id = $1`,
+          [write.id, write.team1_id, twoPlaces(write.score1), write.team2_id, twoPlaces(write.score2)]
+        );
+      }
+      await writeStandings(client, season.id);
+      await client.query("COMMIT");
+    } else {
+      await client.query("ROLLBACK");
+    }
+
+    // The row ids stay server-side.
+    for (const week of weeks) for (const game of week.games) delete game.write;
+
+    problems.sort((a, b) => (a.line ?? 0) - (b.line ?? 0));
+    return { year: season.year, weeks, problems, entered: writes.length, applied };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

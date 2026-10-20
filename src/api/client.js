@@ -22,10 +22,13 @@ const BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://loca
  * `{"error": "…"}`, so a caller never has to invent wording of its own.
  */
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, body = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    // The whole refusal, for the one caller that sends more than `error`: the
+    // import's 409 carries its report.
+    this.body = body;
   }
 }
 
@@ -162,6 +165,20 @@ export function removeTeam(slug, year, teamId) {
   });
 }
 
+/**
+ * Read a pasted ESPN League Schedule page against a season. With `apply` false
+ * it only reports: every week, every game, and every problem with its line.
+ * With `apply` true it writes, or refuses with a 409 whose `body` is the same
+ * report when there is anything to fix.
+ */
+export function importScores(slug, year, text, apply) {
+  return request(
+    'POST',
+    `/api/leagues/${encodeURIComponent(requireSlug(slug))}/seasons/${encodeURIComponent(year)}/import`,
+    { body: { text, apply }, withCookie: true, guarded: true }
+  );
+}
+
 // ============================================
 // SESSION
 // ============================================
@@ -200,10 +217,10 @@ let unauthorizedHandler = null;
  * still throws afterwards, so a caller that wants to say something about the
  * failure still can — and so the editor keeps the week that was typed into it.
  *
- * Only the guarded writes — saveWeek, createSeason and the three roster edits —
- * reach this. A 401 from a read is a defect in the server, not a prompt: reads
- * are public, so answering one with an unlock form would tell the reader
- * something untrue about the product. A 401 from unlock is the
+ * Only the guarded writes — saveWeek, createSeason, the three roster edits and
+ * importScores — reach this. A 401 from a read is a defect in the server, not a
+ * prompt: reads are public, so answering one with an unlock form would tell the
+ * reader something untrue about the product. A 401 from unlock is the
  * passphrase being wrong, which the form the caller is already showing says in
  * the server's own words. Neither calls the handler; both still throw.
  *
@@ -263,7 +280,7 @@ async function request(method, path, { body, withCookie = false, guarded = false
  */
 async function refusal(response, guarded) {
   const body = await response.json().catch(() => ({}));
-  const error = new ApiError(response.status, body.error || `Request failed (${response.status})`);
+  const error = new ApiError(response.status, body.error || `Request failed (${response.status})`, body);
 
   if (response.status === 401 && guarded && unauthorizedHandler !== null) {
     try {

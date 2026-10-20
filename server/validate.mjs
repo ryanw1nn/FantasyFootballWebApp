@@ -294,3 +294,31 @@ export function parseNewTeamBody(body) {
 
   return { teamName, player: { name: parseName(player.name, "Player name") } };
 }
+
+// ---------------------------------------------------------------------------
+// The import body
+// ---------------------------------------------------------------------------
+
+/**
+ * A whole season's schedule page is about 10,000 characters. This is several
+ * of them, and still under the body parser's 100kb, which would otherwise
+ * answer first with a less useful message.
+ */
+const MAX_PASTE = 90000;
+
+/** `{ text, apply }`: the pasted page, and whether to write it or only report. */
+export function parseImportBody(body) {
+  requireBodyKeys(body, ["text", "apply"]);
+
+  if (typeof body.text !== "string" || body.text.trim() === "") {
+    throw new RequestError(400, "Paste the schedule page first");
+  }
+  if (body.text.length > MAX_PASTE) {
+    throw new RequestError(400, `The paste is longer than ${MAX_PASTE} characters`);
+  }
+  if (body.apply !== undefined && typeof body.apply !== "boolean") {
+    throw new RequestError(400, "apply must be true or false");
+  }
+
+  return { text: body.text, apply: body.apply === true };
+}

@@ -13,6 +13,7 @@ import {
   addTeam,
   allLeagues,
   createSeason,
+  importSeason,
   leagueBySlug,
   loadSeason,
   loadSeasons,
@@ -127,6 +128,23 @@ router.patch("/api/leagues/:slug/seasons/:year/teams/:teamId", async (req, res) 
 router.post("/api/leagues/:slug/seasons/:year/teams", async (req, res) => {
   const bundle = await addTeam(req.params.slug, req.params.year, req.body);
   res.status(201).json(apiSeason(bundle));
+});
+
+// IMPORT scores from a pasted ESPN schedule page. The body is { text, apply }.
+// Without apply it is the report and writes nothing; with it, the import writes
+// only if the report has no problems, and otherwise answers 409 with the report
+// so the editor can list every one.
+router.post("/api/leagues/:slug/seasons/:year/import", async (req, res) => {
+  const report = await importSeason(req.params.slug, req.params.year, req.body);
+  const refused = req.body.apply === true && report.problems.length > 0;
+
+  if (refused) {
+    return res.status(409).json({
+      error: `Nothing was imported: ${report.problems.length} problem(s) to fix first.`,
+      ...report,
+    });
+  }
+  res.json(report);
 });
 
 // REMOVE a team that has no scored matchup this season; one that has is a 409.
