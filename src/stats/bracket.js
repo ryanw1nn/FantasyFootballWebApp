@@ -11,7 +11,7 @@
  * or an earlier start render with no code of its own.
  */
 
-import { isBye } from './league';
+import { isBye, isPlayerTeam, ownerLabel, teamsById } from './league';
 
 /**
  * The column each matchup status belongs to.
@@ -130,4 +130,38 @@ export function getWinner(matchup) {
 
   if (matchup.team1_score == null || matchup.team2_score == null) return null;
   return matchup.team1_score > matchup.team2_score ? 'team1' : 'team2';
+}
+
+/**
+ * Each season's toilet bowl champion: the winner of the toilet game in the
+ * last week that has one. That week's game is the toilet bowl final, so a
+ * season whose final is still unplayed has no champion yet.
+ *
+ * @param {Object} seasons - one league's payload, keyed by year
+ * @returns {Object} year -> owner label of the champion
+ */
+export function toiletBowlChampions(seasons) {
+  const championsByYear = {};
+
+  for (const [year, seasonData] of Object.entries(seasons ?? {})) {
+    if (isNaN(Number(year))) continue;
+
+    const finalWeek = playoffWeeks(seasonData)
+      .filter((week) => categorizeMatchups(seasonData.weeks?.[week]).toiletBowl.length > 0)
+      .pop();
+    if (finalWeek == null) continue;
+
+    const finals = categorizeMatchups(seasonData.weeks[finalWeek]).toiletBowl;
+    // More than one toilet game in the last week means there is no single
+    // final to read a champion from.
+    if (finals.length !== 1) continue;
+
+    const winner = getWinner(finals[0]);
+    if (!winner) continue;
+
+    const team = teamsById(seasonData).get(finals[0][`${winner}_id`]);
+    if (isPlayerTeam(team)) championsByYear[year] = ownerLabel(team);
+  }
+
+  return championsByYear;
 }

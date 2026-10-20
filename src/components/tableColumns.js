@@ -28,6 +28,7 @@ export const ALLTIME_COLUMNS = [
   { key: 'regLoser', label: 'Regular Season Last Place', group: 'regAwards', defaultVisible: false },
   { key: 'rounds', label: 'Playoff Rounds Won', group: 'postAwards' },
   { key: 'po', label: 'Playoff Titles', group: 'postAwards' },
+  { key: 'toilet', label: 'Toilet Bowl Titles', group: 'postAwards' },
 ];
 
 // Header-band labels for the grouped columns, keyed by group id.

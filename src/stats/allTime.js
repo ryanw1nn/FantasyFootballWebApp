@@ -116,9 +116,10 @@ function playersIn(allData) {
  * @param {string} [searchQuery] - matches a player name
  * @param {Object} [statusFilter] - status -> shown, deciding who is listed
  * @param {Set<string>} [finishedYears] - years whose regular season is over, passed to seasonLeaders
+ * @param {Object} [toiletChampionsByYear] - year -> toilet bowl champion, from toiletBowlChampions
  * @returns {Array} a row per listed player, unsorted
  */
-export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears) {
+export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears, toiletChampionsByYear = {}) {
   const stats = {};
 
   const listed = playersIn(onlyShown(allData, statusFilter));
@@ -145,6 +146,7 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
           rChampionYears: [],
           playoffRounds: 0,
           pChampionYears: [],
+          toiletChampionYears: [],
           pfLeaderYears: [],
           paLeaderYears: [],
           regLoserYears: []
@@ -188,6 +190,11 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
         const shortYear = "'" + seasonYear.toString().slice(-2);
         stats[name].pChampionYears.push(shortYear);
       }
+
+      if (toiletChampionsByYear[seasonYear] === name) {
+        const shortYear = "'" + seasonYear.toString().slice(-2);
+        stats[name].toiletChampionYears.push(shortYear);
+      }
     });
   });
 
@@ -207,6 +214,7 @@ export function allTimePlayers(allData, searchQuery, statusFilter, finishedYears
         PAPG: totalGames ? s.PA / totalGames : 0,
         rChampionCount: s.rChampionYears.length,
         pChampionCount: s.pChampionYears.length,
+        toiletChampionCount: s.toiletChampionYears.length,
         pfLeaderCount: s.pfLeaderYears.length,
         paLeaderCount: s.paLeaderYears.length,
         regLoserCount: s.regLoserYears.length

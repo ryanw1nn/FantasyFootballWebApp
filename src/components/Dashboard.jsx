@@ -13,6 +13,7 @@ import { playerPath } from '../routes';
 import { getSeasonArray, seasonStatsCards } from '../stats/season';
 import { lastGameRankChange } from '../stats/allTime';
 import { regularSeasonIsOver } from '../stats/league';
+import { toiletBowlChampions } from '../stats/bracket';
 
 /**
  * The season table and the all-time table. Two routes, one component: they
@@ -93,6 +94,11 @@ export default function Dashboard({ view }) {
   // A season's PF title waits for its regular season to end.
   const finishedYears = useMemo(
     () => new Set(Object.keys(shownSeasons).filter((year) => regularSeasonIsOver(shownSeasons[year]))),
+    [shownSeasons]
+  );
+
+  const toiletChampionsByYear = useMemo(
+    () => toiletBowlChampions(shownSeasons),
     [shownSeasons]
   );
 
@@ -238,6 +244,7 @@ export default function Dashboard({ view }) {
               )}
               statusFilter={filters}
               finishedYears={finishedYears}
+              toiletChampionsByYear={toiletChampionsByYear}
               rankChange={rankChange}
               onPlayerClick={handlePlayerClick}
               visibleColumns={alltimeCols}

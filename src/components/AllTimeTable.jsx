@@ -29,10 +29,11 @@ import { allTimePlayers } from '../stats/allTime';
  *    since the league's most recent game week
  *  @param {Function} props.onPlayerClick - Callback function when player name is clicked
  *  @param {Set<string>} props.finishedYears - Years whose regular season is over
+ *  @param {Object} props.toiletChampionsByYear - Year -> toilet bowl champion
  *  @param {Object} props.visibleColumns - Map of optional column key -> shown/hidden
  */
 
-export default function AllTimeTable({ allData, searchQuery, statusFilter, finishedYears, rankChange, onPlayerClick, visibleColumns = {} }) {
+export default function AllTimeTable({ allData, searchQuery, statusFilter, finishedYears, toiletChampionsByYear, rankChange, onPlayerClick, visibleColumns = {} }) {
 
     // ==================================
     // STATE MANAGEMENT
@@ -50,11 +51,11 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
     // ==================================
 
     const allTimeStats = useMemo(
-        () => allTimePlayers(allData, searchQuery, statusFilter, finishedYears).map((player) => ({
+        () => allTimePlayers(allData, searchQuery, statusFilter, finishedYears, toiletChampionsByYear).map((player) => ({
             ...player,
             change: rankChange?.changes.get(player.name) ?? 0,
         })),
-        [allData, searchQuery, statusFilter, finishedYears, rankChange]
+        [allData, searchQuery, statusFilter, finishedYears, toiletChampionsByYear, rankChange]
     );
 
     // ==================================
@@ -114,14 +115,15 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
     const showRegLoser = cols.regLoser !== false;
     const showRounds = cols.rounds !== false;
     const showPO = cols.po !== false;
+    const showToilet = cols.toilet !== false;
 
     const statsSpan = 2 + [showL, showT, showGP, showPFPG, showPAPG, showPFTotal, showPATotal].filter(Boolean).length; // +2 for always-on WIN% and W
     const regAwardsSpan = [showMPF, showRS, showPALdr, showRegLoser].filter(Boolean).length;
-    const postAwardsSpan = [showRounds, showPO].filter(Boolean).length;
+    const postAwardsSpan = [showRounds, showPO, showToilet].filter(Boolean).length;
 
     // First visible column in each toggleable group gets the divider so the border survives column toggling.
     const regAwardsFirst = showMPF ? 'mpf' : showRS ? 'rs' : showPALdr ? 'paLdr' : showRegLoser ? 'regLoser' : null;
-    const postAwardsFirst = showRounds ? 'rounds' : showPO ? 'po' : null;
+    const postAwardsFirst = showRounds ? 'rounds' : showPO ? 'po' : showToilet ? 'toilet' : null;
 
     return (
         <div>
@@ -251,6 +253,15 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                                 title="Playoff Champion"
                             >
                                 Champ {getSortIcon("pChampionCount")}
+                            </th>
+                        )}
+                        {showToilet && (
+                            <th
+                                className={`${th} ${postAwardsFirst === 'toilet' ? divider : ''}`}
+                                onClick={() => requestSort("toiletChampionCount")}
+                                title="Toilet Bowl Champion"
+                            >
+                                Toilet {getSortIcon("toiletChampionCount")}
                             </th>
                         )}
                         </tr>
@@ -387,6 +398,14 @@ export default function AllTimeTable({ allData, searchQuery, statusFilter, finis
                             <td className={`px-4 py-3 text-center ${postAwardsFirst === 'po' ? dividerCell : ''}`}>
                                 {player.pChampionYears.length > 0 && (
                                     <Badge variant="gold" icon={Trophy}>{player.pChampionYears.join(', ')}</Badge>
+                                )}
+                            </td>
+                        )}
+
+                        {showToilet && (
+                            <td className={`px-4 py-3 text-center ${postAwardsFirst === 'toilet' ? dividerCell : ''}`}>
+                                {player.toiletChampionCount > 0 && (
+                                    <Badge>{player.toiletChampionYears.join(', ')}</Badge>
                                 )}
                             </td>
                         )}
