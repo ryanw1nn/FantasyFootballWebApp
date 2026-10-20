@@ -37,6 +37,7 @@ npm run db:import    truncate every table and reload src/data/seasons.json
 npm run db:recompute recompute stored standings from the matchup rows
 npm run db:verify    diff the whole database against src/data/seasons.json
 npm run db:season    create a season — roster, every week, empty pairings
+npm run db:league    create a league and its first season from a file, or --remove one
 npm run db:player    set a player's status across the seasons they played
 npm run db:team      rename a player's team within one season
 npm run db:passphrase set a league's write passphrase (prompted, never an argument)
@@ -282,6 +283,73 @@ The scores themselves are **not** in this table and cannot be — they are enter
 through the app and exist only in the database. Replaying this ledger after an
 import rebuilds the league's structure, not its results, which is the other half
 of why `db:import` must not be run against a database holding a live season.
+
+## A second league
+
+Leagues are the one thing the website never creates or removes.
+`db/new-league.mjs` does both, by hand, from a JSON file kept **outside the
+repo** — it refuses a path inside it, because the file is a roster of real
+people. The file never holds a passphrase, and refuses any key that looks like
+one.
+
+```json
+{
+  "name": "League Two",
+  "slug": "league-two",
+  "first_season": 2026,
+  "regular_season_weeks": 13,
+  "playoff_start_week": 14,
+  "playoffs": [
+    [ { "status": "playoff", "label": "#1 SEED vs #4 SEED" },
+      { "status": "playoff", "label": "#2 SEED vs #3 SEED" },
+      { "status": "toilet",  "label": "#5 SEED vs #6 SEED" } ],
+    [ { "status": "playoff", "label": "Winner Matchup 1 vs Winner Matchup 2 - SUPER BOWL" },
+      { "status": "out",     "label": "loser Matchup 1 vs loser Matchup 2 - Third Place" } ]
+  ],
+  "roster": [
+    { "owner": "Alex", "team": "Alpha", "real_name": "Alex Example" },
+    { "owner": "Blake", "team": "Bravo" }
+  ]
+}
+```
+
+```
+npm run db:league -- --file ~/fantasy-football-leagues/league-two.json --dry-run
+npm run db:league -- --file ~/fantasy-football-leagues/league-two.json
+npm run db:passphrase -- --league league-two          # the commissioner types it
+npm run db:league -- --remove league-two --dry-run
+```
+
+One transaction inserts the league row and builds the first season through
+`db/season-builder.mjs` — the same code as `db:season` — so it gets the same
+shape: every week laid out empty, a zero standings row per team. Every season
+after the first is created on the website.
+
+- **`playoffs` is spelled out game by game**, one array per week from
+  `playoff_start_week` on, in the order the bracket draws them. Status is
+  `playoff`, `toilet` or `out` and decides the column; the label is the
+  bracket's wiring. They are not generated from a team count and a number of
+  byes because the labels and consolation games are each league's own. Later
+  seasons copy them from the nearest season, like Fan Club's do. `[]` is allowed
+  and warned about.
+- **The slug is permanent** — it is the URL, `/l/<slug>`. Lowercase letters,
+  digits and single hyphens, up to 40.
+- **`team_count`** starts as the first roster's size. **`real_name`** defaults to
+  the display name.
+- **A player is looked up only inside the league**, the rule `db:season` uses, so
+  league two's "TJ Cairney" is a new row, not Fan Club's.
+- **No passphrase is set.** Until `db:passphrase` runs, the league reads like any
+  other and cannot be unlocked.
+
+Against any host but localhost both directions need `--yes`; `--dry-run` does
+everything and rolls back.
+
+`--remove <slug>` deletes the league's matchups, standings, teams, seasons and
+row, plus the player rows only that league was using. It refuses `fan-club` by
+name, and refuses a league with any scored matchup unless `--including-scores`
+is passed — a league with scores is the only copy of them, so take a dump first.
+A session that had unlocked the removed league holds only its id, which is never
+reused.
 
 ## The standings port
 
