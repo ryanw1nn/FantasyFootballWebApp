@@ -317,6 +317,29 @@ export default function EditSeasonPage() {
   }
 
   /**
+   * Update a playoff game's status or label. Both are the bracket's wiring:
+   * status picks the column it is drawn and scored in, label is the text above
+   * it. An emptied label is stored as no label.
+   */
+  function updateMatchupFormat(weekNum, matchupIndex, field, value) {
+    setWeeks(prev => {
+      const newWeeks = { ...prev };
+      const week = newWeeks[weekNum];
+
+      if (!week || !week.matchups) return prev;
+
+      const matchups = [...week.matchups];
+      matchups[matchupIndex] = {
+        ...matchups[matchupIndex],
+        [field]: value === '' ? null : value
+      };
+
+      newWeeks[weekNum] = { matchups };
+      return newWeeks;
+    });
+  }
+
+  /**
    * get available teams for a specific week
    * excludes teams already assigned in that week
    *
@@ -367,13 +390,16 @@ export default function EditSeasonPage() {
       // Every key the write knows, explicitly null: a matchup that is missing a
       // key on the way out is indistinguishable from one that is clearing it,
       // and the payload the rest of the state came from spells all six out.
+      //
+      // A game added to a playoff week starts in the bracket, which is the
+      // likeliest reason to add one there; its status select changes that.
       const matchups = [...(week.matchups || [])];
       matchups.push({
         team1_id: null,
         team1_score: null,
         team2_id: null,
         team2_score: null,
-        status: null,
+        status: isPlayoffWeek(weekNum) ? 'playoff' : null,
         label: null
       });
 
@@ -558,28 +584,40 @@ export default function EditSeasonPage() {
    * Render a single matchup editor
    */
   function renderMatchup(weekNum, matchup, index) {
-    const hasLabel = matchup.label;
-    const hasStatus = matchup.status;
     const isPlayoff = isPlayoffWeek(weekNum);
 
+    // A playoff game with no status is drawn and scored as Out (bracket.js,
+    // db/standings.mjs), so that is what the select shows for one.
+    const status = matchup.status ?? 'out';
+
     return (
-      <div 
-        key={index} 
+      <div
+        key={index}
         className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3"
       >
-        {/* matchup header (for playoff weeks) */}
-        {isPlayoff && (hasLabel || hasStatus) && (
-          <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-300">
-            {hasLabel && (
-              <span className="text-sm font-semibold text-gray-700">
-                {matchup.label}
-              </span>
-            )}
-            {hasStatus && (
-              <span className={`text-xs px-2 py-1 rounded-full border ${getStatusBadgeClass(matchup.status)}`}>
-                {getStatusText(matchup.status)}
-              </span>
-            )}
+        {/* The game's place in the bracket (playoff weeks only) */}
+        {isPlayoff && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2 pb-3 border-b border-gray-300">
+            <input
+              value={matchup.label ?? ''}
+              onChange={(e) => updateMatchupFormat(weekNum, index, 'label', e.target.value)}
+              placeholder="Label, e.g. #1 SEED vs BYE"
+              maxLength={120}
+              aria-label="Game label"
+              className="w-full sm:flex-1 px-3 py-2 border border-gray-300 rounded text-sm font-semibold text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            />
+            <select
+              value={status}
+              onChange={(e) => updateMatchupFormat(weekNum, index, 'status', e.target.value)}
+              aria-label="Bracket"
+              className={`px-3 py-2 rounded border text-sm ${getStatusBadgeClass(status)}`}
+            >
+              {PLAYOFF_STATUSES.map(option => (
+                <option key={option} value={option}>
+                  {getStatusText(option)}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
@@ -642,17 +680,15 @@ export default function EditSeasonPage() {
           </div>
         </div>
 
-        {/* delete button for regular weeks only */}
-        {!isPlayoff && (
-          <div className="flex justify-end pt-2">
-            <button 
-              onClick={() => removeMatchup(weekNum, index)}
-              className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
-            >
-              <Trash2 size={14} />
-            </button>
-          </div>
-        )}
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={() => removeMatchup(weekNum, index)}
+            aria-label="Remove matchup"
+            className="text-red-600 hover:text-red-800 text-sm flex items-center gap-1"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
       </div>
     );
   }  
@@ -860,13 +896,17 @@ export default function EditSeasonPage() {
                       renderMatchup(weekNum, matchup, idx)
                     )}
 
-                    {!isPlayoff && (
-                      <button 
-                        onClick={() => addMatchup(weekNum)}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition-colors"
-                      >
-                        + Add Matchup
-                      </button>
+                    <button
+                      onClick={() => addMatchup(weekNum)}
+                      className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-indigo-500 hover:text-indigo-600 transition-colors"
+                    >
+                      + Add Matchup
+                    </button>
+
+                    {isPlayoff && (
+                      <p className="text-xs text-gray-500">
+                        The bracket draws each column's games in the order listed here.
+                      </p>
                     )}
                     
                     {/* Save Button */}
@@ -897,6 +937,9 @@ export default function EditSeasonPage() {
     </div>
   );
 }
+
+/** The statuses a playoff game can have — the matchups_status_known set. */
+const PLAYOFF_STATUSES = ['playoff', 'toilet', 'out'];
 
 /**
  * The payload's weeks, holding only the keys a save may send back.

@@ -196,7 +196,7 @@ league's first. It writes four things:
 | --- | --- |
 | `seasons` | One row. Weeks come from the **league** template — the one thing `002` left those columns for. |
 | `teams` | The source season's roster, minus `--drop`, plus `--add`, with `--rename`. Everyone `active`, no playoff rounds, no champion flags. A botted slot is never inherited. |
-| `matchups` | Every week of the season with every pairing empty — `regular_season_weeks` × half the roster, then the source season's playoff rows. |
+| `matchups` | Every week of the season with every pairing empty — `regular_season_weeks` × half the roster (rounded up, so an odd roster has a spare row for its BYE), then the source season's playoff rows. |
 | `standings` | A zero row per team, so the season renders a 0-0-0 table instead of an empty one until the first week is scored. |
 
 The matchups are the point. A week exists in a payload only because some row

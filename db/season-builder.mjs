@@ -346,10 +346,10 @@ async function insertTeams(client, seasonId, roster, ids) {
 /**
  * Every week of the season, every pairing empty.
  *
- * Regular season: one row per game, so an even roster fills the week. An odd
- * roster leaves one team out every week, and the extra empty row it would need
- * is not something the builder can place — buildSeason refuses rather than
- * guessing.
+ * Regular season: one row per game — half the roster, rounded up. An odd
+ * roster's extra row is the one its spare team is paired or given a BYE in,
+ * the same count fitRegularWeeks (server/queries.mjs) keeps after a roster
+ * change, so a season created odd and one made odd later look alike.
  *
  * Playoffs: the layout's rows, carrying week, position, status and label and
  * nothing else.
@@ -440,14 +440,6 @@ async function replaceSeason(client, existing) {
  * only the caller knows where the layout came from, so it warns about that.
  */
 export async function buildSeason(client, league, { year, roster, layout, replacing }) {
-  if (roster.length % 2 !== 0) {
-    fail(
-      `${roster.length} teams is an odd roster, so one team would sit out every week. ` +
-        `Only a full week of games can be laid out — add or drop a team to make it ` +
-        `even, or create the season even and add the odd team afterwards.`
-    );
-  }
-
   const warnings = [];
   if (roster.length !== league.team_count) {
     warnings.push(
@@ -474,7 +466,7 @@ export async function buildSeason(client, league, { year, roster, layout, replac
     client,
     seasonId,
     league.regular_season_weeks,
-    roster.length / 2,
+    Math.ceil(roster.length / 2),
     layout
   );
   await insertStandings(client, seasonId, teamIds);

@@ -297,8 +297,9 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
                 </p>
                 <p className="text-gray-500 mt-1">Every week starts empty, ready for pairings and scores.</p>
                 {isOdd && (
-                  <p className="text-red-700 mt-2">
-                    {teamCount} teams is odd. Add or drop a team so every week is full.
+                  <p className="text-amber-700 mt-2">
+                    {teamCount} teams is odd, so one team sits out each week. Each regular-season
+                    week gets a spare row for it.
                   </p>
                 )}
               </div>
@@ -311,7 +312,7 @@ export default function CreateSeasonPanel({ slug, years, onCreated, onSessionEnd
             <div className="flex justify-end">
               <button
                 onClick={create}
-                disabled={creating || isOdd || hasBlank || teamCount === 0}
+                disabled={creating || hasBlank || teamCount === 0}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors flex items-center gap-2"
               >
                 <Plus size={18} />
