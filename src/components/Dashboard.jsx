@@ -129,28 +129,6 @@ export default function Dashboard({ view }) {
 
   return (
     <>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatsCard
-          title="Total Games"
-          value={currentSeasonStats.totalGames}
-          icon={TrendingUp}
-          subtitle="This season"
-        />
-        <StatsCard
-          title="Avg PFPG"
-          value={currentSeasonStats.avgPFPG.toFixed(1)}
-          icon={Medal}
-          subtitle="League average"
-        />
-        <StatsCard
-          title="Active Teams"
-          value={currentSeasonStats.activeTeams}
-          icon={Trophy}
-          subtitle="Currently competing"
-        />
-      </div>
-
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
         <div className="flex items-start justify-between mb-4 gap-4">
@@ -253,17 +231,26 @@ export default function Dashboard({ view }) {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="mt-6 bg-white rounded-lg shadow-sm border border-slate-200 p-4">
-        <h3 className="font-semibold text-slate-900 mb-2 text-sm">Legend</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm text-slate-600">
-          <div><strong className="text-slate-900">PFPG:</strong> Points For Per Game</div>
-          <div><strong className="text-slate-900">PAPG:</strong> Points Against Per Game</div>
-          <div><strong className="text-slate-900">PO:</strong> Playoff Champion</div>
-          <div><strong className="text-slate-900">RS:</strong> Regular Season Champion</div>
-          <div><strong className="text-slate-900">GP:</strong> Games Played</div>
-          <div><strong className="text-slate-900">Δ:</strong> Rank Change</div>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <StatsCard
+          title="Total Games"
+          value={currentSeasonStats.totalGames}
+          icon={TrendingUp}
+          subtitle="This season"
+        />
+        <StatsCard
+          title="Avg PFPG"
+          value={currentSeasonStats.avgPFPG.toFixed(1)}
+          icon={Medal}
+          subtitle="League average"
+        />
+        <StatsCard
+          title="Active Teams"
+          value={currentSeasonStats.activeTeams}
+          icon={Trophy}
+          subtitle="Currently competing"
+        />
       </div>
     </>
   );
