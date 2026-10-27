@@ -52,7 +52,7 @@ function fromHundredths(total) {
 
 async function loadSeason(client, seasonId) {
   const { rows: seasons } = await client.query(
-    `SELECT year, playoff_start_week FROM seasons WHERE id = $1`,
+    `SELECT year, playoff_start_week, regular_season_weeks FROM seasons WHERE id = $1`,
     [seasonId]
   );
   if (seasons.length === 0) throw new Error(`no season with id ${seasonId}`);
@@ -171,8 +171,10 @@ function rankTeams(teamIds, stats) {
  * written over it.
  */
 export async function computeStandings(client, seasonId) {
-  const { season, teams, matchups } = await loadSeason(client, seasonId);
+  return standingsFrom(await loadSeason(client, seasonId));
+}
 
+function standingsFrom({ season, teams, matchups }) {
   const teamIds = teams.map((team) => team.id);
   const stats = new Map(teamIds.map((id) => [id, emptyStats()]));
 
@@ -231,11 +233,131 @@ export async function computeStandings(client, seasonId) {
 }
 
 // ---------------------------------------------------------------------------
+// Results: the rung each team reached and the two titles
+// ---------------------------------------------------------------------------
+//
+// playoff_rounds, is_playoff_champ and is_regular_champ used to be imported
+// from the JSON and never derived, so a season created here kept every team at
+// 0 and no champion however far it was played. They are now derived from the
+// same matchup rows as the standings, on the ladder in docs/schema.md:
+//
+//   A round is a week from playoff_start_week on with a 'playoff' matchup in
+//   it. The last round is the final, so losing in round r of R rounds is rung
+//   r + 3 - R: 3 in the final, 2 in the semi, 1 in the round before, and 0 in
+//   any play-in earlier than that. Advancing past a round adds one, a BYE
+//   advances, and only the final's winner reaches 4.
+//
+// Only scored weeks count, so the results describe the season as played so
+// far: a round not yet scored moves nobody up.
+
+const FINAL_RUNG = 3;
+
+/** Whether teamId came through a playoff matchup: won a game both teams scored in, or had a BYE. */
+function advanced(matchup, teamId) {
+  if (matchup.team1_id === null || matchup.team2_id === null) return true;
+
+  const score1 = hundredths(matchup.team1_score);
+  const score2 = hundredths(matchup.team2_score);
+  if (score1 <= 0 || score2 <= 0 || score1 === score2) return false;
+
+  return (score1 > score2 ? matchup.team1_id : matchup.team2_id) === teamId;
+}
+
+function playoffMatchups(matchups, week) {
+  return matchups.filter((m) => m.week === week && m.status === "playoff");
+}
+
+/** The playoff champion's team id, or null until the final has a winner. */
+function championOf(finalMatchups) {
+  const games = finalMatchups.filter((m) => m.team1_id !== null && m.team2_id !== null);
+  // More than one game in the last round means there is no single final.
+  if (games.length !== 1) return null;
+
+  const [game] = games;
+  if (advanced(game, game.team1_id)) return game.team1_id;
+  if (advanced(game, game.team2_id)) return game.team2_id;
+  return null;
+}
+
+/** The rung each team reached so far, keyed by team id. Teams that never appear reach 0. */
+function playoffRungs(season, matchups, scored) {
+  const rounds = [...new Set(matchups.filter((m) => m.status === "playoff").map((m) => m.week))]
+    .filter((week) => week >= season.playoff_start_week)
+    .sort((a, b) => a - b);
+
+  const rungs = new Map();
+  let champion = null;
+
+  rounds.forEach((week, index) => {
+    if (!scored.has(week)) return;
+    const round = index + 1;
+    const reached = round + FINAL_RUNG - rounds.length;
+
+    for (const matchup of playoffMatchups(matchups, week)) {
+      for (const teamId of [matchup.team1_id, matchup.team2_id]) {
+        if (teamId === null) continue;
+        const rung = reached + (advanced(matchup, teamId) ? 1 : 0);
+        rungs.set(teamId, Math.max(0, Math.min(rung, FINAL_RUNG)));
+      }
+    }
+
+    if (round === rounds.length) champion = championOf(playoffMatchups(matchups, week));
+  });
+
+  if (champion !== null) rungs.set(champion, FINAL_RUNG + 1);
+  return { rungs, champion };
+}
+
+/**
+ * Each team's playoff rung and titles, keyed by team id. The regular season
+ * champion is first place once every regular season week is scored — playoff
+ * games never touch the main record, so that place cannot move afterwards.
+ */
+function resultsFrom({ season, teams, matchups }, standings) {
+  const scored = new Set(scoredWeeks(matchups).map(([week]) => week));
+  const { rungs, champion } = playoffRungs(season, matchups, scored);
+
+  const regularScored = [...scored].filter((week) => week < season.playoff_start_week).length;
+  const regularChampion =
+    standings !== null && regularScored >= season.regular_season_weeks
+      ? standings[0].team_id
+      : null;
+
+  return new Map(
+    teams.map(({ id }) => [
+      id,
+      {
+        playoff_rounds: rungs.get(id) ?? 0,
+        is_playoff_champ: id === champion,
+        is_regular_champ: id === regularChampion,
+      },
+    ])
+  );
+}
+
+/** Computes one season's playoff rungs and titles without writing anything. */
+export async function computeResults(client, seasonId) {
+  const loaded = await loadSeason(client, seasonId);
+  return resultsFrom(loaded, standingsFrom(loaded));
+}
+
+async function writeResults(client, results) {
+  for (const [teamId, result] of results) {
+    await client.query(
+      `UPDATE teams SET playoff_rounds = $2, is_playoff_champ = $3, is_regular_champ = $4
+        WHERE id = $1`,
+      [teamId, result.playoff_rounds, result.is_playoff_champ, result.is_regular_champ]
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Writing
 // ---------------------------------------------------------------------------
 
 /**
- * Recomputes one season and replaces its standings rows.
+ * Recomputes one season, replaces its standings rows, and rewrites each team's
+ * playoff rung and titles.
  *
  * The caller owns the transaction — this issues no BEGIN and no COMMIT, which
  * is the whole point of the port: the caller writes a matchup and recomputes
@@ -257,7 +379,12 @@ export async function writeStandings(client, seasonId) {
   // computed from that single week.
   if (rows[0].standings_are_imported) return null;
 
-  const computed = await computeStandings(client, seasonId);
+  const loaded = await loadSeason(client, seasonId);
+  const computed = standingsFrom(loaded);
+
+  // Results are written even with no scored week, so clearing every score
+  // takes the titles away with it.
+  await writeResults(client, resultsFrom(loaded, computed));
   if (computed === null) return null;
 
   // Replace rather than upsert: a team dropped from the season should lose its
