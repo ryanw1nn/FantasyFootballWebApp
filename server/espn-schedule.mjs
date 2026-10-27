@@ -19,6 +19,16 @@
 //   Woody "skid" ...     home team
 //   (2-4-0)              its record
 //
+// A league with an odd number of teams gives one team a week off, and ESPN
+// names it after the games with its points for the week — the team only, no
+// manager or record. The page breaks the line in more than one place, so all of
+// these are the same bye:
+//
+//   Bye:Hennything is possible(133.12 Pts)
+//   Bye:Danger Russ Darts (88.52 Pts)
+//   Bye:                                 on its own line, the rest on the next
+//   She joshin on my jefferson (88.12 Pts)
+//
 // Blank lines fall wherever the page's layout put them, so they are dropped and
 // carry no meaning. A week not yet seeded reads "Matchups to be determined" and
 // nothing else.
@@ -37,6 +47,8 @@ const REGULAR_WEEK = /^NFL Week (\d{1,2})(?:Edit)?$/;
 const PLAYOFF_WEEK = /^Playoff Round (\d{1,2}) \(NFL Week (\d{1,2})\)$/;
 const RECORD = /^\(\d+-\d+-\d+\)$/;
 const SCORE = /^\d{1,3}(?:\.\d{1,2})?$/;
+const BYE_LABEL = "Bye:";
+const BYE = /^Bye:\s*(.+?)\s*(?:\((\d{1,3}(?:\.\d{1,2})?) Pts\))?$/;
 
 const COLUMN_TITLES = new Set(["AWAY TEAM", "TEAM MANAGER(S)", "Score", "HOME TEAM"]);
 const TO_BE_DETERMINED = "Matchups to be determined";
@@ -46,8 +58,8 @@ const FOOTER = "Fantasy Football Support";
 
 /**
  * `{ year, weeks, problems }`. A week is `{ week, playoff, line, determined,
- * complete, games }`; a game is `{ line, away, home }`, and a side is `{ team, manager,
- * score }` with the score a number or null. A problem is `{ line, message }`,
+ * complete, games, byes }`; a game is `{ line, away, home }`, and a side is `{ team, manager,
+ * score }` with the score a number or null. A bye is `{ line, team, score }`. A problem is `{ line, message }`,
  * line counted from 1 in the pasted text, or null when it belongs to no line.
  */
 export function parseSchedule(text) {
@@ -133,11 +145,19 @@ function readWeek(section, problems) {
     // nothing can be said about who is missing from the week.
     complete: true,
     games: [],
+    byes: [],
   };
   if (!week.determined || week.playoff) return week;
 
   let i = 0;
   while (i < body.length) {
+    const bye = readBye(body, i);
+    if (bye !== null) {
+      week.byes.push(bye.bye);
+      i = bye.next;
+      continue;
+    }
+
     const game = readGame(body, i);
     if (game === null) {
       problems.push({
@@ -154,6 +174,25 @@ function readWeek(section, problems) {
   }
 
   return week;
+}
+
+/** A bye from position `i`, on one line or split after "Bye:", or null when there is none. */
+function readBye(body, i) {
+  const first = body[i].value;
+  if (!first.startsWith(BYE_LABEL)) return null;
+
+  const split = first === BYE_LABEL && body[i + 1] !== undefined;
+  const match = (split ? `${first}${body[i + 1].value}` : first).match(BYE);
+  if (match === null) return null;
+
+  return {
+    bye: {
+      line: body[i].line,
+      team: match[1],
+      score: match[2] === undefined ? null : Number(match[2]),
+    },
+    next: i + (split ? 2 : 1),
+  };
 }
 
 /** One game from position `i`, or null when the lines there are not one. */

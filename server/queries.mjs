@@ -855,12 +855,12 @@ function skippedBecause(week) {
   if (week.playoff) return "playoffs, enter these in the editor";
   if (!week.determined) return "matchups to be determined";
   if (week.games.length === 0) return "no games";
-  if (week.games.some((game) => game.away.score === null || game.home.score === null)) {
-    return "not played yet";
-  }
-  if (week.games.some((game) => game.away.score === 0 || game.home.score === 0)) {
-    return "has a score of 0";
-  }
+  const scores = [
+    ...week.games.flatMap((game) => [game.away.score, game.home.score]),
+    ...week.byes.map((bye) => bye.score),
+  ];
+  if (scores.some((score) => score === null)) return "not played yet";
+  if (scores.some((score) => score === 0)) return "has a score of 0";
   return null;
 }
 
@@ -967,6 +967,7 @@ function sideResolver(teams, year, problems) {
 }
 
 const twoPlaces = (value) => Number(value).toFixed(2);
+const storedScore = (value) => (value === null ? null : twoPlaces(value));
 
 /** How a site row reads in a message: who, and their score or that there is none. */
 function siteSide(teams, teamId, score) {
@@ -979,17 +980,129 @@ function siteSide(teams, teamId, score) {
 const espnSide = (side) => `${side.manager} ${twoPlaces(side.score)}`;
 
 /**
+ * The roster team an ESPN bye stands for. A bye carries the team name and
+ * nothing else, so the name is all there is to match, and it must be exact.
+ */
+function byeResolver(teams, year, problems) {
+  return (bye) => {
+    const team = teams.find((row) => row.team_name === bye.team);
+    if (team !== undefined) return team;
+
+    const hint = closest(bye.team, teams.map((row) => row.team_name));
+    problems.push({
+      line: bye.line,
+      message:
+        `Team not found: ESPN gives "${bye.team}" a bye, but no ${year} team has that name.` +
+        (hint ? ` Closest on the roster: "${hint}".` : ""),
+    });
+    return null;
+  };
+}
+
+/** How a team is named in a report: its people, or its name for a botted slot. */
+const playerOf = (team) => managersOf(team) ?? team.team_name;
+
+/**
+ * An empty row of the week nobody has claimed yet, or a problem saying there is
+ * none. An odd roster's week has one row more than its games, for the bye.
+ */
+function emptyRow(rows, claimed, week, line, what, problems) {
+  const empty = rows.find(
+    (r) =>
+      !claimed.has(r.id) &&
+      r.team1_id === null && r.team2_id === null &&
+      r.team1_score === null && r.team2_score === null
+  );
+  if (empty === undefined) {
+    problems.push({ line, message: `Week ${week.week}: no empty game left on the site for ${what}.` });
+    return null;
+  }
+  claimed.add(empty.id);
+  return empty;
+}
+
+/**
+ * One bye: the team's one-sided row if the site has it, else an empty row. Its
+ * score is kept on the team's side, as ESPN shows it; standings skip a BYE, so
+ * the score counts toward nothing. A site that pairs the team with an opponent
+ * that week is a disagreement.
+ */
+function matchBye(week, bye, team, rows, claimed, teams, problems) {
+  const entry = {
+    line: bye.line,
+    bye: true,
+    away: { player: playerOf(team), team: bye.team, score: bye.score },
+    home: null,
+    action: null,
+  };
+
+  const row = rows.find((r) => r.team1_id === team.id || r.team2_id === team.id);
+
+  if (row === undefined) {
+    const empty = emptyRow(rows, claimed, week, bye.line, `${entry.away.player}'s bye`, problems);
+    if (empty !== null) {
+      entry.action = "enter";
+      entry.write = { id: empty.id, team1_id: team.id, team2_id: null, score1: bye.score, score2: null };
+    }
+    return entry;
+  }
+
+  claimed.add(row.id);
+  const opponent = row.team1_id === team.id ? row.team2_id : row.team1_id;
+  if (opponent !== null) {
+    problems.push({
+      line: bye.line,
+      message:
+        `Pairing mismatch, week ${week.week}: ESPN has ${entry.away.player} on a bye, the site has ` +
+        `${siteSide(teams, row.team1_id, row.team1_score)} vs ${siteSide(teams, row.team2_id, row.team2_score)}.`,
+    });
+    return entry;
+  }
+
+  const onTeam1 = row.team1_id === team.id;
+  const stored = onTeam1 ? row.team1_score : row.team2_score;
+
+  if (stored === null) {
+    entry.action = "enter";
+    entry.write = onTeam1
+      ? { id: row.id, team1_id: team.id, team2_id: null, score1: bye.score, score2: null }
+      : { id: row.id, team1_id: null, team2_id: team.id, score1: null, score2: bye.score };
+  } else if (twoPlaces(stored) === twoPlaces(bye.score)) {
+    entry.action = "same";
+  } else {
+    problems.push({
+      line: bye.line,
+      message:
+        `Score mismatch, week ${week.week}: ESPN has ${entry.away.player}'s bye at ${twoPlaces(bye.score)}, ` +
+        `the site has ${twoPlaces(stored)}. Fix whichever is wrong; nothing was imported.`,
+    });
+  }
+  return entry;
+}
+
+/**
  * One played week: each game matched to the site's row for it. A row with the
  * same two teams is the game; its scores are entered if it has none, left alone
  * if they agree, and a problem if they differ. A pairing the site does not have
  * goes into an empty row of the week, unless either team is already paired
- * there with someone else — that is a disagreement, not a gap. Only regular-
+ * there with someone else — that is a disagreement, not a gap. A bye is matched
+ * the same way, as a row with one side empty (see matchBye). Only regular-
  * season weeks get here; playoff weeks are skipped before matching.
  */
-function matchWeek(week, rows, teams, resolve, year, problems) {
+function matchWeek(week, rows, teams, resolve, resolveBye, year, problems) {
   const games = [];
   const claimed = new Set();
   const seen = new Map();
+
+  function playsOnce(team, line) {
+    if (seen.has(team.id)) {
+      problems.push({
+        line,
+        message: `Week ${week.week}: ${playerOf(team)} plays twice (lines ${seen.get(team.id)} and ${line}).`,
+      });
+    }
+    seen.set(team.id, line);
+  }
 
   for (const game of week.games) {
     const away = resolve(game.away, game.line);
@@ -1003,15 +1116,7 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
     games.push(entry);
     if (away === null || home === null) continue;
 
-    for (const team of [away, home]) {
-      if (seen.has(team.id)) {
-        problems.push({
-          line: game.line,
-          message: `Week ${week.week}: ${managersOf(team)} plays twice (lines ${seen.get(team.id)} and ${game.line}).`,
-        });
-      }
-      seen.set(team.id, game.line);
-    }
+    for (const team of [away, home]) playsOnce(team, game.line);
 
     const row = rows.find(
       (r) =>
@@ -1060,21 +1165,11 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
       continue;
     }
 
-    const empty = rows.find(
-      (r) =>
-        !claimed.has(r.id) &&
-        r.team1_id === null && r.team2_id === null &&
-        r.team1_score === null && r.team2_score === null
+    const empty = emptyRow(
+      rows, claimed, week, game.line, `${game.away.manager} vs ${game.home.manager}`, problems
     );
-    if (empty === undefined) {
-      problems.push({
-        line: game.line,
-        message: `Week ${week.week}: no empty game left on the site for ${game.away.manager} vs ${game.home.manager}.`,
-      });
-      continue;
-    }
+    if (empty === null) continue;
 
-    claimed.add(empty.id);
     entry.action = "enter";
     entry.write = {
       id: empty.id,
@@ -1083,6 +1178,24 @@ function matchWeek(week, rows, teams, resolve, year, problems) {
       score1: game.away.score,
       score2: game.home.score,
     };
+  }
+
+  // Byes after games, so a pairing the site lacks claims an empty row before a
+  // bye does — both need one, and the bye's row is the week's spare.
+  for (const bye of week.byes) {
+    const team = resolveBye(bye);
+    if (team === null) {
+      games.push({
+        line: bye.line,
+        bye: true,
+        away: { player: bye.team, team: bye.team, score: bye.score },
+        home: null,
+        action: null,
+      });
+      continue;
+    }
+    playsOnce(team, bye.line);
+    games.push(matchBye(week, bye, team, rows, claimed, teams, problems));
   }
 
   if (week.complete) {
@@ -1157,6 +1270,7 @@ export async function importSeason(slug, year, body) {
     );
 
     const resolve = sideResolver(teams, season.year, problems);
+    const resolveBye = byeResolver(teams, season.year, problems);
     const weeks = [];
 
     for (const week of parsed.weeks) {
@@ -1172,7 +1286,7 @@ export async function importSeason(slug, year, body) {
         continue;
       }
 
-      const games = matchWeek(week, rows, teams, resolve, season.year, problems);
+      const games = matchWeek(week, rows, teams, resolve, resolveBye, season.year, problems);
       weeks.push({
         week: week.week,
         playoff: week.playoff,
@@ -1194,7 +1308,7 @@ export async function importSeason(slug, year, body) {
           `UPDATE matchups
               SET team1_id = $2, team1_score = $3, team2_id = $4, team2_score = $5
             WHERE id = $1`,
-          [write.id, write.team1_id, twoPlaces(write.score1), write.team2_id, twoPlaces(write.score2)]
+          [write.id, write.team1_id, storedScore(write.score1), write.team2_id, storedScore(write.score2)]
         );
       }
       await writeStandings(client, season.id);

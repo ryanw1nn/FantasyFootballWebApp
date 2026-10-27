@@ -14,8 +14,9 @@ import { ApiError, importScores } from '../api/client';
  * the same report if anything is wrong, so nothing is ever half imported.
  *
  * Scores already on the site are left alone when they agree and are a problem
- * when they don't. Weeks not played yet, or with a score of 0, are skipped, and
- * so are playoff weeks: those are entered in the editor.
+ * when they don't. A bye goes in as the team with no opponent. Weeks not played
+ * yet, or with a score of 0, are skipped, and so are playoff weeks: those are
+ * entered in the editor.
  *
  * Drawn only when canWrite is true. `onImported()` runs after a write, so the
  * editor can reload the season; `onSessionEnded()` runs on a 401.
@@ -177,8 +178,16 @@ function ImportReport({ report }) {
           <ul className="space-y-0.5 text-gray-700">
             {week.games.map((game) => (
               <li key={game.line} className={game.action === 'enter' ? '' : 'text-gray-400'}>
-                {game.away.player} {game.away.score.toFixed(2)} – {game.home.score.toFixed(2)}{' '}
-                {game.home.player}
+                {game.bye ? (
+                  <>
+                    {game.away.player} {game.away.score.toFixed(2)} · BYE
+                  </>
+                ) : (
+                  <>
+                    {game.away.player} {game.away.score.toFixed(2)} – {game.home.score.toFixed(2)}{' '}
+                    {game.home.player}
+                  </>
+                )}
                 {game.action === 'same' && ' · already on the site'}
                 {game.action === null && ' · see problems'}
               </li>
